@@ -1,0 +1,10 @@
+.idea
+
+*.iml
+
+frontend/dist
+frontend/node_modules
+
+*/.gitignore
+
+docker/data

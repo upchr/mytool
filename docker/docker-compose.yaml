@@ -1,0 +1,12 @@
+services:
+  note-app:
+    image: mytool/note:1.0
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: note
+    ports:
+      - "80:80"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
