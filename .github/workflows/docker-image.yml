@@ -1,0 +1,85 @@
+name: Build and Push Multi-Arch Image to Aliyun ACR
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # 例如 v1.5.0 触发构建
+  workflow_dispatch:  # 允许手动触发
+
+env:
+  REGISTRY: registry.cn-beijing.aliyuncs.com
+  REPO: base-chr/note
+  TAG: ${{ github.ref_name == '' && 'latest' || (startsWith(github.ref, 'refs/tags/') && github.ref_name || github.sha) }}
+
+jobs:
+  build:
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: linux/amd64
+            runner: ubuntu-latest
+            arch: amd64
+          - name: linux/arm64
+            runner: ubuntu-latest-arm64
+            arch: arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+
+      - name: Build and push single-platform image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          platforms: ${{ matrix.platform.name }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }}-${{ matrix.platform.arch }}
+
+  merge-manifest:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+
+      - name: Enable Docker CLI experimental features
+        run: |
+          mkdir -p ~/.docker
+          echo '{"experimental": "enabled"}' > ~/.docker/config.json
+
+      - name: Create and push multi-arch manifest
+        run: |
+          docker manifest create \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }} \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }}-arm64
+
+          docker manifest annotate \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }} \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }}-amd64 \
+            --arch amd64
+
+          docker manifest annotate \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }} \
+            ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }}-arm64 \
+            --arch arm64
+
+          docker manifest push ${{ env.REGISTRY }}/${{ env.REPO }}:${{ env.TAG }}
