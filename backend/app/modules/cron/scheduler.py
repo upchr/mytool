@@ -48,7 +48,7 @@ class CronJobScheduler:
             self.scheduler.add_job(
                 func=self._execute_job_task,
                 trigger=trigger,
-                args=[job['id']],
+                args=[job['id'], job['name']],
                 id=str(job['id']),
                 name=job['name']
             )
@@ -57,21 +57,21 @@ class CronJobScheduler:
         except Exception as e:
             print(f"❌ 添加任务失败 {job['name']}: {e}")
 
-    def remove_job(self, job_id):
+    def remove_job(self, job_id, job_name):
         """移除任务"""
         if job_id in self.job_ids:
             self.scheduler.remove_job(str(job_id))
             self.job_ids.remove(job_id)
-            print(f"🗑️ 已移除定时任务: {job_id}")
+            print(f"🗑️ 已移除定时任务: {job_id} ({job_name})")
 
-    def _execute_job_task(self, job_id):
+    def _execute_job_task(self, job_id, job_name):
         """实际执行任务的函数（被调度器调用）"""
         try:
             # 调用你的 execute_job 函数
             services.execute_job(engine, job_id, triggered_by="system")
-            print(f"✅ 系统自动执行任务 {job_id}")
+            print(f"✅ 系统自动执行任务 {job_id} ({job_name})")
         except Exception as e:
-            print(f"❌ 自动执行任务 {job_id} 失败: {e}")
+            print(f"❌ 自动执行任务 {job_id} ({job_name}) 失败: {e}")
 
 # 全局调度器实例
 scheduler = CronJobScheduler()
