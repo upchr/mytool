@@ -1,5 +1,5 @@
 # backend/app/modules/note/services.py
-from sqlalchemy import select, insert,delete
+from sqlalchemy import select, insert,delete,update
 from sqlalchemy.engine import Engine
 from .models import notes_table
 from .schemas import NoteCreate
@@ -23,3 +23,18 @@ def delete_note(engine: Engine, note_id: int) -> bool:
     with engine.begin() as conn:
         result = conn.execute(stmt)
         return result.rowcount > 0  # True 表示删除成功
+
+def update_note(engine: Engine, note_id: int, note: NoteCreate) -> dict:
+    stmt = (
+        update(notes_table)
+        .where(notes_table.c.id == note_id)
+        .values(title=note.title, content=note.content)
+    )
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        if result.rowcount == 0:
+            return None
+        # 返回更新后的数据
+        select_stmt = select(notes_table).where(notes_table.c.id == note_id)
+        row = conn.execute(select_stmt).mappings().first()
+        return dict(row)

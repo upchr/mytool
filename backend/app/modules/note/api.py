@@ -21,3 +21,12 @@ def remove_note(note_id: int):
     if success:
         return {"status": "ok", "id": note_id}
     return {"status": "not found", "id": note_id}
+
+# 在现有路由下添加
+@router.put("/{note_id}", response_model=dict)
+def update_note(note_id: int, note: schemas.NoteCreate):
+    updated = services.update_note(engine, note_id, note)
+    if updated:
+        return updated
+    return {"status": "not found", "id": note_id}
+

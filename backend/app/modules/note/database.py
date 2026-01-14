@@ -1,3 +1,4 @@
+# backend/app/modules/note/database.py
 import sqlite3
 import os
 

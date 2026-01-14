@@ -1,3 +1,4 @@
+# backend/app/modules/note/schemas.py
 from pydantic import BaseModel
 
 class NoteBase(BaseModel):

@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.modules.note.api import router as note_router
-
+from app.modules.cron.api import router as cron_router
 app = FastAPI(title="Note App")
 app.add_middleware(
     CORSMiddleware,
@@ -12,6 +12,7 @@ app.add_middleware(
 )
 
 app.include_router(note_router)
+app.include_router(cron_router)
 
 if __name__ == "__main__":
     import uvicorn

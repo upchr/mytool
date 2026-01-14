@@ -1,9 +1,39 @@
 <template>
-  <div>
-    <NoteList />
+  <div class="min-h-screen bg-gray-50">
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"  style="text-align: center;font-size: 20px">
+        <div class="flex justify-between h-16">
+          <div class="flex">
+            <router-link to="/" class="flex items-center px-2 text-gray-900 hover:bg-gray-100 rounded-md">
+              <span class="font-bold text-lg">📝 便签管理</span>
+            </router-link>
+            <router-link to="/nodes" class="flex items-center px-2 text-gray-900 hover:bg-gray-100 rounded-md ml-4">
+              <span class="font-bold text-lg">🖥️ 节点管理</span>
+            </router-link>
+            <router-link to="/jobs" class="flex items-center px-2 text-gray-900 hover:bg-gray-100 rounded-md ml-4">
+              <span class="font-bold text-lg">⏰ 任务管理</span>
+            </router-link>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <main class="py-6">
+      <n-message-provider>
+          <router-view />
+      </n-message-provider>
+<!--      <router-view />-->
+    </main>
+
+    <footer class="bg-white shadow-inner mt-12" style="text-align: center;margin-top: 20px">
+      <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 text-center text-gray-500 text-sm">
+        © 2026 定时任务管理系统
+      </div>
+    </footer>
   </div>
+
 </template>
 
-<script setup lang="ts">
-import NoteList from './modules/note/NoteList.vue'
+<script setup>
+import { RouterView } from 'vue-router'
 </script>
