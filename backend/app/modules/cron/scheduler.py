@@ -68,8 +68,8 @@ class CronJobScheduler:
         """实际执行任务的函数（被调度器调用）"""
         try:
             # 调用你的 execute_job 函数
-            services.execute_job(engine, job_id, triggered_by="system")
             print(f"✅ 系统自动执行任务 {job_id} ({job_name})")
+            services.execute_job(engine, job_id, triggered_by="system")
         except Exception as e:
             print(f"❌ 自动执行任务 {job_id} ({job_name}) 失败: {e}")
 

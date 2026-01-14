@@ -81,3 +81,10 @@ def toggle_job(job_id: int, is_active: bool = Body(..., embed=True)):
     if not success:
         raise HTTPException(status_code=404, detail="任务不存在")
     return {"status": "ok", "is_active": is_active}
+
+@router.delete("/jobs/{job_id}", response_model=dict)
+def remove_job(job_id: int):
+    success = services.remove_job(engine, job_id)
+    if success:
+        return {"status": "ok", "id": job_id}
+    return {"status": "not found", "id": job_id}

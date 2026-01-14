@@ -1,7 +1,7 @@
 <template>
   <n-card title="⏰ 定时任务管理" class="mb-6">
     <!-- 任务筛选 -->
-    <n-space justify="space-between" class="mb-4">
+    <n-space justify="space-between" class="mb-4" style="margin-bottom: 20px">
       <n-space>
         <n-select
             v-model:value="selectedNode"
@@ -16,15 +16,15 @@
 
     <!-- 任务列表 -->
     <n-empty v-if="jobs.length === 0" description="暂无任务" />
-    <n-list v-else>
-      <n-list-item v-for="job in jobs" :key="job.id" class="mb-2">
+    <n-collapse v-else>
+      <n-collapse-item v-for="job in jobs" :key="job.id" :title="getNodeName(job.node_id)+'：'+job.name"  class="mb-2">
         <n-card :bordered="false" class="shadow-sm">
           <template #header>
             <div class="flex justify-between items-start">
-              <div>
+              <div style="margin-bottom: 10px">
+                <span class="ml-2 text-xs text-gray-500">{{ getNodeName(job.node_id) }}：</span>
                 <span class="font-bold">{{ job.name }}</span>
-                <span class="ml-2 text-xs text-gray-500">({{ getNodeName(job.node_id) }})</span>
-                <n-tag size="small" class="ml-2" type="info">{{ job.schedule }}</n-tag>
+                <n-tag size="small" class="ml-2" type="info" style="margin-left: 10px">{{ job.schedule }}</n-tag>
               </div>
               <n-space>
                 <n-button size="small" type="info" @click="executeJob(job)">立即执行</n-button>
@@ -35,11 +35,17 @@
                 >
                   {{ job.is_active ? '停用' : '启用' }}
                 </n-button>
+                <n-popconfirm @positive-click="deleteJob(job)">
+                  <template #trigger>
+                    <n-button size="small" type="error">删除</n-button>
+                  </template>
+                  确定要删除任务 "{{ job.name }}" 吗？
+                </n-popconfirm>
               </n-space>
             </div>
           </template>
 
-          <n-collapse :default-expanded-names="['1', '2', '3']">
+          <n-collapse :default-expanded-names="['3']">
             <n-collapse-item title="命令详情" name="1">
               <pre class="bg-gray-50 p-2 rounded text-sm overflow-x-auto">
               <n-code :code="job.command" language="sh" show-line-numbers />
@@ -81,8 +87,8 @@
             </n-collapse-item>
           </n-collapse>
         </n-card>
-      </n-list-item>
-    </n-list>
+      </n-collapse-item>
+    </n-collapse>
 
     <!-- 添加任务模态框 -->
     <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" style="width: 600px">
@@ -173,7 +179,7 @@ const newJob = ref({
   schedule: '',
   command: '',
   description: '',
-  is_active: true
+  is_active: false
 })
 
 const jobFormRef = ref(null)
@@ -204,6 +210,7 @@ const loadNodes = async () => {
 
 const loadJobs = async () => {
   try {
+    console.log('selectedNode.value',selectedNode.value)
     const params = selectedNode.value ? {node_id: selectedNode.value} : {}
     const res = await axios.get('/api/cron/jobs', {params})
     jobs.value = res.data
@@ -273,11 +280,21 @@ const addJob = async () => {
       schedule: '',
       command: '',
       description: '',
-      is_active: true
+      is_active: false
     }
     loadJobs()
   } catch (error) {
     message.error(`添加任务失败: ${error.response?.data?.detail || error.message}`)
+  }
+}
+
+const deleteJob = async (job) => {
+  try {
+    await axios.delete(`/api/cron/jobs/${job.id}`)
+    message.success('任务删除成功')
+    loadJobs()
+  } catch (error) {
+    message.error('任务节点失败')
   }
 }
 

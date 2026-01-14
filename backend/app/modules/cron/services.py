@@ -50,7 +50,6 @@ def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
 
 # 执行任务
 def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> schemas.JobExecutionRead:
-    print(datetime.now())
     # 创建执行记录
     stmt = insert(models.job_executions_table).values(
         job_id=job_id,
@@ -69,6 +68,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> sc
         # 获取节点信息
         node_stmt = select(models.nodes_table).where(models.nodes_table.c.id == job['node_id'])
         node = conn.execute(node_stmt).mappings().first()
+        print(f"✅ 任务调度：时间（{datetime.now().replace(second=0, microsecond=0)}），设备（{node.name}），任务（{job.name}），触发方式（{triggered_by}）")
 
     # 异步执行
     def run_task():
@@ -139,17 +139,31 @@ def toggle_job_status(engine: Engine, job_id: int, is_active: bool) -> bool:
         if result.rowcount == 0:
             return False
 
+        job_stmt = select(models.cron_jobs_table).where(
+            models.cron_jobs_table.c.id == job_id
+        )
+        job = conn.execute(job_stmt).mappings().first()
+        if not job:
+            return False
         # 同步调度器
         if is_active:
             # 重新加载任务到调度器
-            job_stmt = select(models.cron_jobs_table).where(
-                models.cron_jobs_table.c.id == job_id
-            )
-            job = conn.execute(job_stmt).mappings().first()
-            if job:
-                scheduler.add_job(job)
+            scheduler.add_job(job)
         else:
             # 从调度器移除
-            scheduler.remove_job(job_id)
-
+            scheduler.remove_job(job_id,job.name)
         return True
+
+def remove_job(engine: Engine, job_id: int) -> bool:
+    with engine.begin() as conn:
+        job_stmt = select(models.cron_jobs_table).where(
+            models.cron_jobs_table.c.id == job_id
+        )
+        job = conn.execute(job_stmt).mappings().first()
+
+        if not job:
+            return False
+        stmt = delete(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
+        result = conn.execute(stmt)
+        scheduler.remove_job(job_id,job.name)
+        return result.rowcount > 0  # True 表示删除成功
