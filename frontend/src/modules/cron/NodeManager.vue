@@ -1,47 +1,61 @@
 <template>
   <n-card title="🖥️ 从节点管理" class="mb-6">
     <!-- 添加节点表单 -->
-    <n-form ref="formRef" :model="newNode" :rules="rules" label-placement="left" label-width="auto">
-      <n-grid :cols="2" :x-gap="12" :y-gap="12">
-        <n-form-item path="name" label="节点名称">
-          <n-input v-model:value="newNode.name" placeholder="例如：生产服务器" />
-        </n-form-item>
-        <n-form-item path="host" label="主机地址">
-          <n-input v-model:value="newNode.host" placeholder="IP 或域名" />
-        </n-form-item>
-        <n-form-item path="port" label="SSH端口">
-          <n-input-number v-model:value="newNode.port" :min="1" :max="65535" />
-        </n-form-item>
-        <n-form-item path="username" label="用户名">
-          <n-input v-model:value="newNode.username" placeholder="root / admin" />
-        </n-form-item>
-        <n-form-item path="auth_type" label="认证方式">
-          <n-radio-group v-model:value="newNode.auth_type">
-            <n-space>
-              <n-radio value="password">密码认证</n-radio>
-              <n-radio value="ssh_key">SSH密钥</n-radio>
-            </n-space>
-          </n-radio-group>
-        </n-form-item>
-        <n-form-item v-if="newNode.auth_type === 'password'" path="password" label="密码">
-          <n-input
-              type="password"
-              show-password-on="mousedown"
-              placeholder="密码"
-              v-model:value="newNode.password"
-              :maxlength="8"
-          />
-        </n-form-item>
-        <n-form-item v-else path="private_key" label="私钥">
-          <n-input
-              v-model:value="newNode.private_key"
-              type="textarea"
-              placeholder="粘贴私钥内容（PEM格式）"
-              rows="4"
-          />
-        </n-form-item>
-      </n-grid>
-      <n-space justify="end">
+    <n-form ref="formRef" :model="newNode" :rules="rules" label-placement="left" :label-width="100">
+      <n-row :gutter="[12, 12]">
+        <n-col :span="12">
+          <n-form-item path="name" label="节点名称">
+            <n-input v-model:value="newNode.name" placeholder="例如：生产服务器" />
+          </n-form-item>
+        </n-col>
+        <n-col :span="12">
+          <n-form-item path="host" label="主机地址">
+            <n-input v-model:value="newNode.host" placeholder="IP 或域名" />
+          </n-form-item>
+        </n-col>
+        <n-col :span="12">
+          <n-form-item path="port" label="SSH端口">
+            <n-input-number v-model:value="newNode.port" :min="1" :max="65535" />
+          </n-form-item>
+        </n-col>
+        <n-col :span="12">
+          <n-form-item path="username" label="用户名">
+            <n-input v-model:value="newNode.username" placeholder="root / admin" />
+          </n-form-item>
+        </n-col>
+        <n-col :span="24">
+          <n-form-item path="auth_type" label="认证方式">
+            <n-radio-group v-model:value="newNode.auth_type">
+              <n-space>
+                <n-radio value="password">密码认证</n-radio>
+                <n-radio value="ssh_key">SSH密钥</n-radio>
+              </n-space>
+            </n-radio-group>
+          </n-form-item>
+        </n-col>
+        <n-col :span="24" v-if="newNode.auth_type === 'password'">
+          <n-form-item path="password" label="密码">
+            <n-input
+                type="password"
+                show-password-on="mousedown"
+                placeholder="密码"
+                v-model:value="newNode.password"
+                :maxlength="8"
+            />
+          </n-form-item>
+        </n-col>
+        <n-col :span="24" v-else>
+          <n-form-item path="private_key" label="私钥">
+            <n-input
+                v-model:value="newNode.private_key"
+                type="textarea"
+                placeholder="粘贴私钥内容（PEM格式）"
+                rows="4"
+            />
+          </n-form-item>
+        </n-col>
+      </n-row>
+      <n-space justify="end" class="mt-4">
         <n-button type="primary" @click="addNode">添加节点</n-button>
       </n-space>
     </n-form>
