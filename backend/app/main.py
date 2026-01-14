@@ -3,7 +3,21 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.modules.note.api import router as note_router
 from app.modules.cron.api import router as cron_router
-app = FastAPI(title="Note App")
+from contextlib import asynccontextmanager
+from app.modules.cron.scheduler import scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 启动时
+    scheduler.start()
+    yield
+    # 关闭时
+    scheduler.shutdown()
+
+app = FastAPI(title="Note App", lifespan=lifespan)
+
+# 跨域
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

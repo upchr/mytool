@@ -37,7 +37,9 @@
           <p>{{ note.content }}</p>
           <template #footer>
             <div class="flex justify-end space-x-2">
-              <n-button size="small" type="info" ghost @click="editNote(note)">
+              <n-space>
+
+              <n-button size="small" type="info"  @click="editNote(note)">
                 编辑
               </n-button>
               <n-popconfirm
@@ -46,10 +48,11 @@
                   positive-text="确定"
               >
                 <template #trigger>
-                  <n-button size="small" type="error" ghost>删除</n-button>
+                  <n-button size="small" type="error" >删除</n-button>
                 </template>
                 确定要删除便签 "{{ note.title }}" 吗？
               </n-popconfirm>
+              </n-space>
             </div>
           </template>
         </n-card>

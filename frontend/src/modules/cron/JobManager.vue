@@ -240,7 +240,7 @@ const executeJob = async (job) => {
 const toggleJob = async (job) => {
   try {
     job.is_active = !job.is_active
-    await axios.patch(`/api/cron/jobs/${job.id}`, {is_active: job.is_active})
+    await axios.patch(`/api/cron/jobs/${job.id}/toggle`, {is_active: job.is_active})
     message.success(`任务 "${job.name}" 已${job.is_active ? '启用' : '停用'}`)
   } catch (error) {
     message.error('更新任务状态失败')

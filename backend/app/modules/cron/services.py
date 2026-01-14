@@ -4,6 +4,7 @@ from datetime import datetime
 import threading
 from . import models, schemas
 from .ssh_client import SSHClient
+from .scheduler import scheduler  # 👈 导入全局调度器
 
 # 节点管理
 def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
@@ -124,3 +125,31 @@ def execute_jobs(engine: Engine, request: schemas.ManualExecutionRequest) -> lis
         execution = execute_job(engine, job_id, "manual")
         results.append(execution)
     return results
+
+def toggle_job_status(engine: Engine, job_id: int, is_active: bool) -> bool:
+    """启用/停用任务，并同步调度器"""
+    # 更新数据库
+    stmt = (
+        update(models.cron_jobs_table)
+        .where(models.cron_jobs_table.c.id == job_id)
+        .values(is_active=is_active)
+    )
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        if result.rowcount == 0:
+            return False
+
+        # 同步调度器
+        if is_active:
+            # 重新加载任务到调度器
+            job_stmt = select(models.cron_jobs_table).where(
+                models.cron_jobs_table.c.id == job_id
+            )
+            job = conn.execute(job_stmt).mappings().first()
+            if job:
+                scheduler.add_job(job)
+        else:
+            # 从调度器移除
+            scheduler.remove_job(job_id)
+
+        return True

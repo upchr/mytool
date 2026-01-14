@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.params import Body
+
 from . import services, schemas, models
 from app.core.database import engine, metadata
 from .ssh_client import SSHClient
@@ -72,3 +74,10 @@ def read_execution(execution_id: int):
     if not execution:
         raise HTTPException(status_code=404, detail="执行记录不存在")
     return execution
+
+@router.patch("/jobs/{job_id}/toggle")
+def toggle_job(job_id: int, is_active: bool = Body(..., embed=True)):
+    success = services.toggle_job_status(engine, job_id, is_active)
+    if not success:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return {"status": "ok", "is_active": is_active}

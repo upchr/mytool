@@ -4,5 +4,5 @@ SQLAlchemy==2.0.22
 pydantic>=2.7.0
 
 paramiko==3.4.0
-python-crontab==3.0.0
 python-dateutil==2.8.2
+APScheduler==3.10.4
