@@ -4,7 +4,6 @@ from datetime import datetime
 import threading
 from . import models, schemas
 from .ssh_client import SSHClient
-from app.modules.cron.schemas import JobExecutionRead
 
 # 节点管理
 def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
@@ -27,13 +26,18 @@ def get_node(engine: Engine, node_id: int) -> dict:
         result = conn.execute(stmt).mappings().first()
         return dict(result) if result else None
 
+def delete_node(engine: Engine, node_id: int) -> bool:
+    stmt = delete(models.nodes_table).where(models.nodes_table.c.id == node_id)
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        return result.rowcount > 0  # True 表示删除成功
 # 任务管理
 def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
     stmt = insert(models.cron_jobs_table).values(**job.model_dump())
     with engine.begin() as conn:
         result = conn.execute(stmt)
-        job_id = result.inserted_primary_key[0]
-        return get_cron_job(engine, job_id)
+        # job_id = result.inserted_primary_key[0]
+        # return job_id
 
 def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
     stmt = select(models.cron_jobs_table)
@@ -45,10 +49,11 @@ def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
 
 # 执行任务
 def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> schemas.JobExecutionRead:
+    print(datetime.now())
     # 创建执行记录
     stmt = insert(models.job_executions_table).values(
         job_id=job_id,
-        start_time=datetime.utcnow(),
+        start_time=datetime.now(),
         status="running",
         triggered_by=triggered_by
     )
@@ -82,7 +87,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> sc
             update(models.job_executions_table)
             .where(models.job_executions_table.c.id == execution_id)
             .values(
-                end_time=datetime.utcnow(),
+                end_time=datetime.now(),
                 status=status,
                 output=output[:1000],  # 限制日志长度
                 error=error[:1000]

@@ -5,6 +5,8 @@
 frontend/dist
 frontend/node_modules
 
+*.db
+
 */.gitignore
 
 docker/data

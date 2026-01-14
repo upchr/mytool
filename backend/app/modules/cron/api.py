@@ -40,9 +40,14 @@ def read_node(node_id: int):
     if not node:
         raise HTTPException(status_code=404, detail="节点不存在")
     return node
-
+@router.delete("/nodes/{node_id}", response_model=dict)
+def remove_node(node_id: int):
+    success = services.delete_node(engine, node_id)
+    if success:
+        return {"status": "ok", "id": node_id}
+    return {"status": "not found", "id": node_id}
 # 任务管理
-@router.post("/jobs", response_model=schemas.CronJobRead)
+@router.post("/jobs")
 def create_job(job: schemas.CronJobCreate):
     return services.create_cron_job(engine, job)
 

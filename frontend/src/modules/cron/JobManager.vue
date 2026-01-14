@@ -10,7 +10,7 @@
             @update:value="loadJobs"
             style="width: 200px"
         />
-        <n-button type="primary" @click="addJobModal = true">添加任务</n-button>
+        <n-button type="primary" @click="addJobModal = true;">添加任务</n-button>
       </n-space>
     </n-space>
 
@@ -39,14 +39,16 @@
             </div>
           </template>
 
-          <n-collapse>
-            <n-collapse-item title="命令详情">
-              <pre class="bg-gray-50 p-2 rounded text-sm overflow-x-auto">{{ job.command }}</pre>
+          <n-collapse :default-expanded-names="['1', '2', '3']">
+            <n-collapse-item title="命令详情" name="1">
+              <pre class="bg-gray-50 p-2 rounded text-sm overflow-x-auto">
+              <n-code :code="job.command" language="sh" show-line-numbers />
+              </pre>
             </n-collapse-item>
-            <n-collapse-item v-if="job.description" title="描述">
+            <n-collapse-item v-if="job.description" title="描述" name="2">
               <p>{{ job.description }}</p>
             </n-collapse-item>
-            <n-collapse-item title="执行历史">
+            <n-collapse-item title="执行历史" name="3">
               <n-table :bordered="false" size="small" class="mt-2">
                 <thead>
                 <tr>
@@ -85,7 +87,6 @@
     <!-- 添加任务模态框 -->
     <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" style="width: 600px">
       <n-form ref="jobFormRef" :model="newJob" :rules="jobRules" label-placement="left" label-width="auto">
-        <n-grid :cols="2" :x-gap="12" :y-gap="12">
           <n-form-item path="node_id" label="所属节点">
             <n-select v-model:value="newJob.node_id" :options="nodeOptions" />
           </n-form-item>
@@ -114,7 +115,6 @@
                 rows="2"
             />
           </n-form-item>
-        </n-grid>
         <n-space justify="end" class="mt-4">
           <n-button @click="addJobModal = false">取消</n-button>
           <n-button type="primary" @click="addJob">保存任务</n-button>
@@ -179,7 +179,7 @@ const newJob = ref({
 const jobFormRef = ref(null)
 
 const jobRules = {
-  node_id: {required: true, message: '请选择节点', trigger: ['blur']},
+  // node_id: {required: true, message: '请选择节点', trigger: ['blur']},
   name: {required: true, message: '请输入任务名称', trigger: ['blur']},
   schedule: {required: true, message: '请输入Cron表达式', trigger: ['blur']},
   command: {required: true, message: '请输入执行命令', trigger: ['blur']}
@@ -208,6 +208,7 @@ const loadJobs = async () => {
     const res = await axios.get('/api/cron/jobs', {params})
     jobs.value = res.data
     jobs.value.forEach(job => loadRecentExecutions(job.id))
+    newJob.value.node_id = selectedNode.value
   } catch (error) {
     message.error('加载任务失败')
   }
