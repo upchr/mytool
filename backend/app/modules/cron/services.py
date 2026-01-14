@@ -1,17 +1,23 @@
-from sqlalchemy import select, insert, update, delete, func
+import asyncio
+from sqlalchemy import select, insert, update, delete
 from sqlalchemy.engine import Engine
 from datetime import datetime
 import threading
 from . import models, schemas
 from .ssh_client import SSHClient
-from .scheduler import scheduler  # 👈 导入全局调度器
+from .scheduler import scheduler
+from .ws_manager import ws_manager
+from .execution_manager import execution_manager, ExecutionCancelledError
+
 
 # 节点管理
 def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
-    stmt = insert(models.nodes_table).values(**node.model_dump())
+    data = node.model_dump()
+    stmt = insert(models.nodes_table).values(**data)
     with engine.begin() as conn:
         result = conn.execute(stmt)
-
+        node_id = result.inserted_primary_key[0]
+        return {"id": node_id, **data}  # ✅ 返回完整对象
 
 def get_nodes(engine: Engine, active_only: bool = True) -> list[dict]:
     stmt = select(models.nodes_table)
@@ -31,14 +37,16 @@ def delete_node(engine: Engine, node_id: int) -> bool:
     stmt = delete(models.nodes_table).where(models.nodes_table.c.id == node_id)
     with engine.begin() as conn:
         result = conn.execute(stmt)
-        return result.rowcount > 0  # True 表示删除成功
+        return result.rowcount > 0
+
 # 任务管理
 def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
-    stmt = insert(models.cron_jobs_table).values(**job.model_dump())
+    data = job.model_dump()
+    stmt = insert(models.cron_jobs_table).values(**data)
     with engine.begin() as conn:
         result = conn.execute(stmt)
-        # job_id = result.inserted_primary_key[0]
-        # return job_id
+        job_id = result.inserted_primary_key[0]
+        return {"id": job_id, **data}  # ✅ 返回完整对象
 
 def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
     stmt = select(models.cron_jobs_table)
@@ -49,7 +57,19 @@ def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
         return [dict(row) for row in result.mappings()]
 
 # 执行任务
-def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> schemas.JobExecutionRead:
+def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> dict:
+    # 获取任务和节点（提前验证）
+    with engine.connect() as conn:
+        job_stmt = select(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
+        job = conn.execute(job_stmt).mappings().first()
+        if not job:
+            raise ValueError(f"任务 {job_id} 不存在")
+
+        node_stmt = select(models.nodes_table).where(models.nodes_table.c.id == job['node_id'])
+        node = conn.execute(node_stmt).mappings().first()
+        if not node:
+            raise ValueError(f"任务 {job_id} 的节点不存在")
+
     # 创建执行记录
     stmt = insert(models.job_executions_table).values(
         job_id=job_id,
@@ -60,44 +80,163 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> sc
     with engine.begin() as conn:
         result = conn.execute(stmt)
         execution_id = result.inserted_primary_key[0]
-
-        # 获取任务详情
-        job_stmt = select(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
-        job = conn.execute(job_stmt).mappings().first()
-
-        # 获取节点信息
-        node_stmt = select(models.nodes_table).where(models.nodes_table.c.id == job['node_id'])
-        node = conn.execute(node_stmt).mappings().first()
-        print(f"✅ 任务调度：时间（{datetime.now().replace(second=0, microsecond=0)}），设备（{node.name}），任务（{job.name}），触发方式（{triggered_by}）")
+        print(f"✅ 任务调度：时间（{datetime.now().replace(second=0, microsecond=0)}），设备（{node['name']}），任务（{job['name']}），触发方式（{triggered_by}）")
 
     # 异步执行
+    # def run_task():
+    #     try:
+    #         ssh = SSHClient(schemas.NodeRead(**node))
+    #         ssh.connect()
+    #
+    #         initial_log = {
+    #             "status": "running",
+    #             "output": "正在连接...\n",
+    #             "error": "",
+    #             "end_time": None
+    #         }
+    #         ws_manager.send_log_sync(execution_id, initial_log)
+    #
+    #         _, stdout, stderr = ssh.client.exec_command(job['command'], timeout=60)
+    #         output_buffer = []
+    #         error_buffer = []
+    #
+    #         while True:
+    #             if stdout.channel.recv_ready():
+    #                 line = stdout.channel.recv(1024).decode('utf-8', errors='replace')
+    #                 if line:
+    #                     output_buffer.append(line)
+    #                     log_data = {
+    #                         "status": "running",
+    #                         "output": "".join(output_buffer),
+    #                         "error": "".join(error_buffer),
+    #                         "end_time": None
+    #                     }
+    #                     ws_manager.send_log_sync(execution_id, log_data)
+    #
+    #             if stderr.channel.recv_stderr_ready():
+    #                 line = stderr.channel.recv_stderr(1024).decode('utf-8', errors='replace')
+    #                 if line:
+    #                     error_buffer.append(line)
+    #                     log_data = {
+    #                         "status": "running",
+    #                         "output": "".join(output_buffer),
+    #                         "error": "".join(error_buffer),
+    #                         "end_time": None
+    #                     }
+    #                     ws_manager.send_log_sync(execution_id, log_data)
+    #
+    #             if stdout.channel.exit_status_ready():
+    #                 break
+    #
+    #         exit_code = stdout.channel.recv_exit_status()
+    #         status = "success" if exit_code == 0 else "failed"
+    #         final_log = {
+    #             "status": status,
+    #             "output": "".join(output_buffer),
+    #             "error": "".join(error_buffer),
+    #             "end_time": datetime.now().isoformat()
+    #         }
+    #         ws_manager.send_log_sync(execution_id, final_log)
+    #         _update_execution_log(engine, execution_id, "".join(output_buffer), "".join(error_buffer), status)
+    #
+    #     except Exception as e:
+    #         error_msg = str(e)
+    #         final_log = {
+    #             "status": "failed",
+    #             "output": "",
+    #             "error": error_msg,
+    #             "end_time": datetime.now().isoformat()
+    #         }
+    #         ws_manager.send_log_sync(execution_id, final_log)
+    #         _update_execution_log(engine, execution_id, "", error_msg, "failed")
+    #     finally:
+    #         ssh.close()
     def run_task():
-        ssh = SSHClient(schemas.NodeRead(**node))
+        ssh = None
         try:
+            # 创建停止事件
+            execution_manager.create_execution(execution_id)
+
+            ssh = SSHClient(schemas.NodeRead(**node))
             ssh.connect()
-            exit_code, output, error = ssh.execute_command(job['command'])
+
+            initial_log = {"status": "running", "output": "正在连接...\n", "error": "", "end_time": None}
+            ws_manager.send_log_sync(execution_id, initial_log)
+
+            _, stdout, stderr = ssh.client.exec_command(job['command'], timeout=60)
+            output_buffer = []
+            error_buffer = []
+
+            while True:
+                # 检查是否需要中断
+                if execution_manager.should_stop(execution_id):
+                    raise ExecutionCancelledError("任务已被用户中断")
+                if stdout.channel.recv_ready():
+                    line = stdout.channel.recv(1024).decode('utf-8', errors='replace')
+                    if line:
+                        output_buffer.append(line)
+                        log_data = {
+                            "status": "running",
+                            "output": "".join(output_buffer),
+                            "error": "".join(error_buffer),
+                            "end_time": None
+                        }
+                        ws_manager.send_log_sync(execution_id, log_data)
+
+                if stderr.channel.recv_stderr_ready():
+                    line = stderr.channel.recv_stderr(1024).decode('utf-8', errors='replace')
+                    if line:
+                        error_buffer.append(line)
+                        log_data = {
+                            "status": "running",
+                            "output": "".join(output_buffer),
+                            "error": "".join(error_buffer),
+                            "end_time": None
+                        }
+                        ws_manager.send_log_sync(execution_id, log_data)
+
+                if stdout.channel.exit_status_ready():
+                    break
+
+            exit_code = stdout.channel.recv_exit_status()
             status = "success" if exit_code == 0 else "failed"
+            final_log = {
+                "status": status,
+                "output": "".join(output_buffer),
+                "error": "".join(error_buffer),
+                "end_time": datetime.now().isoformat()
+            }
+            ws_manager.send_log_sync(execution_id, final_log)
+            _update_execution_log(engine, execution_id, "".join(output_buffer), "".join(error_buffer), status)
+        except ExecutionCancelledError as e:
+            # 👇 用户中断：状态 = cancelled
+            error_msg = str(e)
+            final_log = {
+                "status": "cancelled",
+                "output": "".join(output_buffer) if 'output_buffer' in locals() else "",
+                "error": error_msg,
+                "end_time": datetime.now().isoformat()
+            }
+            ws_manager.send_log_sync(execution_id, final_log)
+            _update_execution_log(engine, execution_id, final_log["output"], error_msg, "cancelled")
         except Exception as e:
-            exit_code, output, error = 1, "", str(e)
-            status = "failed"
+            error_msg = str(e)
+            final_log = {
+                "status": "failed",
+                "output": "",
+                "error": error_msg,
+                "end_time": datetime.now().isoformat()
+            }
+            ws_manager.send_log_sync(execution_id, final_log)
+            _update_execution_log(engine, execution_id, "", error_msg, "failed")
         finally:
-            ssh.close()
-
-        # 更新执行记录
-        update_stmt = (
-            update(models.job_executions_table)
-            .where(models.job_executions_table.c.id == execution_id)
-            .values(
-                end_time=datetime.now(),
-                status=status,
-                output=output[:1000],  # 限制日志长度
-                error=error[:1000]
-            )
-        )
-        with engine.begin() as conn:
-            conn.execute(update_stmt)
-
+            if ssh:
+                ssh.close()
+            # 清理资源
+            execution_manager.cleanup(execution_id)
     threading.Thread(target=run_task, daemon=True).start()
+
+    # ✅ 返回初始执行记录
     return get_execution(engine, execution_id)
 
 # 获取执行记录
@@ -127,8 +266,6 @@ def execute_jobs(engine: Engine, request: schemas.ManualExecutionRequest) -> lis
     return results
 
 def toggle_job_status(engine: Engine, job_id: int, is_active: bool) -> bool:
-    """启用/停用任务，并同步调度器"""
-    # 更新数据库
     stmt = (
         update(models.cron_jobs_table)
         .where(models.cron_jobs_table.c.id == job_id)
@@ -139,31 +276,44 @@ def toggle_job_status(engine: Engine, job_id: int, is_active: bool) -> bool:
         if result.rowcount == 0:
             return False
 
-        job_stmt = select(models.cron_jobs_table).where(
-            models.cron_jobs_table.c.id == job_id
-        )
+        job_stmt = select(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
         job = conn.execute(job_stmt).mappings().first()
         if not job:
             return False
-        # 同步调度器
+
         if is_active:
-            # 重新加载任务到调度器
             scheduler.add_job(job)
         else:
-            # 从调度器移除
-            scheduler.remove_job(job_id,job.name)
+            scheduler.remove_job(job_id, job['name'])
         return True
 
 def remove_job(engine: Engine, job_id: int) -> bool:
     with engine.begin() as conn:
-        job_stmt = select(models.cron_jobs_table).where(
-            models.cron_jobs_table.c.id == job_id
-        )
+        job_stmt = select(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
         job = conn.execute(job_stmt).mappings().first()
-
         if not job:
             return False
+
         stmt = delete(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
         result = conn.execute(stmt)
-        scheduler.remove_job(job_id,job.name)
-        return result.rowcount > 0  # True 表示删除成功
+        scheduler.remove_job(job_id, job['name'])
+        return result.rowcount > 0
+
+# ✅ 修正参数顺序：engine 放第一位
+def _update_execution_log(engine: Engine, execution_id: int, output: str, error: str, status: str):
+    max_length = 5000
+    truncated_output = output[-max_length:] if len(output) > max_length else output
+    truncated_error = error[-max_length:] if len(error) > max_length else error
+
+    stmt = (
+        update(models.job_executions_table)
+        .where(models.job_executions_table.c.id == execution_id)
+        .values(
+            output=truncated_output,
+            error=truncated_error,
+            status=status,
+            end_time=datetime.now() if status in ["success", "failed"] else None
+        )
+    )
+    with engine.begin() as conn:
+        conn.execute(stmt)

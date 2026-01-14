@@ -1,14 +1,19 @@
 # backend/app/main.py
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.modules.note.api import router as note_router
 from app.modules.cron.api import router as cron_router
 from contextlib import asynccontextmanager
 from app.modules.cron.scheduler import scheduler
+from app.modules.cron.ws_manager import ws_manager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ws_manager.set_event_loop(asyncio.get_running_loop())
+
     # 启动时
     scheduler.start()
     yield

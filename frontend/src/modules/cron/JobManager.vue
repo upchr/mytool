@@ -72,7 +72,9 @@
                             ? 'success'
                             : exec.status === 'failed'
                             ? 'error'
-                            : 'warning'
+                            : exec.status === 'cancelled'
+                            ? 'warning'
+                            : 'info'
                         "
                         size="small"
                     >
@@ -129,38 +131,72 @@
     </n-modal>
 
     <!-- 日志模态框 -->
-    <n-modal v-model:show="logModal" preset="card" title="执行日志" style="width: 800px; max-height: 600px; overflow-y: auto">
-      <n-space vertical>
-        <n-text depth="3">执行 ID: {{ selectedExecution?.id }}</n-text>
-        <n-text depth="3">开始时间: {{ new Date(selectedExecution?.start_time).toLocaleString() }}</n-text>
-        <n-text depth="3" v-if="selectedExecution?.end_time">
-          结束时间: {{ new Date(selectedExecution?.end_time).toLocaleString() }}
-        </n-text>
-        <n-text :type="selectedExecution?.status === 'success' ? 'success' : 'error'">
-          状态: {{ selectedExecution?.status }}
-        </n-text>
-        <n-text type="info">触发方式: {{ selectedExecution?.triggered_by }}</n-text>
+    <n-modal
+        v-model:show="logModal"
+        @after-leave="closeLogModal"
+        preset="card"
+        title="执行日志"
+        style="width: 1200px; max-height: 80vh;min-height: 60vh"
+    >
+      <div class="space-y-4">
+        <div class="flex justify-between items-center" style="margin-bottom: 20px">
+          <n-tag :type="getLogStatusType(selectedExecution?.status)">
+            {{ selectedExecution?.status }}
+          </n-tag>
+          <n-button
+              v-if="['running', 'pending'].includes(selectedExecution?.status)"
+              size="small"
+              type="error"
+              style="margin-left: 10px"
+              @click="stopExecution"
+          >
+            中断执行
+          </n-button>
+          <n-text depth="3">执行ID: {{ selectedExecution?.id }}</n-text>
+        </div>
 
-        <n-divider />
+        <!-- STDOUT -->
+        <div>
+          <n-text depth="3">STDOUT:</n-text>
+          <div
+              ref="stdoutRef"
+              class="bg-gray-50 p-2 rounded text-sm font-mono"
+              style="
+              height: 25vh;
+              overflow-y: auto;
+              overflow-x: auto;
+              white-space: pre-wrap;
+              word-break: break-word;
+      "
+          >
+            {{ selectedExecution?.output || '无输出' }}
+          </div>
+        </div>
 
-        <n-text depth="3">STDOUT:</n-text>
-        <pre class="bg-gray-50 p-2 rounded text-sm overflow-x-auto">
-{{ selectedExecution?.output || '无输出' }}
-        </pre>
-
-        <n-divider />
-
-        <n-text depth="3">STDERR:</n-text>
-        <pre class="bg-red-50 p-2 rounded text-sm overflow-x-auto text-red-700">
-{{ selectedExecution?.error || '无错误' }}
-        </pre>
-      </n-space>
+        <!-- STDERR -->
+        <div>
+          <n-text depth="3">STDERR:</n-text>
+          <div
+              ref="stderrRef"
+              class="bg-red-50 p-2 rounded text-sm font-mono text-red-700"
+              style="
+                height: 25vh;
+                overflow-y: auto;
+                overflow-x: auto;
+                white-space: pre-wrap;
+                word-break: break-word;
+              "
+          >
+            {{ selectedExecution?.error || '无错误' }}
+          </div>
+        </div>
+      </div>
     </n-modal>
   </n-card>
 </template>
 
 <script setup>
-import {ref, onMounted, computed} from 'vue'
+import {ref, onMounted, onUnmounted, computed, nextTick} from 'vue'
 import axios from 'axios'
 import {useMessage} from 'naive-ui'
 
@@ -254,10 +290,10 @@ const toggleJob = async (job) => {
   }
 }
 
-const showLog = (execution) => {
-  selectedExecution.value = execution
-  logModal.value = true
-}
+// const showLog = (execution) => {
+//   selectedExecution.value = execution
+//   logModal.value = true
+// }
 
 const getNodeName = (nodeId) => {
   const node = nodes.value.find(n => n.id === nodeId)
@@ -298,8 +334,102 @@ const deleteJob = async (job) => {
   }
 }
 
+const stopExecution = async () => {
+  if (!selectedExecution.value) return
+
+  try {
+    await axios.post(`/api/cron/executions/${selectedExecution.value.id}/stop`)
+    message.info('中断请求已发送')
+
+    // 更新本地状态（可选）
+    if (selectedExecution.value) {
+      selectedExecution.value.status = 'cancelled'
+    }
+
+    logModal.value = false
+    await loadJobs()
+  } catch (error) {
+    message.error('中断失败')
+  }
+}
+
+
+
+const stdoutRef = ref(null)
+const stderrRef = ref(null)
+let ws = null
+
+const showLog = (execution) => {
+  selectedExecution.value = { ...execution }
+  logModal.value = true
+
+  // 建立 WebSocket 连接
+  connectWebSocket(execution.id)
+}
+
+const connectWebSocket = (executionId) => {
+  const wsUrl = `/api/cron/executions/${executionId}/logs`
+  ws = new WebSocket(wsUrl)
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data)
+    // 更新日志
+    if (selectedExecution.value && selectedExecution.value.id === executionId) {
+      selectedExecution.value.status = data.status
+      selectedExecution.value.output = data.output
+      selectedExecution.value.error = data.error
+      if (data.end_time) {
+        selectedExecution.value.end_time = data.end_time
+      }
+
+      // 触发自动滚动
+      nextTick(() => {
+        scrollToBottom(stdoutRef.value)
+        scrollToBottom(stderrRef.value)
+      })
+    }
+  }
+
+  ws.onclose = () => {
+    console.log('WebSocket closed')
+  }
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error)
+  }
+}
+
+const scrollToBottom = (element) => {
+  if (element) {
+    element.scrollTop = element.scrollHeight
+  }
+}
+
+const closeLogModal = () => {
+  logModal.value = false
+  // 关闭 WebSocket
+  if (ws) {
+    ws.close()
+    ws = null
+  }
+}
+
+const getLogStatusType = (status) => {
+  switch (status) {
+    case 'success': return 'success'
+    case 'failed': return 'error'
+    case 'running': return 'info'
+    case 'cancelled': return 'warning'
+    default: return 'default'
+  }
+}
 onMounted(async () => {
   await loadNodes()
   await loadJobs()
+})
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+  }
 })
 </script>

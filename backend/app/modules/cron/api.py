@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,WebSocket
 from fastapi.params import Body
-
 from . import services, schemas, models
 from app.core.database import engine, metadata
 from .ssh_client import SSHClient
+from .ws_manager import ws_manager
 
 router = APIRouter(prefix="/cron", tags=["cron"])
 
@@ -14,6 +14,15 @@ metadata.create_all(engine, tables=[
     models.job_executions_table
 ])
 
+@router.websocket("/executions/{execution_id}/logs")
+async def execution_logs_websocket(websocket: WebSocket, execution_id: int):
+    await ws_manager.connect(websocket, execution_id)
+    try:
+        while True:
+            # 保持连接（实际日志由后台任务推送）
+            await websocket.receive_text()
+    except Exception:
+        ws_manager.disconnect(websocket, execution_id)
 # 节点管理
 @router.post("/nodes")
 def create_node(node: schemas.NodeCreate):
@@ -74,6 +83,11 @@ def read_execution(execution_id: int):
     if not execution:
         raise HTTPException(status_code=404, detail="执行记录不存在")
     return execution
+@router.post("/executions/{execution_id}/stop")
+def stop_execution(execution_id: int):
+    from .execution_manager import execution_manager
+    execution_manager.stop_execution(execution_id)
+    return {"status": "ok", "message": "中断请求已发送"}
 
 @router.patch("/jobs/{job_id}/toggle")
 def toggle_job(job_id: int, is_active: bool = Body(..., embed=True)):
