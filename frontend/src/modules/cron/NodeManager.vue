@@ -62,9 +62,12 @@
     <n-space justify="end" class="mt-4" style="margin-top: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
-        <span>已选择 {{ selectedNodeIds.length }} 个节点</span>
+        <n-space justify="end" >已选择 {{ selectedNodeIds.length }} 个节点</n-space>
         <n-space>
-          <n-button size="small" @click="cancelBatch">取消</n-button>
+          <n-button  size="small" type="info" @click="toggleAllNodesAdd"
+          >
+            {{ allNodesSelectedAdd ? '取消全选' : '全选' }}
+          </n-button>
           <n-popconfirm
               @positive-click="batchDeleteNodes"
               negative-text="取消"
@@ -75,6 +78,7 @@
             </template>
             确定要删除选中的 {{ selectedNodeIds.length }} 个节点吗？
           </n-popconfirm>
+          <n-button size="small" @click="cancelBatch">取消</n-button>
         </n-space>
       </div>
     </n-space>
@@ -140,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import {ref, onMounted, computed} from 'vue'
 import axios from 'axios'
 import { useMessage } from 'naive-ui'
 
@@ -284,5 +288,27 @@ const handleCardClick = (node) => {
   const isChecked = selectedNodeIds.value.includes(node.id)
   toggleNodeSelection(node.id, !isChecked)
 }
+
+const allNodesSelectedAdd = computed(() => {
+  const activeNodes = nodes.value
+  return (
+      activeNodes.length > 0 &&
+      selectedNodeIds.value.length === activeNodes.length &&
+      activeNodes.every(node => selectedNodeIds.value.includes(node.id))
+  )
+})
+
+// 全选/取消全选
+const toggleAllNodesAdd = () => {
+  if (allNodesSelectedAdd.value) {
+    selectedNodeIds.value = []
+  } else {
+    // 只选择活跃节点
+    selectedNodeIds.value = nodes.value
+        .map(n => n.id)
+  }
+}
+
+
 onMounted(loadNodes)
 </script>
