@@ -41,9 +41,9 @@ def test_node_connection(node_id: int):
         return {"success": True, "message": "连接成功"}
     except Exception as e:
         return {"success": False, "message": str(e)}
-@router.get("/nodes", response_model=list[schemas.NodeRead])
-def read_nodes():
-    return services.get_nodes(engine)
+@router.get("/nodes/{active_only}", response_model=list[schemas.NodeRead])
+def read_nodes(active_only: bool):
+    return services.get_nodes(engine,active_only)
 
 @router.get("/nodes/{node_id}", response_model=schemas.NodeRead)
 def read_node(node_id: int):
@@ -57,10 +57,31 @@ def remove_node(node_id: int):
     if success:
         return {"status": "ok", "id": node_id}
     return {"status": "not found", "id": node_id}
+@router.patch("/nodes/{node_id}/toggle")
+def toggle_node(node_id: int, is_active: bool = Body(..., embed=True)):
+    success = services.toggle_node_status(engine, node_id, is_active)
+    if not success:
+        raise HTTPException(status_code=404, detail="节点不存在")
+    return {"status": "ok", "is_active": is_active}
+
+
+
+
+
 # 任务管理
 @router.post("/jobs")
-def create_job(job: schemas.CronJobCreate):
-    return services.create_cron_job(engine, job)
+def create_cron_job(job: schemas.CronJobCreate):
+    """为多个节点创建相同任务"""
+    results = []
+    for node_id in job.node_ids:
+        # 为每个节点创建独立任务
+        job_data = job.model_dump()
+        job_data['node_id'] = node_id  # 单个节点ID
+        del job_data['node_ids']       # 移除列表字段
+
+        result = services.create_cron_job(engine, schemas.CronJobCreateSingle(**job_data))
+        results.append(result)
+    return results
 
 @router.get("/jobs", response_model=list[schemas.CronJobRead])
 def read_jobs(node_id: int = None):

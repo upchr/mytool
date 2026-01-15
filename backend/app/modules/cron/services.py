@@ -1,4 +1,6 @@
 import asyncio
+
+from croniter import croniter
 from sqlalchemy import select, insert, update, delete
 from sqlalchemy.engine import Engine
 from datetime import datetime
@@ -19,7 +21,7 @@ def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
         node_id = result.inserted_primary_key[0]
         return {"id": node_id, **data}  # ✅ 返回完整对象
 
-def get_nodes(engine: Engine, active_only: bool = True) -> list[dict]:
+def get_nodes(engine: Engine, active_only: bool) -> list[dict]:
     stmt = select(models.nodes_table)
     if active_only:
         stmt = stmt.where(models.nodes_table.c.is_active == True)
@@ -38,7 +40,34 @@ def delete_node(engine: Engine, node_id: int) -> bool:
     with engine.begin() as conn:
         result = conn.execute(stmt)
         return result.rowcount > 0
+def toggle_node_status(engine: Engine, node_id: int, is_active: bool) -> bool:
+    with engine.begin() as conn:
+        # 1️⃣ 更新节点状态
+        result = conn.execute(
+            update(models.nodes_table)
+            .where(models.nodes_table.c.id == node_id)
+            .values(is_active=is_active)
+        )
+        if result.rowcount == 0:
+            return False
 
+        # 2️⃣ 查询该节点下所有任务
+        jobs = conn.execute(
+            select(models.cron_jobs_table)
+            .where(models.cron_jobs_table.c.node_id == node_id)
+        ).mappings().all()
+
+    # 3️⃣ 同步调度器（事务外）
+    for job in jobs:
+        if is_active:
+            # 节点恢复：只恢复原本启用的任务
+            if job["is_active"]:
+                scheduler.add_job(job)
+        else:
+            # 节点停用：全部从调度器移除
+            scheduler.remove_job(job["id"], job["name"])
+
+    return True
 # 任务管理
 def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
     data = job.model_dump()
@@ -49,12 +78,37 @@ def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
         return {"id": job_id, **data}  # ✅ 返回完整对象
 
 def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
-    stmt = select(models.cron_jobs_table)
-    if node_id:
+    stmt = (
+        select(models.cron_jobs_table)
+        .join(
+            models.nodes_table,
+            models.cron_jobs_table.c.node_id == models.nodes_table.c.id
+        )
+        .where(models.nodes_table.c.is_active.is_(True))
+    )
+
+    if node_id is not None:
         stmt = stmt.where(models.cron_jobs_table.c.node_id == node_id)
     with engine.connect() as conn:
         result = conn.execute(stmt)
-        return [dict(row) for row in result.mappings()]
+        jobs = []
+        for row in result.mappings():
+            job_dict = dict(row)
+
+            # 计算下次执行时间
+            try:
+                if job_dict['is_active']:
+                    cron = croniter(job_dict['schedule'], datetime.now())
+                    next_run = cron.get_next(datetime)
+                    job_dict['next_run'] = next_run.isoformat()
+                else:
+                    job_dict['next_run'] = None
+            except Exception:
+                job_dict['next_run'] = None
+
+            jobs.append(job_dict)
+        return jobs
+        # return [dict(row) for row in result.mappings()]
 
 # 执行任务
 def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> dict:

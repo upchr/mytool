@@ -1,10 +1,10 @@
 services:
   note-app:
-    image: mytool/note:1.0
+    image: chrplus/toolsplus:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: note
+    container_name: toolsplus
     ports:
       - "80:80"
     volumes:

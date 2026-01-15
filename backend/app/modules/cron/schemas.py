@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field,  field_validator
 from datetime import datetime
 from typing import Optional, List
-
+from croniter import croniter
 # 节点相关
 class NodeBase(BaseModel):
     name: str
@@ -30,12 +30,32 @@ class CronJobBase(BaseModel):
     description: Optional[str] = None
     is_active: bool = True
 
-class CronJobCreate(CronJobBase):
-    pass
+class CronJobCreate(BaseModel):
+    node_ids: list[int]  # 👈 改为列表
+    name: str
+    schedule: str
+    command: str
+    description: str = ""
+    is_active: bool = False
+
+    @field_validator('schedule')
+    def validate_cron(cls, v):
+        try:
+            croniter(v)
+            return v
+        except:
+            raise ValueError('无效的Cron表达式')
+class CronJobCreateSingle(BaseModel):
+    node_id: int  # 单个节点
+    name: str
+    schedule: str
+    command: str
+    description: str = ""
+    is_active: bool = False
 
 class CronJobRead(CronJobBase):
     id: int
-
+    next_run: Optional[datetime] = None
     model_config = {"from_attributes": True}
 
 # 执行日志

@@ -16,15 +16,33 @@
 
     <!-- 任务列表 -->
     <n-empty v-if="jobs.length === 0" description="暂无任务" />
-    <n-collapse v-else>
-      <n-collapse-item v-for="job in jobs" :key="job.id" :title="getNodeName(job.node_id)+'：'+job.name"  class="mb-2">
+    <n-collapse v-else @item-header-click="handleItemHeaderClick">
+      <n-collapse-item v-for="job in jobs" :key="job.id" :title="getJobTitle(job)"  class="mb-2" :name="job.id">
         <n-card :bordered="false" class="shadow-sm">
           <template #header>
             <div class="flex justify-between items-start">
               <div style="margin-bottom: 10px">
                 <span class="ml-2 text-xs text-gray-500">{{ getNodeName(job.node_id) }}：</span>
                 <span class="font-bold">{{ job.name }}</span>
-                <n-tag size="small" class="ml-2" type="info" style="margin-left: 10px">{{ job.schedule }}</n-tag>
+                <n-tag size="small" class="ml-2" type="info" style="margin-left: 10px;margin-right: 10px">{{ job.schedule }}</n-tag>
+
+                <!-- 下次执行时间标签 -->
+                <n-tag
+                    v-if="job.next_run"
+                    size="small"
+                    type="success"
+                    class="ml-2"
+                >
+                  下次：{{formatDate(job.next_run) }}
+                </n-tag>
+                <n-tag
+                    v-else-if="!job.is_active"
+                    size="small"
+                    type="warning"
+                    class="ml-2"
+                >
+                  已停用
+                </n-tag>
               </div>
               <n-space>
                 <n-button size="small" type="info" @click="executeJob(job)">立即执行</n-button>
@@ -55,37 +73,46 @@
               <p>{{ job.description }}</p>
             </n-collapse-item>
             <n-collapse-item title="执行历史" name="3">
-              <n-table :bordered="false" size="small" class="mt-2">
-                <thead>
-                <tr>
-                  <th>状态</th>
-                  <th>时间</th>
-                  <th>触发方式</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="exec in getRecentExecutions(job.id)" :key="exec.id" @click="showLog(exec)">
-                  <td>
-                    <n-tag
-                        :type="
-                          exec.status === 'success'
-                            ? 'success'
-                            : exec.status === 'failed'
-                            ? 'error'
-                            : exec.status === 'cancelled'
-                            ? 'warning'
-                            : 'info'
-                        "
-                        size="small"
-                    >
-                      {{ exec.status }}
-                    </n-tag>
-                  </td>
-                  <td>{{ new Date(exec.start_time).toLocaleString() }}</td>
-                  <td><n-tag size="small" type="info">{{ exec.triggered_by }}</n-tag></td>
-                </tr>
-                </tbody>
-              </n-table>
+              <div
+                  style="
+                  max-height: 40vh;
+                  overflow-y: auto;
+                  border: 1px solid #f0f0f0;
+                  border-radius: 6px;
+                "
+                >
+                <n-table :bordered="false" size="small" class="mt-2">
+                  <thead>
+                  <tr>
+                    <th>状态</th>
+                    <th>时间</th>
+                    <th>触发方式</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr v-for="exec in getRecentExecutions(job.id)" :key="exec.id" @click="showLog(exec)">
+                    <td>
+                      <n-tag
+                          :type="
+                            exec.status === 'success'
+                              ? 'success'
+                              : exec.status === 'failed'
+                              ? 'error'
+                              : exec.status === 'cancelled'
+                              ? 'warning'
+                              : 'info'
+                          "
+                          size="small"
+                      >
+                        {{ exec.status }}
+                      </n-tag>
+                    </td>
+                    <td>{{ new Date(exec.start_time).toLocaleString() }}</td>
+                    <td><n-tag size="small" type="info">{{ exec.triggered_by }}</n-tag></td>
+                  </tr>
+                  </tbody>
+                </n-table>
+              </div>
             </n-collapse-item>
           </n-collapse>
         </n-card>
@@ -96,15 +123,24 @@
     <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" style="width: 600px">
       <n-form ref="jobFormRef" :model="newJob" :rules="jobRules" label-placement="left" label-width="auto">
           <n-form-item path="node_id" label="所属节点">
-            <n-select v-model:value="newJob.node_id" :options="nodeOptions" />
+<!--            <n-select v-model:value="newJob.node_id" :options="nodeOptions" />-->
+            <n-select
+                v-model:value="newJob.node_ids"
+                :options="nodeOptions.filter(opt => opt.value !== '')"
+                multiple
+                placeholder="请选择节点"
+            />
           </n-form-item>
           <n-form-item path="name" label="任务名称">
             <n-input v-model:value="newJob.name" placeholder="例如：每日备份" />
           </n-form-item>
           <n-form-item path="schedule" label="Cron表达式">
-            <n-input v-model:value="newJob.schedule" placeholder="* * * * *" />
+            <n-input v-model:value="newJob.schedule" placeholder="* * * * *【分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)】" />
             <template #footer>
-              <n-text depth="3" class="text-xs">分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)</n-text>
+              <n-text depth="3" class="text-xs">
+                格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-6)<br/>
+                示例：0 2 * * * → 每天凌晨2点
+              </n-text>
             </template>
           </n-form-item>
           <n-form-item path="command" label="执行命令">
@@ -210,7 +246,7 @@ const logModal = ref(false)
 const selectedExecution = ref(null)
 
 const newJob = ref({
-  node_id: '',
+  node_ids: [],
   name: '',
   schedule: '',
   command: '',
@@ -220,13 +256,31 @@ const newJob = ref({
 
 const jobFormRef = ref(null)
 
-const jobRules = {
-  // node_id: {required: true, message: '请选择节点', trigger: ['blur']},
-  name: {required: true, message: '请输入任务名称', trigger: ['blur']},
-  schedule: {required: true, message: '请输入Cron表达式', trigger: ['blur']},
-  command: {required: true, message: '请输入执行命令', trigger: ['blur']}
-}
+// Cron 表达式正则（支持标准 5 位格式）
+const CRON_REGEX = /^(\*|([0-5]?\d)(\-([0-5]?\d))?(\,([0-5]?\d)(\-([0-5]?\d))?)*)\s+(\*|([01]?\d|2[0-3])(\-([01]?\d|2[0-3]))?(\,([01]?\d|2[0-3])(\-([01]?\d|2[0-3]))?)*)\s+(\*|([1-9]|[12]\d|3[01])(\-([1-9]|[12]\d|3[01]))?(\,([1-9]|[12]\d|3[01])(\-([1-9]|[12]\d|3[01]))?)*)\s+(\*|([1-9]|1[0-2])(\-([1-9]|1[0-2]))?(\,([1-9]|1[0-2])(\-([1-9]|1[0-2]))?)*)\s+(\*|([0-6])(\-([0-6]))?(\,([0-6])(\-([0-6]))?)*)$/
 
+const jobRules = {
+  node_ids: [
+    {
+      required: true,
+      validator: (rule, value) => {
+        return value && value.length > 0
+      },
+      message: '请选择至少一个节点',
+      trigger: ['blur', 'change']
+    }
+  ],
+  name: { required: true, message: '请输入任务名称', trigger: ['blur'] },
+  schedule: [
+    { required: true, message: '请输入Cron表达式', trigger: ['blur'] },
+    {
+      validator: (rule, value) => CRON_REGEX.test(value.trim()),
+      message: 'Cron表达式格式错误（分 时 日 月 周）',
+      trigger: ['blur']
+    }
+  ],
+  command: { required: true, message: '请输入执行命令', trigger: ['blur'] }
+}
 const nodeOptions = computed(() => [
   {label: '所有节点', value: ''},
   ...nodes.value.map(node => ({
@@ -237,12 +291,50 @@ const nodeOptions = computed(() => [
 
 const loadNodes = async () => {
   try {
-    const res = await axios.get('/api/cron/nodes')
+    const res = await axios.get('/api/cron/nodes/true')
     nodes.value = res.data
   } catch (error) {
     message.error('加载节点失败')
   }
 }
+// 添加响应式变量
+const expandedJobs = ref(new Set()) // 存储已展开的任务ID
+
+// 监听展开/折叠事件
+const handleItemHeaderClick = (node) => {
+  if (node.expanded && !executions.value[node.name]) {
+    // 只在首次展开时加载
+    loadRecentExecutions(node.name)
+  }
+  if (node.expanded) {
+    expandedJobs.value.add(node.name)
+  } else {
+    expandedJobs.value.delete(node.name)
+  }
+}
+const getRecentExecutions = (jobId) => {
+  return executions.value[jobId] || []
+}
+
+// 防止重复请求
+const loadRecentExecutions = async (jobId,loadForce=false) => {
+  // 如果已有数据或正在加载，直接返回
+  if (!loadForce && executions.value[jobId]) return
+
+  try {
+    // 标记为正在加载（可选）
+    executions.value[jobId] = []
+
+    const res = await axios.get(`/api/cron/jobs/${jobId}/executions`, {
+      params: { limit: 50 } // 增加限制数量
+    })
+    executions.value[jobId] = res.data
+  } catch (error) {
+    console.error(`加载任务 ${jobId} 的执行记录失败:`, error)
+    executions.value[jobId] = [] // 确保有默认值
+  }
+}
+
 
 const loadJobs = async () => {
   try {
@@ -250,35 +342,83 @@ const loadJobs = async () => {
     const params = selectedNode.value ? {node_id: selectedNode.value} : {}
     const res = await axios.get('/api/cron/jobs', {params})
     jobs.value = res.data
-    jobs.value.forEach(job => loadRecentExecutions(job.id))
+    // jobs.value.forEach(job => loadRecentExecutions(job.id))
     newJob.value.node_id = selectedNode.value
   } catch (error) {
     message.error('加载任务失败')
   }
 }
 
-const loadRecentExecutions = async (jobId) => {
-  try {
-    const res = await axios.get(`/api/cron/jobs/${jobId}/executions`, {
-      params: {limit: 5}
-    })
-    executions.value[jobId] = res.data
-  } catch (error) {
-    console.error(`加载任务 ${jobId} 的执行记录失败:`, error)
-  }
-}
-
+// const executeJob = async (job) => {
+//   try {
+//     await axios.post('/api/cron/jobs/execute', {
+//       job_ids: [job.id]
+//     })
+//     message.success(`任务 "${job.name}" 已触发执行`)
+//     loadRecentExecutions(job.id,true)
+//   } catch (error) {
+//     message.error(`执行任务失败: ${error.response?.data?.detail || error.message}`)
+//   }
+// }
 const executeJob = async (job) => {
   try {
-    await axios.post('/api/cron/jobs/execute', {
+    // 1. 触发执行
+    const res = await axios.post('/api/cron/jobs/execute', {
       job_ids: [job.id]
     })
     message.success(`任务 "${job.name}" 已触发执行`)
-    loadRecentExecutions(job.id)
+
+    // 2. 获取执行ID（假设返回格式为 [{id: 123, ...}]）
+    const executionId = res.data?.[0]?.id
+    if (!executionId) return
+
+    // 3. 开始轮询状态
+    await pollExecutionStatus(executionId, job.id)
+
   } catch (error) {
     message.error(`执行任务失败: ${error.response?.data?.detail || error.message}`)
   }
 }
+
+// 轮询任务状态
+const pollExecutionStatus = async (executionId, jobId) => {
+  let attempts = 0
+  const maxAttempts = 60 // 最多轮询 60 秒
+
+  const checkStatus = async () => {
+    if (attempts >= maxAttempts) {
+      console.warn('轮询超时，停止检测')
+      return
+    }
+
+    try {
+      // 获取最新执行记录
+      const res = await axios.get(`/api/cron/executions/${executionId}`)
+      const status = res.data.status
+
+      // 如果任务已完成
+      if (['success', 'failed', 'cancelled'].includes(status)) {
+        console.log('任务已完成，刷新历史')
+        loadRecentExecutions(jobId, true) // 强制刷新
+        return
+      }
+
+      // 继续轮询
+      attempts++
+      setTimeout(checkStatus, 1000) // 每秒检查一次
+
+    } catch (error) {
+      console.error('轮询状态失败:', error)
+      // 即使出错也继续轮询（可能是临时网络问题）
+      attempts++
+      setTimeout(checkStatus, 1000)
+    }
+  }
+
+  // 立即开始第一次检查
+  checkStatus()
+}
+
 
 const toggleJob = async (job) => {
   try {
@@ -300,8 +440,35 @@ const getNodeName = (nodeId) => {
   return node ? node.name : `未知节点 (#${nodeId})`
 }
 
-const getRecentExecutions = (jobId) => {
-  return executions.value[jobId] || []
+const formatDate = (isoString) => {
+  const date = new Date(isoString)
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+const getJobTitle = (job) => {
+  const nodeName = getNodeName(job.node_id)
+  let title = `${nodeName}：${job.name}`
+
+  // 显示下次执行时间
+  if (job.next_run) {
+    const nextRun = new Date(job.next_run)
+    const formatted = nextRun.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    title += `（下次：${formatted}）`
+  } else if (!job.is_active) {
+    title += '（已停用）'
+  }
+
+  return title
 }
 
 const addJob = async () => {
@@ -347,7 +514,7 @@ const stopExecution = async () => {
     }
 
     logModal.value = false
-    await loadJobs()
+    await loadRecentExecutions(selectedExecution.value.job_id,true)
   } catch (error) {
     message.error('中断失败')
   }

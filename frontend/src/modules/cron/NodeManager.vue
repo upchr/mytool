@@ -150,7 +150,7 @@ const formRef = ref(null)
 
 const loadNodes = async () => {
   try {
-    const res = await axios.get('/api/cron/nodes')
+    const res = await axios.get('/api/cron/nodes/false')
     nodes.value = res.data
   } catch (error) {
     message.error('加载节点失败')
@@ -197,7 +197,7 @@ const toggleNode = async (node) => {
   try {
     node.is_active = !node.is_active
     // 👇 调用后端更新接口（需后端实现）
-    await axios.patch(`/api/cron/nodes/${node.id}`, { is_active: node.is_active })
+    await axios.patch(`/api/cron/nodes/${node.id}/toggle`, { is_active: node.is_active })
     message.success(`节点 ${node.name} 已${node.is_active ? '启用' : '停用'}`)
   } catch (error) {
     message.error('操作失败')
