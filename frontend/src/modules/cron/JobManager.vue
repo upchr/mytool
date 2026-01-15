@@ -8,6 +8,7 @@
             :options="nodeOptions"
             placeholder="选择节点"
             @update:value="loadJobs"
+            multiple
             style="width: 200px"
         />
         <n-button type="primary" @click="addJobModal = true;">添加任务</n-button>
@@ -257,7 +258,7 @@ const newJob = ref({
 const jobFormRef = ref(null)
 
 // Cron 表达式正则（支持标准 5 位格式）
-const CRON_REGEX = /^(\*|([0-5]?\d)(\-([0-5]?\d))?(\,([0-5]?\d)(\-([0-5]?\d))?)*)\s+(\*|([01]?\d|2[0-3])(\-([01]?\d|2[0-3]))?(\,([01]?\d|2[0-3])(\-([01]?\d|2[0-3]))?)*)\s+(\*|([1-9]|[12]\d|3[01])(\-([1-9]|[12]\d|3[01]))?(\,([1-9]|[12]\d|3[01])(\-([1-9]|[12]\d|3[01]))?)*)\s+(\*|([1-9]|1[0-2])(\-([1-9]|1[0-2]))?(\,([1-9]|1[0-2])(\-([1-9]|1[0-2]))?)*)\s+(\*|([0-6])(\-([0-6]))?(\,([0-6])(\-([0-6]))?)*)$/
+const CRON_REGEX = /^(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?))*$/;
 
 const jobRules = {
   node_ids: [
@@ -349,17 +350,6 @@ const loadJobs = async () => {
   }
 }
 
-// const executeJob = async (job) => {
-//   try {
-//     await axios.post('/api/cron/jobs/execute', {
-//       job_ids: [job.id]
-//     })
-//     message.success(`任务 "${job.name}" 已触发执行`)
-//     loadRecentExecutions(job.id,true)
-//   } catch (error) {
-//     message.error(`执行任务失败: ${error.response?.data?.detail || error.message}`)
-//   }
-// }
 const executeJob = async (job) => {
   try {
     // 1. 触发执行
@@ -367,6 +357,7 @@ const executeJob = async (job) => {
       job_ids: [job.id]
     })
     message.success(`任务 "${job.name}" 已触发执行`)
+    await loadRecentExecutions(job.id,true)
 
     // 2. 获取执行ID（假设返回格式为 [{id: 123, ...}]）
     const executionId = res.data?.[0]?.id
@@ -399,7 +390,8 @@ const pollExecutionStatus = async (executionId, jobId) => {
       // 如果任务已完成
       if (['success', 'failed', 'cancelled'].includes(status)) {
         console.log('任务已完成，刷新历史')
-        loadRecentExecutions(jobId, true) // 强制刷新
+        message.success(`任务 "${jobId}" 已完成。`)
+        await loadRecentExecutions(jobId, true) // 强制刷新
         return
       }
 

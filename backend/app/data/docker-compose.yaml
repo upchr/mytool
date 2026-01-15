@@ -1,0 +1,11 @@
+services:
+  note-app:
+    image: chrplus/toolsplus:latest
+    container_name: toolsplus
+    ports:
+      - "16780:80"
+    volumes:
+      - ./notes.db:/data/notes.db
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
