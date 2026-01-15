@@ -68,6 +68,35 @@ def toggle_node_status(engine: Engine, node_id: int, is_active: bool) -> bool:
             scheduler.remove_job(job["id"], job["name"])
 
     return True
+
+def batch_delete_nodes(engine: Engine, node_ids: list[int]) -> int:
+    """批量删除节点，返回成功删除的数量"""
+    deleted_count = 0
+
+    with engine.begin() as conn:
+        for node_id in node_ids:
+            try:
+                # 1. 删除关联的定时任务
+                conn.execute(
+                    delete(models.cron_jobs_table)
+                    .where(models.cron_jobs_table.c.node_id == node_id)
+                )
+
+                # 2. 删除节点
+                result = conn.execute(
+                    delete(models.nodes_table)
+                    .where(models.nodes_table.c.id == node_id)
+                )
+
+                if result.rowcount > 0:
+                    deleted_count += 1
+
+            except Exception as e:
+                print(f"删除节点 {node_id} 失败: {e}")
+                # 继续处理其他节点
+
+    return deleted_count
+
 # 任务管理
 def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
     data = job.model_dump()

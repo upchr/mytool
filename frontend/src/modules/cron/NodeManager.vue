@@ -59,31 +59,61 @@
         <n-button type="primary" @click="addNode">添加节点</n-button>
       </n-space>
     </n-form>
+    <n-space justify="end" class="mt-4" style="margin-top: 10px">
+      <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
+      <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
+        <span>已选择 {{ selectedNodeIds.length }} 个节点</span>
+        <n-space>
+          <n-button size="small" @click="cancelBatch">取消</n-button>
+          <n-popconfirm
+              @positive-click="batchDeleteNodes"
+              negative-text="取消"
+              positive-text="确定删除"
+          >
+            <template #trigger>
+              <n-button size="small" type="error">批量删除</n-button>
+            </template>
+            确定要删除选中的 {{ selectedNodeIds.length }} 个节点吗？
+          </n-popconfirm>
+        </n-space>
+      </div>
+    </n-space>
+
 
     <!-- 节点列表 -->
     <n-divider />
     <div v-if="nodes.length === 0" class="text-center text-gray-500 py-8">
       暂无节点，点击上方按钮添加
     </div>
-    <n-grid v-else :cols="1" :x-gap="12" :y-gap="12" responsive="screen" style="height: 55vh;overflow-y: auto;">
+    <n-grid v-else :cols="1" :x-gap="12" :y-gap="12" responsive="screen" style="height: 51vh;overflow-y: auto;">
       <n-gi v-for="node in nodes" :key="node.id">
-        <n-card :title="node.name" :bordered="false" class="shadow-sm">
+        <n-card :title="node.name" :bordered="false" class="shadow-sm"
+                :style="isBatchMode && selectedNodeIds.includes(node.id) ? { backgroundColor: 'lightgray'}: {}"
+                @click="handleCardClick(node)">
           <template #header-extra>
             <n-space>
-              <n-button size="small" type="info" @click="testConnection(node)">测试连接</n-button>
-              <n-button
-                  size="small"
-                  :type="node.is_active ? 'success' : 'warning'"
-                  @click="toggleNode(node)"
-              >
-                {{ node.is_active ? '停用' : '启用' }}
-              </n-button>
-              <n-popconfirm @positive-click="deleteNode(node)">
-                <template #trigger>
-                  <n-button size="small" type="error">删除</n-button>
-                </template>
-                确定要删除节点 "{{ node.name }}" 吗？
-              </n-popconfirm>
+              <n-checkbox
+                  v-if="isBatchMode"
+                  :checked="selectedNodeIds.includes(node.id)"
+                  @click.stop.prevent="(e) => toggleNodeSelection(node.id, !selectedNodeIds.includes(node.id))"
+              />
+              <n-space v-else>
+                <n-button size="small" type="info" @click="testConnection(node)">测试连接</n-button>
+                <n-button
+                    size="small"
+                    :type="node.is_active ? 'success' : 'warning'"
+                    @click="toggleNode(node)"
+                >
+                  {{ node.is_active ? '停用' : '启用' }}
+                </n-button>
+                <n-popconfirm @positive-click="deleteNode(node)">
+                  <template #trigger>
+                    <n-button size="small" type="error">删除</n-button>
+                  </template>
+                  确定要删除节点 "{{ node.name }}" 吗？
+                </n-popconfirm>
+              </n-space>
+
             </n-space>
           </template>
 
@@ -213,6 +243,46 @@ const deleteNode = async (node) => {
     message.error('删除节点失败')
   }
 }
+// NodeManager.vue
+const selectedNodeIds = ref([]) // 批量选择的节点ID
+const isBatchMode = ref(false)  // 批量模式开关
+// 批量操作方法
+const enterBatchMode = () => {
+  isBatchMode.value = true
+  selectedNodeIds.value = []
+}
 
+const cancelBatch = () => {
+  isBatchMode.value = false
+  selectedNodeIds.value = []
+}
+
+const toggleNodeSelection = (nodeId, checked) => {
+  if (checked) {
+    selectedNodeIds.value.push(nodeId)
+  } else {
+    selectedNodeIds.value = selectedNodeIds.value.filter(id => id !== nodeId)
+  }
+}
+
+const batchDeleteNodes = async () => {
+  if (selectedNodeIds.value.length === 0) return
+
+  try {
+    await axios.post('/api/cron/nodes/deleteBatch', { node_ids: selectedNodeIds.value })
+    message.success(`成功删除 ${selectedNodeIds.value.length} 个节点`)
+    cancelBatch()
+    loadNodes()
+  } catch (error) {
+    message.error('批量删除失败')
+  }
+}
+// 处理卡片点击（仅在批量模式下生效）
+const handleCardClick = (node) => {
+  if (!isBatchMode.value) return
+
+  const isChecked = selectedNodeIds.value.includes(node.id)
+  toggleNodeSelection(node.id, !isChecked)
+}
 onMounted(loadNodes)
 </script>

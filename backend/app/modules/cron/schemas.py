@@ -58,7 +58,7 @@ class CronJobRead(CronJobBase):
     next_run: Optional[datetime] = None
     model_config = {"from_attributes": True}
 
-class JobRequest(BaseModel):
+class NodeRequest(BaseModel):
     node_ids: List[int]
 # 执行日志
 class JobExecutionBase(BaseModel):

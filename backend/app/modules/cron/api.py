@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException,WebSocket
 from fastapi.params import Body
 from . import services, schemas, models
 from app.core.database import engine, metadata
-from .schemas import JobRequest
+from .schemas import NodeRequest
 from .ssh_client import SSHClient
 from .ws_manager import ws_manager
 
@@ -65,6 +65,13 @@ def toggle_node(node_id: int, is_active: bool = Body(..., embed=True)):
         raise HTTPException(status_code=404, detail="节点不存在")
     return {"status": "ok", "is_active": is_active}
 
+@router.post("/nodes/deleteBatch")
+def batch_delete_nodes(req:NodeRequest):
+    if not req.node_ids:
+        raise HTTPException(status_code=400, detail="节点ID列表不能为空")
+
+    success_count = services.batch_delete_nodes(engine, req.node_ids)
+    return {"success": True, "deleted_count": success_count}
 
 
 
@@ -85,7 +92,7 @@ def create_cron_job(job: schemas.CronJobCreate):
     return results
 
 @router.post("/jobsList", response_model=list[schemas.CronJobRead])
-def read_jobs(req: JobRequest):
+def read_jobs(req: NodeRequest):
     return services.get_cron_jobs(engine, req.node_ids or None)
 
 # 任务执行
