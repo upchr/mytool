@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException,WebSocket
+from fastapi import APIRouter, HTTPException,WebSocket
 from fastapi.params import Body
 from . import services, schemas, models
 from app.core.database import engine, metadata
+from .schemas import JobRequest
 from .ssh_client import SSHClient
 from .ws_manager import ws_manager
 
@@ -83,9 +84,9 @@ def create_cron_job(job: schemas.CronJobCreate):
         results.append(result)
     return results
 
-@router.get("/jobs", response_model=list[schemas.CronJobRead])
-def read_jobs(node_id: int = None):
-    return services.get_cron_jobs(engine, node_id)
+@router.post("/jobsList", response_model=list[schemas.CronJobRead])
+def read_jobs(req: JobRequest):
+    return services.get_cron_jobs(engine, req.node_ids or None)
 
 # 任务执行
 @router.post("/jobs/execute", response_model=list[schemas.JobExecutionRead])

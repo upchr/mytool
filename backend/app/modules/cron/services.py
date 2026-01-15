@@ -77,7 +77,7 @@ def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
         job_id = result.inserted_primary_key[0]
         return {"id": job_id, **data}  # ✅ 返回完整对象
 
-def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
+def get_cron_jobs(engine: Engine, node_ids: list[int] = None) -> list[dict]:
     stmt = (
         select(models.cron_jobs_table)
         .join(
@@ -87,8 +87,9 @@ def get_cron_jobs(engine: Engine, node_id: int = None) -> list[dict]:
         .where(models.nodes_table.c.is_active.is_(True))
     )
 
-    if node_id is not None:
-        stmt = stmt.where(models.cron_jobs_table.c.node_id == node_id)
+    # 多节点筛选
+    if node_ids and len(node_ids) > 0:
+        stmt = stmt.where(models.cron_jobs_table.c.node_id.in_(node_ids))
     with engine.connect() as conn:
         result = conn.execute(stmt)
         jobs = []

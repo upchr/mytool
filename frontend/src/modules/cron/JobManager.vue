@@ -4,13 +4,23 @@
     <n-space justify="space-between" class="mb-4" style="margin-bottom: 20px">
       <n-space>
         <n-select
-            v-model:value="selectedNode"
+            v-model:value="selectedNodes"
             :options="nodeOptions"
             placeholder="选择节点"
             @update:value="loadJobs"
             multiple
-            style="width: 200px"
-        />
+            style="width: 200px">
+          <!-- 全选插槽 -->
+<!--          <template #action>-->
+<!--            <n-button-->
+<!--                text-->
+<!--                size="small"-->
+<!--                @click="toggleAllNodes"-->
+<!--            >-->
+<!--              {{ allNodesSelected ? '取消全选' : '全选' }}-->
+<!--            </n-button>-->
+<!--          </template>-->
+        </n-select>
         <n-button type="primary" @click="addJobModal = true;">添加任务</n-button>
       </n-space>
     </n-space>
@@ -241,7 +251,7 @@ const message = useMessage()
 const nodes = ref([])
 const jobs = ref([])
 const executions = ref({})
-const selectedNode = ref('')
+const selectedNodes = ref([])
 const addJobModal = ref(false)
 const logModal = ref(false)
 const selectedExecution = ref(null)
@@ -283,7 +293,7 @@ const jobRules = {
   command: { required: true, message: '请输入执行命令', trigger: ['blur'] }
 }
 const nodeOptions = computed(() => [
-  {label: '所有节点', value: ''},
+  // {label: '所有节点', value: ''},
   ...nodes.value.map(node => ({
     label: `${node.name} (${node.host})`,
     value: node.id
@@ -339,12 +349,15 @@ const loadRecentExecutions = async (jobId,loadForce=false) => {
 
 const loadJobs = async () => {
   try {
-    console.log('selectedNode.value',selectedNode.value)
-    const params = selectedNode.value ? {node_id: selectedNode.value} : {}
-    const res = await axios.get('/api/cron/jobs', {params})
+    console.log('selectedNodes.value',selectedNodes.value)
+    // const params = selectedNodes.value ? {node_ids: selectedNodes.value} : {}
+    // const params = selectedNodes.value.length > 0 ? { node_ids: selectedNodes.value } : {}
+    const res = await axios.post('/api/cron/jobsList', { node_ids: selectedNodes.value })
     jobs.value = res.data
     // jobs.value.forEach(job => loadRecentExecutions(job.id))
-    newJob.value.node_id = selectedNode.value
+    newJob.value.node_ids = selectedNodes.value
+    console.log('newJob.value.node_ids',newJob.value.node_ids)
+
   } catch (error) {
     message.error('加载任务失败')
   }
@@ -470,7 +483,7 @@ const addJob = async () => {
     message.success('任务添加成功')
     addJobModal.value = false
     newJob.value = {
-      node_id: '',
+      node_ids: [],
       name: '',
       schedule: '',
       command: '',
