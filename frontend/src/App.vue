@@ -1,7 +1,7 @@
 <!-- src/App.vue -->
 <template>
   <n-message-provider>
-    <div class="min-h-screen bg-gray-50 mx-5 pb-20">
+    <div class="min-h-screen bg-gray-50 mx-5 pb-20" style="margin-top: 5vh;margin-left: 10vw;margin-right: 10vw">
       <!-- 导航栏 -->
       <nav class="bg-white shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" style="text-align: center; font-size: 20px">
@@ -22,7 +22,7 @@
       </nav>
 
       <!-- 主内容 -->
-      <main class="py-6">
+      <main class="py-6" style="margin-top: 3vh;margin-bottom: 3vh">
         <router-view />
       </main>
 

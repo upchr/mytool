@@ -28,7 +28,7 @@
       暂无便签，快添加一条吧！
     </div>
 
-    <n-list v-else style="height: 70vh;overflow-y: auto;">
+    <n-list v-else style="height: 60vh;overflow-y: auto;">
       <n-list-item v-for="note in notes" :key="note.id" class="mb-3">
         <n-card :bordered="false" size="small" class="shadow-sm">
           <template #header>

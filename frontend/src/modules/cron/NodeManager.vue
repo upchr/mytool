@@ -65,7 +65,7 @@
     <div v-if="nodes.length === 0" class="text-center text-gray-500 py-8">
       暂无节点，点击上方按钮添加
     </div>
-    <n-grid v-else :cols="1" :x-gap="12" :y-gap="12" responsive="screen">
+    <n-grid v-else :cols="1" :x-gap="12" :y-gap="12" responsive="screen" style="height: 55vh;overflow-y: auto;">
       <n-gi v-for="node in nodes" :key="node.id">
         <n-card :title="node.name" :bordered="false" class="shadow-sm">
           <template #header-extra>

@@ -11,15 +11,16 @@
             multiple
             style="width: 200px">
           <!-- 全选插槽 -->
-<!--          <template #action>-->
-<!--            <n-button-->
-<!--                text-->
-<!--                size="small"-->
-<!--                @click="toggleAllNodes"-->
-<!--            >-->
-<!--              {{ allNodesSelected ? '取消全选' : '全选' }}-->
-<!--            </n-button>-->
-<!--          </template>-->
+          <template #action>
+            <n-button
+                text
+                size="small"
+                block
+                @click="toggleAllNodes"
+            >
+              {{ allNodesSelected ? '取消全选' : '全选' }}
+            </n-button>
+          </template>
         </n-select>
         <n-button type="primary" @click="addJobModal = true;">添加任务</n-button>
       </n-space>
@@ -27,7 +28,7 @@
 
     <!-- 任务列表 -->
     <n-empty v-if="jobs.length === 0" description="暂无任务" />
-    <n-collapse v-else @item-header-click="handleItemHeaderClick">
+    <n-collapse v-else @item-header-click="handleItemHeaderClick" style="height: 66vh;overflow-y: auto;">
       <n-collapse-item v-for="job in jobs" :key="job.id" :title="getJobTitle(job)"  class="mb-2" :name="job.id">
         <n-card :bordered="false" class="shadow-sm">
           <template #header>
@@ -140,7 +141,18 @@
                 :options="nodeOptions.filter(opt => opt.value !== '')"
                 multiple
                 placeholder="请选择节点"
-            />
+            >
+              <template #action>
+                <n-button
+                    text
+                    size="small"
+                    block
+                    @click="toggleAllNodesAdd"
+                >
+                  {{ allNodesSelectedAdd ? '取消全选' : '全选' }}
+                </n-button>
+              </template>
+            </n-select>
           </n-form-item>
           <n-form-item path="name" label="任务名称">
             <n-input v-model:value="newJob.name" placeholder="例如：每日备份" />
@@ -252,6 +264,7 @@ const nodes = ref([])
 const jobs = ref([])
 const executions = ref({})
 const selectedNodes = ref([])
+const selectedNodesAdd = ref([])
 const addJobModal = ref(false)
 const logModal = ref(false)
 const selectedExecution = ref(null)
@@ -349,19 +362,61 @@ const loadRecentExecutions = async (jobId,loadForce=false) => {
 
 const loadJobs = async () => {
   try {
-    console.log('selectedNodes.value',selectedNodes.value)
-    // const params = selectedNodes.value ? {node_ids: selectedNodes.value} : {}
-    // const params = selectedNodes.value.length > 0 ? { node_ids: selectedNodes.value } : {}
     const res = await axios.post('/api/cron/jobsList', { node_ids: selectedNodes.value })
     jobs.value = res.data
-    // jobs.value.forEach(job => loadRecentExecutions(job.id))
     newJob.value.node_ids = selectedNodes.value
-    console.log('newJob.value.node_ids',newJob.value.node_ids)
 
   } catch (error) {
     message.error('加载任务失败')
   }
 }
+
+// 计算属性：是否全选
+const allNodesSelected = computed(() => {
+  const activeNodes = nodes.value
+  return (
+      activeNodes.length > 0 &&
+      selectedNodes.value.length === activeNodes.length &&
+      activeNodes.every(node => selectedNodes.value.includes(node.id))
+  )
+})
+
+// 全选/取消全选
+const toggleAllNodes = () => {
+  if (allNodesSelected.value) {
+    selectedNodes.value = []
+  } else {
+    // 只选择活跃节点
+    selectedNodes.value = nodes.value
+        .map(n => n.id)
+  }
+  loadJobs() // 立即加载
+}
+
+
+//add
+// 计算属性：是否全选
+const allNodesSelectedAdd = computed(() => {
+  const activeNodes = nodes.value
+  return (
+      activeNodes.length > 0 &&
+      selectedNodesAdd.value.length === activeNodes.length &&
+      activeNodes.every(node => selectedNodesAdd.value.includes(node.id))
+  )
+})
+
+// 全选/取消全选
+const toggleAllNodesAdd = () => {
+  if (allNodesSelectedAdd.value) {
+    selectedNodesAdd.value = []
+  } else {
+    // 只选择活跃节点
+    selectedNodesAdd.value = nodes.value
+        .map(n => n.id)
+  }
+  newJob.value.node_ids = selectedNodesAdd.value
+}
+
 
 const executeJob = async (job) => {
   try {
