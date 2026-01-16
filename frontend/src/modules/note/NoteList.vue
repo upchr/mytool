@@ -56,7 +56,7 @@
     <n-list v-else style="height: 60vh;overflow-y: auto;">
       <n-list-item v-for="note in notes" :key="note.id" class="mb-3">
         <n-card :title="'标题：'+note.title" :bordered="false" class="shadow-sm"
-                :style="isBatchMode && selectedNoteIds.includes(note.id) ? { backgroundColor: 'lightgray'}: {}"
+                :style="isBatchMode && selectedNoteIds.includes(note.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
                 @click="handleCardClick(note)">
           <template #header-extra>
             <n-space>

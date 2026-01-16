@@ -89,10 +89,10 @@
     <div v-if="nodes.length === 0" class="text-center text-gray-500 py-8">
       暂无节点，点击上方按钮添加
     </div>
-    <n-grid v-else :cols="1" :x-gap="12" :y-gap="12" responsive="screen" style="height: 51vh;overflow-y: auto;">
-      <n-gi v-for="node in nodes" :key="node.id">
+    <n-list v-else  style="height: 51vh;overflow-y: auto;">
+      <n-list-item v-for="node in nodes" :key="node.id">
         <n-card :title="node.name" :bordered="false" class="shadow-sm"
-                :style="isBatchMode && selectedNodeIds.includes(node.id) ? { backgroundColor: 'lightgray'}: {}"
+                :style="isBatchMode && selectedNodeIds.includes(node.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
                 @click="handleCardClick(node)">
           <template #header-extra>
             <n-space>
@@ -138,8 +138,8 @@
             </n-descriptions-item>
           </n-descriptions>
         </n-card>
-      </n-gi>
-    </n-grid>
+      </n-list-item>
+    </n-list>
   </n-card>
 </template>
 
