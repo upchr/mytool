@@ -164,8 +164,8 @@ const newNode = ref({
 // 表单验证规则
 const rules = {
   name: { required: true, message: '请输入节点名称', trigger: ['blur'] },
-  host: { required: true, message: '请输入主机地址', trigger: ['blur'] },
-  username: { required: true, message: '请输入用户名', trigger: ['blur'] },
+  host: { required: true, message: '请输入主机地址', trigger: ['blur'] ,pattern: /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,})$|^(?:\d{1,3}\.){3}\d{1,3}$/},
+  username: { required: true, message: '请输入用户名', trigger: ['blur'],min: 3,max: 20,},
   password: ({ value }) => {
     if (newNode.value.auth_type === 'password' && !value) {
       return '请输入密码'

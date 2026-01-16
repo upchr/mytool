@@ -265,6 +265,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                             "error": "".join(error_buffer),
                             "end_time": None
                         }
+                        ws_manager.send_log_sync(execution_id, log_data)
                 if stderr.channel.recv_stderr_ready():
                     line = stderr.channel.recv_stderr(1024).decode('utf-8', errors='replace')
                     if line:
@@ -275,6 +276,8 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                             "error": "".join(error_buffer),
                             "end_time": None
                         }
+                        ws_manager.send_log_sync(execution_id, log_data)
+
                 if stdout.channel.exit_status_ready():
                     # stdout 兜底
                     while stdout.channel.recv_ready():
