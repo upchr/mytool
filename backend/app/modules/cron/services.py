@@ -333,6 +333,22 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
     # ✅ 返回初始执行记录
     return get_execution(engine, execution_id)
 
+def update_cron_job(engine, job_id: int, update_data: dict) -> bool:
+    with engine.connect() as conn:
+        stmt = (
+            update(models.cron_jobs_table)
+            .where(models.cron_jobs_table.c.id == job_id)
+            .values(**update_data)
+        )
+        result = conn.execute(stmt)
+        conn.commit()
+        return result.rowcount > 0
+def get_cron_job(engine, job_id: int):
+    with engine.connect() as conn:
+        query = models.cron_jobs_table.select().where(models.cron_jobs_table.c.id == job_id)
+        result = conn.execute(query).fetchone()
+        return result._asdict() if result else None
+
 # 获取执行记录
 def get_executions(engine: Engine, job_id: int, limit: int = 10) -> list[dict]:
     stmt = (
@@ -411,3 +427,4 @@ def _update_execution_log(engine: Engine, execution_id: int, output: str, error:
     )
     with engine.begin() as conn:
         conn.execute(stmt)
+

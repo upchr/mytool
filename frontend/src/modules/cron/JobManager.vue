@@ -58,7 +58,7 @@
                 </n-tag>
               </div>
               <n-space>
-                <n-button size="small" type="info" @click="executeJob(job)">立即执行</n-button>
+                <n-button size="small" type="primary" @click="openEditModal(job)">编辑</n-button> <!-- 新增 -->
                 <n-button
                     size="small"
                     :type="job.is_active ? 'success' : 'warning'"
@@ -72,6 +72,7 @@
                   </template>
                   确定要删除任务 "{{ job.name }}" 吗？
                 </n-popconfirm>
+                <n-button size="small" type="info" @click="executeJob(job)">立即执行</n-button>
               </n-space>
             </div>
           </template>
@@ -173,7 +174,10 @@
                 v-model:value="newJob.command"
                 type="textarea"
                 placeholder="例如: echo 'Hello World'"
-                rows="4"
+                :autosize="{
+                  minRows: 3,
+                  maxRows: 10,
+                }"
             />
           </n-form-item>
           <n-form-item path="description" label="描述">
@@ -181,7 +185,10 @@
                 v-model:value="newJob.description"
                 type="textarea"
                 placeholder="任务说明"
-                rows="2"
+                :autosize="{
+                  minRows: 2,
+                  maxRows: 5,
+                }"
             />
           </n-form-item>
         <n-space justify="end" class="mt-4">
@@ -190,7 +197,70 @@
         </n-space>
       </n-form>
     </n-modal>
-
+    <!-- 编辑任务模态框 -->
+    <n-modal v-model:show="editJobModal" preset="card" title="编辑任务" style="width: 600px">
+      <n-form ref="editJobFormRef" :model="editingJob" :rules="jobRules" label-placement="left" label-width="auto">
+        <n-form-item path="node_ids" label="所属节点">
+          <n-select
+              v-model:value="editingJob.node_ids"
+              :options="nodeOptions.filter(opt => opt.value !== '')"
+              multiple
+              disabled
+              placeholder="请选择节点"
+              max-tag-count="responsive"
+          >
+            <template #action>
+              <n-button
+                  text
+                  size="small"
+                  block
+                  @click="toggleAllNodesEdit"
+              >
+                {{ allNodesSelectedEdit ? '取消全选' : '全选' }}
+              </n-button>
+            </template>
+          </n-select>
+        </n-form-item>
+        <n-form-item path="name" label="任务名称">
+          <n-input v-model:value="editingJob.name" placeholder="例如：每日备份" />
+        </n-form-item>
+        <n-form-item path="schedule" label="Cron表达式">
+          <n-input v-model:value="editingJob.schedule" placeholder="* * * * *" />
+          <template #footer>
+            <n-text depth="3" class="text-xs">
+              格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-6)<br/>
+              示例：0 2 * * * → 每天凌晨2点
+            </n-text>
+          </template>
+        </n-form-item>
+        <n-form-item path="command" label="执行命令">
+          <n-input
+              v-model:value="editingJob.command"
+              type="textarea"
+              placeholder="例如: echo 'Hello World'"
+              :autosize="{
+                  minRows: 3,
+                  maxRows: 10,
+                }"
+          />
+        </n-form-item>
+        <n-form-item path="description" label="描述">
+          <n-input
+              v-model:value="editingJob.description"
+              type="textarea"
+              placeholder="任务说明"
+              :autosize="{
+                  minRows: 2,
+                  maxRows: 5,
+                }"
+          />
+        </n-form-item>
+        <n-space justify="end" class="mt-4">
+          <n-button @click="editJobModal = false">取消</n-button>
+          <n-button type="primary" @click="updateJob">保存修改</n-button>
+        </n-space>
+      </n-form>
+    </n-modal>
     <!-- 日志模态框 -->
     <n-modal
         v-model:show="logModal"
@@ -213,7 +283,7 @@
           >
             中断执行
           </n-button>
-          <n-text depth="3">执行ID: {{ selectedExecution?.id }}</n-text>
+          <n-text depth="3" style="margin-left: 10px">执行ID: {{ selectedExecution?.id }}</n-text>
         </div>
 
         <!-- STDOUT -->
@@ -223,12 +293,14 @@
               ref="stdoutRef"
               class="bg-gray-50 p-2 rounded text-sm font-mono"
               style="
-              height: 25vh;
-              overflow-y: auto;
-              overflow-x: auto;
-              white-space: pre-wrap;
-              word-break: break-word;
-      "
+                  height: 25vh;
+                  overflow-y: auto;
+                  overflow-x: auto;
+                  white-space: pre-wrap;
+                  word-break: break-word;
+                  background-color: whitesmoke;
+                  padding: 10px;
+              "
           >
             {{ selectedExecution?.output || '无输出' }}
           </div>
@@ -246,6 +318,8 @@
                 overflow-x: auto;
                 white-space: pre-wrap;
                 word-break: break-word;
+                background-color: wheat;
+                padding: 10px;
               "
           >
             {{ selectedExecution?.error || '无错误' }}
@@ -270,7 +344,16 @@ const selectedNodesAdd = ref([])
 const addJobModal = ref(false)
 const logModal = ref(false)
 const selectedExecution = ref(null)
-
+const editJobModal = ref(false)
+const editingJob = ref({
+  id: null,
+  node_ids: [],
+  name: '',
+  schedule: '',
+  command: '',
+  description: ''
+})
+const editJobFormRef = ref(null)
 const newJob = ref({
   node_ids: [],
   name: '',
@@ -419,7 +502,50 @@ const toggleAllNodesAdd = () => {
   newJob.value.node_ids = selectedNodesAdd.value
 }
 
+// 编辑模态框 - 全选
+const allNodesSelectedEdit = computed(() => {
+  const activeNodes = nodes.value
+  return (
+      activeNodes.length > 0 &&
+      editingJob.value.node_ids.length === activeNodes.length &&
+      activeNodes.every(node => editingJob.value.node_ids.includes(node.id))
+  )
+})
 
+const toggleAllNodesEdit = () => {
+  if (allNodesSelectedEdit.value) {
+    editingJob.value.node_ids = []
+  } else {
+    editingJob.value.node_ids = nodes.value.map(n => n.id)
+  }
+}
+const openEditModal = (job) => {
+  // 注意：原 job.node_id 是单个 ID（旧设计），但新结构支持多节点（node_ids 数组）
+  // 如果后端已改为多节点，则 job.node_ids 存在；否则需兼容
+  editingJob.value = {
+    id: job.id,
+    node_ids: Array.isArray(job.node_ids) ? job.node_ids : [job.node_id],
+    name: job.name,
+    schedule: job.schedule,
+    command: job.command,
+    description: job.description || ''
+  }
+  editJobModal.value = true
+}
+
+const updateJob = async () => {
+  try {
+    await editJobFormRef.value.validate()
+    await axios.put(`/api/cron/jobs/${editingJob.value.id}`, editingJob.value)
+    message.success('任务更新成功')
+    editJobModal.value = false
+    loadJobs() // 刷新列表
+  } catch (error) {
+    message.error(`更新任务失败: ${error.response?.data?.detail || error.message}`)
+  }
+}
+
+// 立即执行
 const executeJob = async (job) => {
   try {
     // 1. 触发执行

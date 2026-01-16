@@ -45,6 +45,13 @@ class CronJobCreate(BaseModel):
             return v
         except:
             raise ValueError('无效的Cron表达式')
+class CronJobUpdate(BaseModel):
+    name: Optional[str] = None
+    schedule: Optional[str] = None
+    command: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class CronJobCreateSingle(BaseModel):
     node_id: int  # 单个节点
     name: str

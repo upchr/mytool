@@ -63,7 +63,7 @@
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
         <n-space justify="end" >已选择 {{ selectedNodeIds.length }} 个节点</n-space>
-        <n-space>
+        <n-space style="margin-top: 5px">
           <n-button  size="small" type="info" @click="toggleAllNodesAdd"
           >
             {{ allNodesSelectedAdd ? '取消全选' : '全选' }}

@@ -95,6 +95,22 @@ def create_cron_job(job: schemas.CronJobCreate):
 def read_jobs(req: NodeRequest):
     return services.get_cron_jobs(engine, req.node_ids or None)
 
+@router.put("/jobs/{job_id}", response_model=schemas.CronJobRead)
+def update_cron_job(job_id: int, job_update: schemas.CronJobUpdate):
+    # 检查任务是否存在
+    existing_job = services.get_cron_job(engine, job_id)
+    if not existing_job:
+        raise HTTPException(status_code=404, detail="任务不存在")
+
+    # 只允许更新 name, schedule, command, description, is_active
+    updated_data = job_update.model_dump(exclude_unset=True)
+
+    success = services.update_cron_job(engine, job_id, updated_data)
+    if not success:
+        raise HTTPException(status_code=500, detail="更新任务失败")
+
+    return services.get_cron_job(engine, job_id)
+
 # 任务执行
 @router.post("/jobs/execute", response_model=list[schemas.JobExecutionRead])
 def execute_jobs(request: schemas.ManualExecutionRequest):

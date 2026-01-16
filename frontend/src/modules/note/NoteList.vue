@@ -10,7 +10,10 @@
             v-model:value="currentNote.content"
             type="textarea"
             placeholder="请输入内容..."
-            :rows="4"
+            :autosize="{
+                  minRows: 4,
+                  maxRows: 10,
+                }"
         />
       </n-form-item>
       <n-space justify="end">
@@ -26,7 +29,7 @@
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
         <n-space justify="end" >已选择 {{ selectedNoteIds.length }} 个节点</n-space>
-        <n-space>
+        <n-space style="margin-top: 5px">
           <n-button  size="small" type="info" @click="toggleAllNotesAdd"
           >
             {{ allNotesSelectedAdd ? '取消全选' : '全选' }}
@@ -83,7 +86,16 @@
 
             </n-space>
           </template>
-          <p>{{ note.content }}</p>
+<!--          <p>{{ note.content }}</p>-->
+          <n-input
+              v-model:value="note.content"
+              type="textarea"
+              disabled
+              :autosize="{
+                  minRows: 3,
+                  maxRows: 10,
+                }"
+          />
         </n-card>
       </n-list-item>
     </n-list>
