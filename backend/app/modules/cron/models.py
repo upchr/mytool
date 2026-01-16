@@ -15,7 +15,17 @@ nodes_table = Table(
     Column("private_key", Text),
     Column("is_active", Boolean, default=True),
 )
-
+credential_templates_table = Table(
+    "credential_templates",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("name", String(100), unique=True, nullable=False),  # 模板名称，如 "root@prod"
+    Column("username", String(100), nullable=False),
+    Column("auth_type", String(10), nullable=False),  # 'password' or 'ssh_key'
+    Column("password", String(255)),   # 可加密存储（建议）
+    Column("private_key", Text),       # PEM 格式
+    Column("is_active", Boolean, default=True)
+)
 # 定时任务表
 cron_jobs_table = Table(
     "cron_jobs",

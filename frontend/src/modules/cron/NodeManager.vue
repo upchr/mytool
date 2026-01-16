@@ -18,9 +18,15 @@
             <n-input-number v-model:value="newNode.port" :min="1" :max="65535" />
           </n-form-item>
         </n-grid-item>
-        <n-grid-item>
-          <n-form-item path="username" label="用户名">
-            <n-input v-model:value="newNode.username" placeholder="root / admin" />
+        <n-grid-item cols="1 600:2">
+          <n-form-item label="凭据模板">
+            <n-select
+                v-model:value="selectedCredentialId"
+                :options="credentialTemplates.map(t => ({ label: t.name, value: t.id }))"
+                placeholder="选择凭据模板（可选）"
+                clearable
+                @update:value="applyCredentialTemplate"
+            />
           </n-form-item>
         </n-grid-item>
         <n-grid-item cols="1 600:2">
@@ -31,6 +37,11 @@
                 <n-radio value="ssh_key">SSH密钥</n-radio>
               </n-space>
             </n-radio-group>
+          </n-form-item>
+        </n-grid-item>
+        <n-grid-item>
+          <n-form-item path="username" label="用户名">
+            <n-input v-model:value="newNode.username" placeholder="root / admin" />
           </n-form-item>
         </n-grid-item>
         <n-grid-item v-if="newNode.auth_type === 'password'">
@@ -50,13 +61,23 @@
                 v-model:value="newNode.private_key"
                 type="textarea"
                 placeholder="粘贴私钥内容（PEM格式）"
-                rows="4"
+                :autosize="{
+                  minRows: 4,
+                  maxRows: 10,
+                }"
             />
           </n-form-item>
         </n-grid-item>
       </n-grid>
       <n-space justify="end" class="mt-4">
         <n-button type="primary" @click="addNode">添加节点</n-button>
+        <n-button
+            type="warning"
+            @click="saveAsTemplate"
+            :disabled="!newNode.name || !newNode.username"
+        >
+          保存凭据模板
+        </n-button>
       </n-space>
     </n-form>
     <n-space justify="end" class="mt-4" style="margin-top: 10px">
@@ -310,6 +331,50 @@ const toggleAllNodesAdd = () => {
   }
 }
 
+const credentialTemplates = ref([])
+const selectedCredentialId = ref(null) // 当前选中的模板ID
+const loadCredentialTemplates = async () => {
+  try {
+    const res = await axios.get('/api/cron/credentials')
+    credentialTemplates.value = res.data
+  } catch (error) {
+    console.warn('加载凭据模板失败:', error)
+  }
+}
+const applyCredentialTemplate = (templateId) => {
+  if (!templateId) return
 
-onMounted(loadNodes)
+  const template = credentialTemplates.value.find(t => t.id === templateId)
+  if (template) {
+    newNode.value.username = template.username
+    newNode.value.auth_type = template.auth_type
+    newNode.value.password = template.password || ''
+    newNode.value.private_key = template.private_key || ''
+  }
+}
+const saveAsTemplate = async () => {
+  // 弹出模态框让用户输入模板名称
+  // 使用 Naive UI 的 Input Modal 或自定义
+  const name = prompt('请输入凭据模板名称（如：root@dev）')
+  if (!name) return
+
+  try {
+    const payload = {
+      name,
+      username: newNode.value.username,
+      auth_type: newNode.value.auth_type,
+      password: newNode.value.auth_type === 'password' ? newNode.value.password : undefined,
+      private_key: newNode.value.auth_type === 'ssh_key' ? newNode.value.private_key : undefined
+    }
+    await axios.post('/api/cron/credentials', payload)
+    message.success('凭据模板保存成功')
+    loadCredentialTemplates() // 刷新列表
+  } catch (error) {
+    message.error('保存失败')
+  }
+}
+onMounted(async () => {
+  await loadNodes()
+  await loadCredentialTemplates() // 新增
+})
 </script>

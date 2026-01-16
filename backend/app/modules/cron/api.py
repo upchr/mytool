@@ -12,7 +12,8 @@ router = APIRouter(prefix="/cron", tags=["cron"])
 metadata.create_all(engine, tables=[
     models.nodes_table,
     models.cron_jobs_table,
-    models.job_executions_table
+    models.job_executions_table,
+    models.credential_templates_table
 ])
 
 @router.websocket("/executions/{execution_id}/logs")
@@ -74,7 +75,21 @@ def batch_delete_nodes(req:NodeRequest):
     return {"success": True, "deleted_count": success_count}
 
 
+# credential templates
+@router.post("/credentials", response_model=schemas.CredentialTemplateRead)
+def create_credential_template(template: schemas.CredentialTemplateCreate):
+    return services.create_credential_template(engine, template)
 
+@router.get("/credentials", response_model=list[schemas.CredentialTemplateRead])
+def list_credential_templates():
+    return services.get_credential_templates(engine)
+
+@router.delete("/credentials/{template_id}")
+def delete_credential_template(template_id: int):
+    success = services.delete_credential_template(engine, template_id)
+    if not success:
+        raise HTTPException(404, "模板不存在")
+    return {"status": "ok"}
 
 # 任务管理
 @router.post("/jobs")

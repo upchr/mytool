@@ -97,6 +97,70 @@ def batch_delete_nodes(engine: Engine, node_ids: list[int]) -> int:
 
     return deleted_count
 
+def create_credential_template(engine, template_data):
+    """
+    创建凭据模板
+    :param engine: SQLAlchemy 引擎
+    :param template_data: dict 或 Pydantic 模型（含 name, username, auth_type, password/private_key）
+    :return: 创建后的模板字典（含 id）
+    """
+    table = models.credential_templates_table
+
+    # 转为字典（兼容 Pydantic 模型）
+    data = template_data if isinstance(template_data, dict) else template_data.model_dump()
+
+    with engine.connect() as conn:
+        # 插入
+        stmt = insert(table).values(**data)
+        result = conn.execute(stmt)
+        conn.commit()
+
+        # 获取刚插入的记录
+        new_id = result.inserted_primary_key[0]
+        query = select(table).where(table.c.id == new_id)
+        row = conn.execute(query).fetchone()
+        return row._asdict() if row else None
+
+
+def get_credential_templates(engine):
+    """
+    获取所有凭据模板列表
+    :param engine: SQLAlchemy 引擎
+    :return: list[dict]
+    """
+    table = models.credential_templates_table
+
+    with engine.connect() as conn:
+        query = select(table).order_by(table.c.id)
+        result = conn.execute(query)
+        return [row._asdict() for row in result.fetchall()]
+
+
+def delete_credential_template(engine, template_id: int) -> bool:
+    """
+    删除凭据模板
+    :param engine: SQLAlchemy 引擎
+    :param template_id: 模板ID
+    :return: 是否成功删除（bool）
+    """
+    table = models.credential_templates_table
+
+    with engine.connect() as conn:
+        stmt = delete(table).where(table.c.id == template_id)
+        result = conn.execute(stmt)
+        conn.commit()
+        return result.rowcount > 0
+
+
+
+
+
+
+
+
+
+
+
 # 任务管理
 def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:
     data = job.model_dump()
