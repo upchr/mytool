@@ -1,29 +1,29 @@
 <template>
-  <n-card title="🖥️ 从节点管理" class="mb-6">
+  <n-card title="🖥️ 节点管理" class="mb-6">
     <!-- 添加节点表单 -->
     <n-form ref="formRef" :model="newNode" :rules="rules" label-placement="left" :label-width="100">
-      <n-row :gutter="[12, 12]">
-        <n-col :span="12">
+      <n-grid cols="1 s:2" responsive="screen">
+        <n-grid-item>
           <n-form-item path="name" label="节点名称">
             <n-input v-model:value="newNode.name" placeholder="例如：生产服务器" />
           </n-form-item>
-        </n-col>
-        <n-col :span="12">
+        </n-grid-item>
+        <n-grid-item>
           <n-form-item path="host" label="主机地址">
             <n-input v-model:value="newNode.host" placeholder="IP 或域名" />
           </n-form-item>
-        </n-col>
-        <n-col :span="12">
+        </n-grid-item>
+        <n-grid-item>
           <n-form-item path="port" label="SSH端口">
             <n-input-number v-model:value="newNode.port" :min="1" :max="65535" />
           </n-form-item>
-        </n-col>
-        <n-col :span="12">
+        </n-grid-item>
+        <n-grid-item>
           <n-form-item path="username" label="用户名">
             <n-input v-model:value="newNode.username" placeholder="root / admin" />
           </n-form-item>
-        </n-col>
-        <n-col :span="24">
+        </n-grid-item>
+        <n-grid-item cols="1 600:2">
           <n-form-item path="auth_type" label="认证方式">
             <n-radio-group v-model:value="newNode.auth_type">
               <n-space>
@@ -32,8 +32,8 @@
               </n-space>
             </n-radio-group>
           </n-form-item>
-        </n-col>
-        <n-col :span="24" v-if="newNode.auth_type === 'password'">
+        </n-grid-item>
+        <n-grid-item v-if="newNode.auth_type === 'password'">
           <n-form-item path="password" label="密码">
             <n-input
                 type="password"
@@ -43,8 +43,8 @@
                 :maxlength="8"
             />
           </n-form-item>
-        </n-col>
-        <n-col :span="24" v-else>
+        </n-grid-item>
+        <n-grid-item v-else>
           <n-form-item path="private_key" label="私钥">
             <n-input
                 v-model:value="newNode.private_key"
@@ -53,8 +53,8 @@
                 rows="4"
             />
           </n-form-item>
-        </n-col>
-      </n-row>
+        </n-grid-item>
+      </n-grid>
       <n-space justify="end" class="mt-4">
         <n-button type="primary" @click="addNode">添加节点</n-button>
       </n-space>
@@ -102,7 +102,7 @@
                   @click.stop.prevent="(e) => toggleNodeSelection(node.id, !selectedNodeIds.includes(node.id))"
               />
               <n-space v-else>
-                <n-button size="small" type="info" @click="testConnection(node)">测试连接</n-button>
+                <n-button size="small" @click="testConnection(node)">⚡️</n-button>
                 <n-button
                     size="small"
                     :type="node.is_active ? 'success' : 'warning'"
@@ -247,7 +247,8 @@ const deleteNode = async (node) => {
     message.error('删除节点失败')
   }
 }
-// NodeManager.vue
+
+//批量删除
 const selectedNodeIds = ref([]) // 批量选择的节点ID
 const isBatchMode = ref(false)  // 批量模式开关
 // 批量操作方法

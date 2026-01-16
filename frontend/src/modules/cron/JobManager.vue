@@ -1,5 +1,5 @@
 <template>
-  <n-card title="⏰ 定时任务管理" class="mb-6">
+  <n-card title="⏰ 定时任务" class="mb-6">
     <!-- 任务筛选 -->
     <n-space justify="space-between" class="mb-4" style="margin-bottom: 20px">
       <n-space>
@@ -9,6 +9,7 @@
             placeholder="选择节点"
             @update:value="loadJobs"
             multiple
+            max-tag-count="responsive"
             style="width: 200px">
           <!-- 全选插槽 -->
           <template #action>
@@ -28,12 +29,12 @@
 
     <!-- 任务列表 -->
     <n-empty v-if="jobs.length === 0" description="暂无任务" />
-    <n-collapse v-else @item-header-click="handleItemHeaderClick" style="height: 66vh;overflow-y: auto;">
+    <n-collapse v-else @item-header-click="handleItemHeaderClick" class="jobList">
       <n-collapse-item v-for="job in jobs" :key="job.id" :title="getJobTitle(job)"  class="mb-2" :name="job.id">
         <n-card :bordered="false" class="shadow-sm">
           <template #header>
             <div class="flex justify-between items-start">
-              <div style="margin-bottom: 10px">
+              <div style="margin-bottom: 10px;">
                 <span class="ml-2 text-xs text-gray-500">{{ getNodeName(job.node_id) }}：</span>
                 <span class="font-bold">{{ job.name }}</span>
                 <n-tag size="small" class="ml-2" type="info" style="margin-left: 10px;margin-right: 10px">{{ job.schedule }}</n-tag>
@@ -141,6 +142,7 @@
                 :options="nodeOptions.filter(opt => opt.value !== '')"
                 multiple
                 placeholder="请选择节点"
+                max-tag-count="responsive"
             >
               <template #action>
                 <n-button
@@ -350,7 +352,7 @@ const loadRecentExecutions = async (jobId,loadForce=false) => {
     executions.value[jobId] = []
 
     const res = await axios.get(`/api/cron/jobs/${jobId}/executions`, {
-      params: { limit: 50 } // 增加限制数量
+      params: { limit: 25 } // 增加限制数量
     })
     executions.value[jobId] = res.data
   } catch (error) {
@@ -660,3 +662,14 @@ onUnmounted(() => {
   }
 })
 </script>
+<style>
+.jobList{
+  height: 66vh;
+  overflow-y: auto;
+
+  .n-card__content{
+    padding: 0px !important;
+  }
+}
+
+</style>

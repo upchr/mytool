@@ -1,4 +1,6 @@
 # backend/app/modules/note/schemas.py
+from typing import List
+
 from pydantic import BaseModel
 
 class NoteBase(BaseModel):
@@ -16,3 +18,5 @@ class NoteRead(BaseModel):
     model_config = {
         "from_attributes": True  # 替代 orm_mode=True
     }
+class NoteRequest(BaseModel):
+    note_ids: List[int]

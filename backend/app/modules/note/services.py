@@ -1,5 +1,5 @@
 # backend/app/modules/note/services.py
-from sqlalchemy import select, insert,delete,update
+from sqlalchemy import select, insert, delete, update, desc
 from sqlalchemy.engine import Engine
 from .models import notes_table
 from .schemas import NoteCreate
@@ -12,7 +12,7 @@ def create_note(engine: Engine, note: NoteCreate) -> dict:
         return {"id": note_id, "title": note.title, "content": note.content}
 
 def get_notes(engine: Engine) -> list[dict]:
-    stmt = select(notes_table)
+    stmt = select(notes_table).order_by(desc(notes_table.c.id ))
     with engine.connect() as conn:
         result = conn.execute(stmt)
         # 每行转成 dict
@@ -38,3 +38,9 @@ def update_note(engine: Engine, note_id: int, note: NoteCreate) -> dict:
         select_stmt = select(notes_table).where(notes_table.c.id == note_id)
         row = conn.execute(select_stmt).mappings().first()
         return dict(row)
+
+def batch_delete_notes(engine: Engine, note_ids: list[int]) -> int:
+    with engine.begin() as conn:
+        stmt = delete(notes_table).where(notes_table.c.id.in_(note_ids))
+        result = conn.execute(stmt)
+        return result

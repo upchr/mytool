@@ -22,7 +22,7 @@ def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
         return {"id": node_id, **data}  # ✅ 返回完整对象
 
 def get_nodes(engine: Engine, active_only: bool) -> list[dict]:
-    stmt = select(models.nodes_table)
+    stmt = select(models.nodes_table).order_by(models.nodes_table.c.name )
     if active_only:
         stmt = stmt.where(models.nodes_table.c.is_active == True)
     with engine.connect() as conn:
@@ -114,6 +114,7 @@ def get_cron_jobs(engine: Engine, node_ids: list[int] = None) -> list[dict]:
             models.cron_jobs_table.c.node_id == models.nodes_table.c.id
         )
         .where(models.nodes_table.c.is_active.is_(True))
+        .order_by(models.cron_jobs_table.c.name, models.nodes_table.c.name)
     )
 
     # 多节点筛选
@@ -138,7 +139,6 @@ def get_cron_jobs(engine: Engine, node_ids: list[int] = None) -> list[dict]:
 
             jobs.append(job_dict)
         return jobs
-        # return [dict(row) for row in result.mappings()]
 
 # 执行任务
 def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> dict:
