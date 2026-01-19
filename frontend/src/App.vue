@@ -133,9 +133,10 @@ const toggleMenu = () => {
   height: 5vh;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
 }
-@media (max-width: 768px) {
+
+@media (max-width: 2000px) {
   .myheader {
-    height: 7vh;
+    height: 9vh;
   }
 }
 /* 固定footer，底部 */
@@ -159,10 +160,11 @@ const toggleMenu = () => {
   height: calc(100vh - 5vh - 60px); /* 满屏高度，减去header和footer */
   z-index: 1000;
 }
-@media (max-width: 768px) {
+
+@media (max-width: 2000px) {
   .mycontent .fixed-sider{
-    top: 7vh; /* header下方 */
-    height: calc(100vh - 7vh - 60px); /* 满屏高度，减去header和footer */
+    top: 9vh; /* header下方 */
+    height: calc(100vh - 9vh - 60px); /* 满屏高度，减去header和footer */
   }
 }
 /* 中间内容区域 */
@@ -171,10 +173,12 @@ const toggleMenu = () => {
   margin-bottom: 60px; /* 给content留出footer的空间 */
   padding: 20px; /* 给content添加内边距 */
 }
-@media (max-width: 768px) {
+
+
+@media (max-width: 2000px) {
   .mycontent .content-layout {
     margin-left: 5vw !important; /* 小屏幕时 margin-left 为 0px */
-    margin-top: 1vw !important; /* 小屏幕时 margin-left 为 0px */
+    margin-top: 4vw !important; /* 小屏幕时 margin-left 为 0px */
   }
 }
 </style>
