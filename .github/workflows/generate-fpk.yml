@@ -1,9 +1,8 @@
-# .github/workflows/generate-fpk.yml
 name: Generate FPK Package and Update FnDepot
 
 on:
   workflow_run:
-    workflows: ["Build and Push Multi-Arch Image"]  # 监听第一个工作流
+    workflows: ["Build and Push Multi-Arch Image to Aliyun ACR and Docker Hub"]  # 监听第一个工作流
     types: [completed]
 
 jobs:
