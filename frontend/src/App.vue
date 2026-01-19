@@ -130,10 +130,14 @@ const toggleMenu = () => {
   z-index: 1000;
   background-color: white;
   padding: 10px 20px;
-  height: 6vh;
+  height: 5vh;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
 }
-
+@media (max-width: 768px) {
+  .myheader {
+    height: 7vh;
+  }
+}
 /* 固定footer，底部 */
 .myfooter {
   position: fixed;
@@ -149,21 +153,26 @@ const toggleMenu = () => {
 /* 固定左侧菜单 */
 .mycontent .fixed-sider {
   position: fixed;
-  top: 6vh; /* header下方 */
+  top: 5vh; /* header下方 */
   left: 0;
   bottom: 60px; /* 留出footer的空间 */
-  height: calc(100vh - 6vh - 60px); /* 满屏高度，减去header和footer */
+  height: calc(100vh - 5vh - 60px); /* 满屏高度，减去header和footer */
   z-index: 1000;
 }
-
+@media (max-width: 768px) {
+  .mycontent .fixed-sider{
+    top: 7vh; /* header下方 */
+    height: calc(100vh - 7vh - 60px); /* 满屏高度，减去header和footer */
+  }
+}
 /* 中间内容区域 */
 .mycontent .content-layout {
-  margin-top: 6vh; /* 给content留出header的空间 */
+  margin-top: 5vh; /* 给content留出header的空间 */
   margin-bottom: 60px; /* 给content留出footer的空间 */
   padding: 20px; /* 给content添加内边距 */
 }
 @media (max-width: 768px) {
-  .content-layout {
+  .mycontent .content-layout {
     margin-left: 5vw !important; /* 小屏幕时 margin-left 为 0px */
     margin-top: 1vw !important; /* 小屏幕时 margin-left 为 0px */
   }
