@@ -2,7 +2,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-
+import './assets/main.css'
 // 👇 引入 Naive UI 核心
 import { createDiscreteApi } from 'naive-ui'
 
