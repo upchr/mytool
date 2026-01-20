@@ -1,12 +1,12 @@
 <template>
-  <n-card :title="'📝 '+title" class="max-w-3xl mx-auto">
+  <n-card title="📝 我的便签" class="max-w-3xl mx-auto">
     <!--    按钮操作-->
     <n-space justify="end" style="margin-bottom: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
-      <n-button type="primary" @click="showForm=true;isBatchMode=false;resetForm();title='新增便签'">编辑便签</n-button>
-      <n-button type="warning" @click="showForm=false;resetForm()">取消</n-button>
+      <n-button type="primary" @click="showForm=true;isBatchMode=false;resetForm()">添加便签</n-button>
     </n-space>
     <n-divider />
+
     <!--    批量操作-->
     <n-space justify="end" class="mt-4" style="margin-top: 10px">
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
@@ -31,29 +31,37 @@
         <n-divider />
       </div>
     </n-space>
+
     <!-- 添加/编辑表单 -->
-    <n-form v-if="showForm" :model="currentNote" label-placement="left" label-width="auto" >
-      <n-form-item path="title" label="标题">
-        <n-input v-model:value="currentNote.title" placeholder="请输入标题" />
-      </n-form-item>
-      <n-form-item path="content" label="内容">
-        <n-input
-            v-model:value="currentNote.content"
-            type="textarea"
-            placeholder="请输入内容..."
-            :autosize="{
-                  minRows: 4,
+    <n-modal v-model:show="showForm"
+             preset="card"
+             :title="'📝 '+title"
+             style="width: auto;height: auto;min-width: 30vw"
+             :on-after-leave="()=>resetForm(true)">
+      <n-form :model="currentNote" label-placement="left" label-width="auto" >
+        <n-form-item path="title" label="标题">
+          <n-input v-model:value="currentNote.title" placeholder="请输入标题" />
+        </n-form-item>
+        <n-form-item path="content" label="内容">
+          <n-input
+              v-model:value="currentNote.content"
+              type="textarea"
+              placeholder="请输入内容..."
+              :autosize="{
+                  minRows: 6,
                   maxRows: 10,
                 }"
-        />
-      </n-form-item>
-      <n-space justify="end">
-        <n-button type="primary" @click="saveNote">
-          {{ isEditing ? '更新便签' : '添加便签' }}
-        </n-button>
-        <n-button type="warning" @click="resetForm">重置</n-button>
-      </n-space>
-    </n-form>
+          />
+        </n-form-item>
+        <n-space justify="end">
+          <n-button type="primary" @click="saveNote">
+            {{ isEditing ? '更新便签' : '添加便签' }}
+          </n-button>
+          <n-button type="warning" @click="resetForm()">重置</n-button>
+        </n-space>
+      </n-form>
+    </n-modal>
+
     <!-- 便签列表 -->
     <div v-if="notes.length === 0" class="text-center py-8 text-gray-500">
       暂无便签，快添加一条吧！
@@ -61,35 +69,33 @@
 
     <n-list v-else style="height: 60vh;overflow-y: auto;">
       <n-list-item v-for="note in notes" :key="note.id" class="mb-3">
-        <n-card :title="'标题：'+note.title" :bordered="false" class="shadow-sm"
+        <n-card hoverable size="small" :title="'标题：'+note.title" :bordered="false" class="shadow-sm"
                 :style="isBatchMode && selectedNoteIds.includes(note.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
                 @click="handleCardClick(note)">
           <template #header-extra>
-            <n-space>
-              <n-checkbox
-                  v-if="isBatchMode"
-                  :checked="selectedNoteIds.includes(note.id)"
-                  @click.stop.prevent="(e) => toggleNoteSelection(note.id, !selectedNoteIds.includes(note.id))"
-              />
-              <n-space v-else>
-                  <n-button size="small" type="info"  @click="editNote(note)">
-                    编辑
-                  </n-button>
-                  <n-popconfirm
-                      @positive-click="deleteNote(note.id)"
-                      negative-text="取消"
-                      positive-text="确定"
-                  >
-                    <template #trigger>
-                      <n-button size="small" type="error" >删除</n-button>
-                    </template>
-                    确定要删除便签 "{{ note.title }}" 吗？
-                  </n-popconfirm>
-              </n-space>
-
+            <n-checkbox
+                v-if="isBatchMode"
+                :checked="selectedNoteIds.includes(note.id)"
+                @click.stop.prevent="(e) => toggleNoteSelection(note.id, !selectedNoteIds.includes(note.id))"
+            />
+          </template>
+          <template #action>
+            <n-space v-if="!isBatchMode" justify="end">
+              <n-button size="small" type="info"  @click="editNote(note)">
+                编辑
+              </n-button>
+              <n-popconfirm
+                  @positive-click="deleteNote(note.id)"
+                  negative-text="取消"
+                  positive-text="确定"
+              >
+                <template #trigger>
+                  <n-button size="small" type="error" >删除</n-button>
+                </template>
+                确定要删除便签 "{{ note.title }}" 吗？
+              </n-popconfirm>
             </n-space>
           </template>
-<!--          <p>{{ note.content }}</p>-->
           <n-input
               v-model:value="note.content"
               type="textarea"
@@ -126,11 +132,22 @@ const loadNotes = async () => {
     message.error('加载便签失败')
   }
 }
+const resetForm = (afterFlag=false) => {
+  if(afterFlag){
+    showForm.value=false
+    isEditing.value = false
+    title.value = '我的便签'
+  }
 
-const resetForm = () => {
-  currentNote.value = { id: null, title: '', content: '' }
-  isEditing.value = false
-  title.value = '我的便签'
+  currentNote.value = {
+    ...currentNote.value,
+    title: '',
+    content: ''
+  }
+
+  if (!isEditing){
+    currentNote.value.id = null
+  }
 }
 
 const saveNote = async () => {
@@ -155,7 +172,7 @@ const saveNote = async () => {
       })
       message.success('便签添加成功')
     }
-    resetForm()
+    resetForm(true)
     loadNotes()
   } catch (error) {
     message.error(isEditing.value ? '更新便签失败' : '添加便签失败')
@@ -166,7 +183,7 @@ const editNote = (note) => {
   currentNote.value = {...note}
   isEditing.value = true
   showForm.value = true
-  title.value = `修改${currentNote.value.title}`
+  title.value = `修改：${currentNote.value.title}`
 }
 
 const deleteNote = async (id) => {
@@ -187,8 +204,6 @@ const isBatchMode = ref(false)  // 批量模式开关
 const enterBatchMode = () => {
   isBatchMode.value = true
   selectedNoteIds.value = []
-  showForm.value = false
-  resetForm()
 }
 
 const cancelBatch = () => {

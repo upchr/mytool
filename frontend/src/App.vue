@@ -35,8 +35,8 @@
         <n-layout-sider ref="siderRef"
             bordered
             collapse-mode="width"
-            :collapsed-width="64"
-            :width="240"
+            :collapsed-width="48"
+            :width="190"
             :collapsed="collapsed"
             show-trigger
             @collapse="collapsed = true"
@@ -46,7 +46,7 @@
           <n-menu
               v-model:value="activeKey"
               :collapsed="collapsed"
-              :collapsed-width="64"
+              :collapsed-width="48"
               :collapsed-icon-size="22"
               :options="menuOptions"
           />
@@ -142,13 +142,13 @@ const toggleMenu = () => {
   z-index: 1000;
   background-color: white;
   padding: 10px 20px;
-  height: 5vh;
+  height: 50px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
 }
 
 @media (max-width: 2000px) {
   .myheader {
-    height: 9vh;
+    height: 70px;
   }
 }
 /* 固定footer，底部 */
@@ -166,31 +166,30 @@ const toggleMenu = () => {
 /* 固定左侧菜单 */
 .mycontent .fixed-sider {
   position: fixed;
-  top: 5vh; /* header下方 */
+  top: 50px; /* header下方 */
   left: 0;
   bottom: 60px; /* 留出footer的空间 */
-  height: calc(100vh - 5vh); /* 满屏高度，减去header和footer */
+  height: calc(100vh - 50px); /* 满屏高度，减去header和footer */
   z-index: 1000;
 }
 
 @media (max-width: 2000px) {
   .mycontent .fixed-sider{
-    top: 9vh; /* header下方 */
-    height: calc(100vh - 9vh); /* 满屏高度，减去header和footer */
+    top: 70px; /* header下方 */
+    height: calc(100vh - 70px); /* 满屏高度，减去header和footer */
   }
 }
 /* 中间内容区域 */
 .mycontent .content-layout {
-  margin-top: 5vh; /* 给content留出header的空间 */
+  margin-top: 50px; /* 给content留出header的空间 */
   margin-bottom: 60px; /* 给content留出footer的空间 */
   padding: 20px; /* 给content添加内边距 */
 }
 
-
 @media (max-width: 2000px) {
   .mycontent .content-layout {
+    margin-top: 70px !important; /* 小屏幕时 margin-left 为 0px */
     margin-left: 5vw !important; /* 小屏幕时 margin-left 为 0px */
-    margin-top: 4vw !important; /* 小屏幕时 margin-left 为 0px */
   }
 }
 </style>

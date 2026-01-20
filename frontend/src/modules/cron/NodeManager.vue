@@ -1,95 +1,99 @@
 <template>
-  <n-card :title="'📝 '+title" class="mb-6">
+  <n-card title="📝 节点管理" class="mb-6">
     <!--    按钮操作-->
     <n-space justify="end" style="margin-bottom: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
-      <n-button type="primary" @click="showForm=true;isBatchMode = false;resetForm();title='新增节点'">编辑节点</n-button>
-      <n-button type="warning" @click="showForm=false;resetForm()">取消</n-button>
+      <n-button type="primary" @click="showForm=true;isBatchMode = false;resetForm();">添加节点</n-button>
     </n-space>
 
     <!-- 添加节点表单 -->
-    <n-form v-if="showForm" ref="formRef" :model="currentNode" :rules="rules" label-placement="left" :label-width="100">
-      <n-grid cols="1 s:2" responsive="screen">
-        <n-grid-item>
-          <n-form-item path="name" label="节点名称">
-            <n-input v-model:value="currentNode.name" placeholder="例如：生产服务器" />
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item>
-          <n-form-item path="host" label="主机地址">
-            <n-input v-model:value="currentNode.host" placeholder="IP 或域名" />
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item>
-          <n-form-item path="port" label="SSH端口">
-            <n-input-number v-model:value="currentNode.port" :min="1" :max="65535" />
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item cols="1 600:2">
-          <n-form-item label="凭据模板">
-            <n-select
-                v-model:value="selectedCredentialId"
-                :options="credentialTemplates.map(t => ({ label: t.name, value: t.id }))"
-                placeholder="选择凭据模板（可选）"
-                clearable
-                @update:value="applyCredentialTemplate"
-            />
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item cols="1 600:2">
-          <n-form-item path="auth_type" label="认证方式">
-            <n-radio-group v-model:value="currentNode.auth_type">
-              <n-space>
-                <n-radio value="password">密码认证</n-radio>
-                <n-radio value="ssh_key">SSH密钥</n-radio>
-              </n-space>
-            </n-radio-group>
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item>
-          <n-form-item path="username" label="用户名">
-            <n-input v-model:value="currentNode.username" placeholder="root / admin" />
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item v-if="currentNode.auth_type === 'password'">
-          <n-form-item path="password" label="密码">
-            <n-input
-                type="password"
-                show-password-on="mousedown"
-                placeholder="密码"
-                v-model:value="currentNode.password"
-                :maxlength="8"
-            />
-          </n-form-item>
-        </n-grid-item>
-        <n-grid-item v-else>
-          <n-form-item path="private_key" label="私钥">
-            <n-input
-                v-model:value="currentNode.private_key"
-                type="textarea"
-                placeholder="粘贴私钥内容（PEM格式）"
-                :autosize="{
-                  minRows: 4,
-                  maxRows: 10,
-                }"
-            />
-          </n-form-item>
-        </n-grid-item>
-      </n-grid>
-      <n-space justify="end" class="mt-4">
-        <n-button type="primary" @click="addNode">
-          {{ isEditing ? '更新节点' : '添加节点' }}
-        </n-button>
-        <n-button
-            type="warning"
-            @click="saveAsTemplate"
-            :disabled="!currentNode.name || !currentNode.username"
-        >
-          保存凭据模板
-        </n-button>
-      </n-space>
-    </n-form>
-
+    <n-modal v-model:show="showForm" preset="card"
+             :title="'📝 '+title"
+             style="width: auto;height: auto;"
+             draggable
+             :on-after-leave="()=>resetForm(true)">
+      <n-form v-if="showForm" ref="formRef" :model="currentNode" :rules="rules" label-placement="left" :label-width="100">
+        <n-grid cols="1 s:2" responsive="screen">
+          <n-grid-item>
+            <n-form-item path="name" label="节点名称">
+              <n-input v-model:value="currentNode.name" placeholder="例如：生产服务器" />
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item>
+            <n-form-item path="host" label="主机地址">
+              <n-input v-model:value="currentNode.host" placeholder="IP 或域名" />
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item>
+            <n-form-item path="port" label="SSH端口">
+              <n-input-number v-model:value="currentNode.port" :min="1" :max="65535" />
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item cols="1 600:2">
+            <n-form-item label="凭据模板">
+              <n-select
+                  v-model:value="selectedCredentialId"
+                  :options="credentialTemplates.map(t => ({ label: t.name, value: t.id }))"
+                  placeholder="选择凭据模板（可选）"
+                  clearable
+                  @update:value="applyCredentialTemplate"
+              />
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item cols="1 600:2">
+            <n-form-item path="auth_type" label="认证方式">
+              <n-radio-group v-model:value="currentNode.auth_type">
+                <n-space>
+                  <n-radio value="password">密码认证</n-radio>
+                  <n-radio value="ssh_key">SSH密钥</n-radio>
+                </n-space>
+              </n-radio-group>
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item>
+            <n-form-item path="username" label="用户名">
+              <n-input v-model:value="currentNode.username" placeholder="root / admin" />
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item v-if="currentNode.auth_type === 'password'">
+            <n-form-item path="password" label="密码">
+              <n-input
+                  type="password"
+                  show-password-on="mousedown"
+                  placeholder="密码"
+                  v-model:value="currentNode.password"
+                  :maxlength="8"
+              />
+            </n-form-item>
+          </n-grid-item>
+          <n-grid-item v-else>
+            <n-form-item path="private_key" label="私钥">
+              <n-input
+                  v-model:value="currentNode.private_key"
+                  type="textarea"
+                  placeholder="粘贴私钥内容（PEM格式）"
+                  :autosize="{
+                    minRows: 6,
+                    maxRows: 10,
+                  }"
+              />
+            </n-form-item>
+          </n-grid-item>
+        </n-grid>
+        <n-space justify="end" class="mt-4">
+          <n-button type="primary" @click="addNode">
+            {{ isEditing ? '更新节点' : '添加节点' }}
+          </n-button>
+          <n-button
+              type="warning"
+              @click="saveAsTemplate"
+              :disabled="!currentNode.name || !currentNode.username"
+          >
+            保存凭据模板
+          </n-button>
+        </n-space>
+      </n-form>
+    </n-modal>
     <n-space justify="end" class="mt-4" style="margin-top: 10px">
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
         <n-space justify="end" >已选择 {{ selectedNodeIds.length }} 个节点</n-space>
@@ -121,18 +125,20 @@
     </div>
     <n-list v-else  style="height: 51vh;overflow-y: auto;">
       <n-list-item v-for="node in nodes" :key="node.id">
-        <n-card :title="node.name" :bordered="false" class="shadow-sm"
+        <n-card hoverable size="small" :title="'节点名称：'+node.name" :bordered="false" class="shadow-sm"
                 :style="isBatchMode && selectedNodeIds.includes(node.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
                 @click="handleCardClick(node)">
+
           <template #header-extra>
-            <n-space>
-              <n-checkbox
-                  v-if="isBatchMode"
-                  :checked="selectedNodeIds.includes(node.id)"
-                  @click.stop.prevent="(e) => toggleNodeSelection(node.id, !selectedNodeIds.includes(node.id))"
-              />
-              <n-space v-else>
-                <n-button size="small" @click="testConnection(node)">⚡️</n-button>
+            <n-checkbox
+                v-if="isBatchMode"
+                :checked="selectedNodeIds.includes(node.id)"
+                @click.stop.prevent="(e) => toggleNodeSelection(node.id, !selectedNodeIds.includes(node.id))"
+            />
+          </template>
+          <template #action>
+            <n-space v-if="!isBatchMode" justify="end">
+              <n-button size="small" @click="testConnection(node)">⚡️</n-button>
                 <n-button
                     size="small"
                     :type="node.is_active ? 'success' : 'warning'"
@@ -149,8 +155,6 @@
                   </template>
                   确定要删除节点 "{{ node.name }}" 吗？
                 </n-popconfirm>
-              </n-space>
-
             </n-space>
           </template>
 
@@ -237,7 +241,7 @@ const addNode = async () => {
       const res = await axios.post('/api/cron/nodes', currentNode.value)
       message.success('节点添加成功')
     }
-    resetForm()
+    resetForm(true)
     loadNodes()
   } catch (error) {
     console.log(error)
@@ -286,12 +290,20 @@ const editNode = async (node) => {
   currentNode.value = {...node}
   isEditing.value = true
   showForm.value = true
-  title.value = `修改${currentNode.value.name}`
+  title.value = `修改：${currentNode.value.name}`
 }
-const resetForm = () => {
+const resetForm = (afterFlag=false) => {
+  if(afterFlag){
+    showForm.value=false
+    isEditing.value = false
+    title.value = '节点管理'
+  }
+
   currentNode.value = {...defaultNode.value}
-  isEditing.value = false
-  title.value = '我的节点'
+
+  if (!isEditing){
+    currentNode.value.id = null
+  }
 }
 
 const deleteNode = async (node) => {
@@ -311,8 +323,6 @@ const isBatchMode = ref(false)  // 批量模式开关
 const enterBatchMode = () => {
   isBatchMode.value = true
   selectedNodeIds.value = []
-  showForm.value = false
-  resetForm()
 }
 
 const cancelBatch = () => {
