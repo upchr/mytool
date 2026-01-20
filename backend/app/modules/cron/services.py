@@ -6,6 +6,8 @@ from sqlalchemy.engine import Engine
 from datetime import datetime
 import threading
 from . import models, schemas
+from .models import nodes_table
+from .schemas import NodeCreate
 from .ssh_client import SSHClient
 from .scheduler import scheduler
 from .ws_manager import ws_manager
@@ -68,6 +70,21 @@ def toggle_node_status(engine: Engine, node_id: int, is_active: bool) -> bool:
             scheduler.remove_job(job["id"], job["name"])
 
     return True
+
+def update_node(engine: Engine, node_id: int, node: NodeCreate) -> dict:
+    stmt = (
+        update(nodes_table)
+        .where(nodes_table.c.id == node_id)
+        .values(**node.__dict__)  # 将NodeCreate对象转为字典
+    )
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        if result.rowcount == 0:
+            return None
+        # 返回更新后的数据
+        select_stmt = select(nodes_table).where(nodes_table.c.id == node_id)
+        row = conn.execute(select_stmt).mappings().first()
+        return dict(row)
 
 def batch_delete_nodes(engine: Engine, node_ids: list[int]) -> int:
     """批量删除节点，返回成功删除的数量"""

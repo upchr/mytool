@@ -73,7 +73,12 @@ def batch_delete_nodes(req:NodeRequest):
 
     success_count = services.batch_delete_nodes(engine, req.node_ids)
     return {"success": True, "deleted_count": success_count}
-
+@router.put("/nodes/{node_id}", response_model=dict)
+def update_node(node_id: int, node: schemas.NodeCreate):
+    updated = services.update_node(engine, node_id, node)
+    if updated:
+        return updated
+    return {"status": "not found", "id": node_id}
 
 # credential templates
 @router.post("/credentials", response_model=schemas.CredentialTemplateRead)

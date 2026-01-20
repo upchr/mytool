@@ -112,9 +112,21 @@ onClickOutside(
       collapsed.value = true
     },
     {
-      ignore: ['.n-button', '.menu-trigger']
+      ignore: ['.n-button', '.menu-trigger'],
+      detectIframe: false,
+      event: 'click',
+      capture: true
     }
 )
+/*onClickOutside(
+    siderRef,
+    () => {
+      collapsed.value = true
+    },
+    {
+      ignore: ['.n-button', '.menu-trigger']
+    }
+)*/
 const toggleMenu = () => {
   collapsed.value = !collapsed.value;
 };
@@ -157,14 +169,14 @@ const toggleMenu = () => {
   top: 5vh; /* header下方 */
   left: 0;
   bottom: 60px; /* 留出footer的空间 */
-  height: calc(100vh - 5vh - 60px); /* 满屏高度，减去header和footer */
+  height: calc(100vh - 5vh); /* 满屏高度，减去header和footer */
   z-index: 1000;
 }
 
 @media (max-width: 2000px) {
   .mycontent .fixed-sider{
     top: 9vh; /* header下方 */
-    height: calc(100vh - 9vh - 60px); /* 满屏高度，减去header和footer */
+    height: calc(100vh - 9vh); /* 满屏高度，减去header和footer */
   }
 }
 /* 中间内容区域 */

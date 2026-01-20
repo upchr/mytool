@@ -1,21 +1,28 @@
 <template>
-  <n-card title="🖥️ 节点管理" class="mb-6">
+  <n-card :title="'📝 '+title" class="mb-6">
+    <!--    按钮操作-->
+    <n-space justify="end" style="margin-bottom: 10px">
+      <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
+      <n-button type="primary" @click="showForm=true;isBatchMode = false;resetForm();title='新增节点'">编辑节点</n-button>
+      <n-button type="warning" @click="showForm=false;resetForm()">取消</n-button>
+    </n-space>
+
     <!-- 添加节点表单 -->
-    <n-form ref="formRef" :model="newNode" :rules="rules" label-placement="left" :label-width="100">
+    <n-form v-if="showForm" ref="formRef" :model="currentNode" :rules="rules" label-placement="left" :label-width="100">
       <n-grid cols="1 s:2" responsive="screen">
         <n-grid-item>
           <n-form-item path="name" label="节点名称">
-            <n-input v-model:value="newNode.name" placeholder="例如：生产服务器" />
+            <n-input v-model:value="currentNode.name" placeholder="例如：生产服务器" />
           </n-form-item>
         </n-grid-item>
         <n-grid-item>
           <n-form-item path="host" label="主机地址">
-            <n-input v-model:value="newNode.host" placeholder="IP 或域名" />
+            <n-input v-model:value="currentNode.host" placeholder="IP 或域名" />
           </n-form-item>
         </n-grid-item>
         <n-grid-item>
           <n-form-item path="port" label="SSH端口">
-            <n-input-number v-model:value="newNode.port" :min="1" :max="65535" />
+            <n-input-number v-model:value="currentNode.port" :min="1" :max="65535" />
           </n-form-item>
         </n-grid-item>
         <n-grid-item cols="1 600:2">
@@ -31,7 +38,7 @@
         </n-grid-item>
         <n-grid-item cols="1 600:2">
           <n-form-item path="auth_type" label="认证方式">
-            <n-radio-group v-model:value="newNode.auth_type">
+            <n-radio-group v-model:value="currentNode.auth_type">
               <n-space>
                 <n-radio value="password">密码认证</n-radio>
                 <n-radio value="ssh_key">SSH密钥</n-radio>
@@ -41,16 +48,16 @@
         </n-grid-item>
         <n-grid-item>
           <n-form-item path="username" label="用户名">
-            <n-input v-model:value="newNode.username" placeholder="root / admin" />
+            <n-input v-model:value="currentNode.username" placeholder="root / admin" />
           </n-form-item>
         </n-grid-item>
-        <n-grid-item v-if="newNode.auth_type === 'password'">
+        <n-grid-item v-if="currentNode.auth_type === 'password'">
           <n-form-item path="password" label="密码">
             <n-input
                 type="password"
                 show-password-on="mousedown"
                 placeholder="密码"
-                v-model:value="newNode.password"
+                v-model:value="currentNode.password"
                 :maxlength="8"
             />
           </n-form-item>
@@ -58,7 +65,7 @@
         <n-grid-item v-else>
           <n-form-item path="private_key" label="私钥">
             <n-input
-                v-model:value="newNode.private_key"
+                v-model:value="currentNode.private_key"
                 type="textarea"
                 placeholder="粘贴私钥内容（PEM格式）"
                 :autosize="{
@@ -70,18 +77,20 @@
         </n-grid-item>
       </n-grid>
       <n-space justify="end" class="mt-4">
-        <n-button type="primary" @click="addNode">添加节点</n-button>
+        <n-button type="primary" @click="addNode">
+          {{ isEditing ? '更新节点' : '添加节点' }}
+        </n-button>
         <n-button
             type="warning"
             @click="saveAsTemplate"
-            :disabled="!newNode.name || !newNode.username"
+            :disabled="!currentNode.name || !currentNode.username"
         >
           保存凭据模板
         </n-button>
       </n-space>
     </n-form>
+
     <n-space justify="end" class="mt-4" style="margin-top: 10px">
-      <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
         <n-space justify="end" >已选择 {{ selectedNodeIds.length }} 个节点</n-space>
         <n-space style="margin-top: 5px">
@@ -131,6 +140,9 @@
                 >
                   {{ node.is_active ? '停用' : '启用' }}
                 </n-button>
+                <n-button size="small" type="info"  @click="editNode(node)">
+                  编辑
+                </n-button>
                 <n-popconfirm @positive-click="deleteNode(node)">
                   <template #trigger>
                     <n-button size="small" type="error">删除</n-button>
@@ -171,7 +183,7 @@ import { useMessage } from 'naive-ui'
 
 const message = useMessage()
 const nodes = ref([])
-const newNode = ref({
+const defaultNode = ref({
   name: '',
   host: '',
   port: 22,
@@ -181,6 +193,7 @@ const newNode = ref({
   private_key: '',
   is_active: true
 })
+const showForm = ref(false)
 
 // 表单验证规则
 const rules = {
@@ -188,13 +201,13 @@ const rules = {
   host: { required: true, message: '请输入主机地址', trigger: ['blur'] ,pattern: /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,})$|^(?:\d{1,3}\.){3}\d{1,3}$/},
   username: { required: true, message: '请输入用户名', trigger: ['blur'],min: 3,max: 20,},
   password: ({ value }) => {
-    if (newNode.value.auth_type === 'password' && !value) {
+    if (currentNode.value.auth_type === 'password' && !value) {
       return '请输入密码'
     }
     return true
   },
   private_key: ({ value }) => {
-    if (newNode.value.auth_type === 'ssh_key' && !value) {
+    if (currentNode.value.auth_type === 'ssh_key' && !value) {
       return '请粘贴私钥'
     }
     return true
@@ -213,23 +226,22 @@ const loadNodes = async () => {
 }
 
 const addNode = async () => {
+  await formRef.value.validate()
   try {
-    await formRef.value.validate()
-    const res = await axios.post('/api/cron/nodes', newNode.value)
-    message.success('节点添加成功')
-    newNode.value = {
-      name: '',
-      host: '',
-      port: 22,
-      username: '',
-      auth_type: 'password',
-      password: '',
-      private_key: '',
-      is_active: true
+    if (isEditing.value) {
+      // 更新节点
+      const res = await axios.put(`/api/cron/nodes/${currentNode.value.id}`, currentNode.value)
+      message.success('节点更新成功')
+    } else {
+      // 新增节点
+      const res = await axios.post('/api/cron/nodes', currentNode.value)
+      message.success('节点添加成功')
     }
+    resetForm()
     loadNodes()
   } catch (error) {
-    message.error('添加节点失败: ' + (error.response?.data?.detail || error.message))
+    console.log(error)
+    message.error(isEditing.value ? '更新节点失败' : '添加节点失败')
   }
 }
 
@@ -258,6 +270,29 @@ const toggleNode = async (node) => {
     message.error('操作失败')
   }
 }
+const isEditing = ref(false)
+const title = ref('我的节点')
+const currentNode = ref({
+  name: '',
+  host: '',
+  port: 22,
+  username: '',
+  auth_type: 'password',
+  password: '',
+  private_key: '',
+  is_active: true
+})
+const editNode = async (node) => {
+  currentNode.value = {...node}
+  isEditing.value = true
+  showForm.value = true
+  title.value = `修改${currentNode.value.name}`
+}
+const resetForm = () => {
+  currentNode.value = {...defaultNode.value}
+  isEditing.value = false
+  title.value = '我的节点'
+}
 
 const deleteNode = async (node) => {
   try {
@@ -276,6 +311,8 @@ const isBatchMode = ref(false)  // 批量模式开关
 const enterBatchMode = () => {
   isBatchMode.value = true
   selectedNodeIds.value = []
+  showForm.value = false
+  resetForm()
 }
 
 const cancelBatch = () => {
@@ -346,10 +383,10 @@ const applyCredentialTemplate = (templateId) => {
 
   const template = credentialTemplates.value.find(t => t.id === templateId)
   if (template) {
-    newNode.value.username = template.username
-    newNode.value.auth_type = template.auth_type
-    newNode.value.password = template.password || ''
-    newNode.value.private_key = template.private_key || ''
+    currentNode.value.username = template.username
+    currentNode.value.auth_type = template.auth_type
+    currentNode.value.password = template.password || ''
+    currentNode.value.private_key = template.private_key || ''
   }
 }
 const saveAsTemplate = async () => {
@@ -361,10 +398,10 @@ const saveAsTemplate = async () => {
   try {
     const payload = {
       name,
-      username: newNode.value.username,
-      auth_type: newNode.value.auth_type,
-      password: newNode.value.auth_type === 'password' ? newNode.value.password : undefined,
-      private_key: newNode.value.auth_type === 'ssh_key' ? newNode.value.private_key : undefined
+      username: currentNode.value.username,
+      auth_type: currentNode.value.auth_type,
+      password: currentNode.value.auth_type === 'password' ? currentNode.value.password : undefined,
+      private_key: currentNode.value.auth_type === 'ssh_key' ? currentNode.value.private_key : undefined
     }
     await axios.post('/api/cron/credentials', payload)
     message.success('凭据模板保存成功')

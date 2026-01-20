@@ -1,32 +1,14 @@
 <template>
-  <n-card title="📝 我的便签" class="max-w-3xl mx-auto">
-    <!-- 添加/编辑表单 -->
-    <n-form :model="currentNote" label-placement="left" label-width="auto">
-      <n-form-item path="title" label="标题">
-        <n-input v-model:value="currentNote.title" placeholder="请输入标题" />
-      </n-form-item>
-      <n-form-item path="content" label="内容">
-        <n-input
-            v-model:value="currentNote.content"
-            type="textarea"
-            placeholder="请输入内容..."
-            :autosize="{
-                  minRows: 4,
-                  maxRows: 10,
-                }"
-        />
-      </n-form-item>
-      <n-space justify="end">
-        <n-button type="warning" @click="resetForm">取消</n-button>
-        <n-button type="primary" @click="saveNote">
-          {{ isEditing ? '更新便签' : '添加便签' }}
-        </n-button>
-      </n-space>
-    </n-form>
-
-<!--    批量操作-->
-    <n-space justify="end" class="mt-4" style="margin-top: 10px">
+  <n-card :title="'📝 '+title" class="max-w-3xl mx-auto">
+    <!--    按钮操作-->
+    <n-space justify="end" style="margin-bottom: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
+      <n-button type="primary" @click="showForm=true;isBatchMode=false;resetForm();title='新增便签'">编辑便签</n-button>
+      <n-button type="warning" @click="showForm=false;resetForm()">取消</n-button>
+    </n-space>
+    <n-divider />
+    <!--    批量操作-->
+    <n-space justify="end" class="mt-4" style="margin-top: 10px">
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
         <n-space justify="end" >已选择 {{ selectedNoteIds.length }} 个节点</n-space>
         <n-space style="margin-top: 5px">
@@ -46,11 +28,32 @@
           </n-popconfirm>
           <n-button size="small" @click="cancelBatch">取消</n-button>
         </n-space>
+        <n-divider />
       </div>
     </n-space>
-
-    <n-divider />
-
+    <!-- 添加/编辑表单 -->
+    <n-form v-if="showForm" :model="currentNote" label-placement="left" label-width="auto" >
+      <n-form-item path="title" label="标题">
+        <n-input v-model:value="currentNote.title" placeholder="请输入标题" />
+      </n-form-item>
+      <n-form-item path="content" label="内容">
+        <n-input
+            v-model:value="currentNote.content"
+            type="textarea"
+            placeholder="请输入内容..."
+            :autosize="{
+                  minRows: 4,
+                  maxRows: 10,
+                }"
+        />
+      </n-form-item>
+      <n-space justify="end">
+        <n-button type="primary" @click="saveNote">
+          {{ isEditing ? '更新便签' : '添加便签' }}
+        </n-button>
+        <n-button type="warning" @click="resetForm">重置</n-button>
+      </n-space>
+    </n-form>
     <!-- 便签列表 -->
     <div v-if="notes.length === 0" class="text-center py-8 text-gray-500">
       暂无便签，快添加一条吧！
@@ -90,7 +93,8 @@
           <n-input
               v-model:value="note.content"
               type="textarea"
-              disabled
+              :disabled="true"
+              style="background-color: white;"
               :autosize="{
                   minRows: 3,
                   maxRows: 10,
@@ -111,6 +115,8 @@ const message = useMessage()
 const notes = ref([])
 const currentNote = ref({ id: null, title: '', content: '' })
 const isEditing = ref(false)
+const showForm = ref(false)
+const title = ref('我的便签')
 
 const loadNotes = async () => {
   try {
@@ -124,6 +130,7 @@ const loadNotes = async () => {
 const resetForm = () => {
   currentNote.value = { id: null, title: '', content: '' }
   isEditing.value = false
+  title.value = '我的便签'
 }
 
 const saveNote = async () => {
@@ -158,6 +165,8 @@ const saveNote = async () => {
 const editNote = (note) => {
   currentNote.value = {...note}
   isEditing.value = true
+  showForm.value = true
+  title.value = `修改${currentNote.value.title}`
 }
 
 const deleteNote = async (id) => {
@@ -178,6 +187,8 @@ const isBatchMode = ref(false)  // 批量模式开关
 const enterBatchMode = () => {
   isBatchMode.value = true
   selectedNoteIds.value = []
+  showForm.value = false
+  resetForm()
 }
 
 const cancelBatch = () => {
