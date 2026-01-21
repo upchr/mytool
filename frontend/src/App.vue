@@ -83,7 +83,8 @@ import {
   TvOutline as PCIcon,
   AlarmOutline as ClockIcon,
   MenuOutline as MenuIcon,
-  LogoGithub
+  LogoGithub,
+  ServerOutline as DatabaseIcon
 } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
 import {h, onMounted, ref} from "vue";
@@ -100,7 +101,8 @@ function renderIcon(icon) {
 const routes = [
   { path: '/', label: '📝 便签管理', icon: NoteIcon, key: 'notes' },
   { path: '/nodes', label: '🖥️ 节点管理', icon: PCIcon, key: 'nodes' },
-  { path: '/jobs', label: '⏰ 任务管理', icon: ClockIcon, key: 'jobs' }
+  { path: '/jobs', label: '⏰ 任务管理', icon: ClockIcon, key: 'jobs' },
+  { path: '/database', label: '💾 数据管理', icon: DatabaseIcon, key: 'database' }
 ];
 
 // 动态生成菜单项

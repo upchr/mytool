@@ -1,12 +1,14 @@
 # backend/app/modules/note/api.py
 from fastapi import APIRouter, Depends, HTTPException
-from . import services, schemas
+from . import services, schemas, models
 from app.core.database import engine, metadata
 from .schemas import NoteRequest
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 
-metadata.create_all(engine)
+metadata.create_all(engine, tables=[
+    models.notes_table
+])
 
 @router.get("", response_model=list[schemas.NoteRead])
 def read_notes():
