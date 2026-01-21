@@ -31,34 +31,32 @@
     <n-empty v-if="jobs.length === 0" description="暂无任务" />
     <n-collapse v-else @item-header-click="handleItemHeaderClick" class="jobList">
       <n-collapse-item v-for="job in jobs" :key="job.id" :title="getJobTitle(job)"  class="mb-2" :name="job.id">
-        <n-card :bordered="false" class="shadow-sm">
+        <template #header-extra>
+          <n-tag
+              v-if="job.next_run"
+              size="small"
+              type="success"
+              class="ml-2"
+          >
+            下次：{{formatDate(job.next_run) }}
+          </n-tag>
+          <n-tag
+              v-else-if="!job.is_active"
+              size="small"
+              type="warning"
+              class="ml-2"
+          >
+            已停用
+          </n-tag>
+        </template>
+        <n-card hoverable :bordered="false" class="shadow-sm" size="small">
           <template #header>
             <div class="flex justify-between items-start">
               <div style="margin-bottom: 10px;">
-                <span class="ml-2 text-xs text-gray-500">{{ getNodeName(job.node_id) }}：</span>
                 <span class="font-bold">{{ job.name }}</span>
                 <n-tag size="small" class="ml-2" type="info" style="margin-left: 10px;margin-right: 10px">{{ job.schedule }}</n-tag>
-
-                <!-- 下次执行时间标签 -->
-                <n-tag
-                    v-if="job.next_run"
-                    size="small"
-                    type="success"
-                    class="ml-2"
-                >
-                  下次：{{formatDate(job.next_run) }}
-                </n-tag>
-                <n-tag
-                    v-else-if="!job.is_active"
-                    size="small"
-                    type="warning"
-                    class="ml-2"
-                >
-                  已停用
-                </n-tag>
               </div>
               <n-space>
-                <n-button size="small" type="primary" @click="openEditModal(job)">编辑</n-button> <!-- 新增 -->
                 <n-button
                     size="small"
                     :type="job.is_active ? 'success' : 'warning'"
@@ -66,22 +64,23 @@
                 >
                   {{ job.is_active ? '停用' : '启用' }}
                 </n-button>
+                <n-button size="small" type="primary" @click="executeJob(job)">执行</n-button>
+                <n-button size="small" type="info" @click="openEditModal(job)">编辑</n-button> <!-- 新增 -->
                 <n-popconfirm @positive-click="deleteJob(job)">
                   <template #trigger>
                     <n-button size="small" type="error">删除</n-button>
                   </template>
                   确定要删除任务 "{{ job.name }}" 吗？
                 </n-popconfirm>
-                <n-button size="small" type="info" @click="executeJob(job)">立即执行</n-button>
               </n-space>
             </div>
           </template>
 
           <n-collapse :default-expanded-names="['3']">
             <n-collapse-item title="命令详情" name="1">
-              <pre class="bg-gray-50 p-2 rounded text-sm overflow-x-auto">
-              <n-code :code="job.command" language="sh" show-line-numbers />
-              </pre>
+              <div style="overflow: auto">
+                <n-code :code="job.command" language="shell" show-line-numbers/>
+              </div>
             </n-collapse-item>
             <n-collapse-item v-if="job.description" title="描述" name="2">
               <p>{{ job.description }}</p>
@@ -191,10 +190,20 @@
                 }"
             />
           </n-form-item>
-        <n-space justify="end" class="mt-4">
-          <n-button @click="addJobModal = false">取消</n-button>
-          <n-button type="primary" @click="addJob">保存任务</n-button>
-        </n-space>
+          <n-form-item label="启用">
+            <n-switch v-model:value="newJob.is_active">
+              <template #checked>
+                停用
+              </template>
+              <template #unchecked>
+                启用
+              </template>
+            </n-switch>
+          </n-form-item>
+          <n-space justify="end" class="mt-4">
+            <n-button @click="addJobModal = false">取消</n-button>
+            <n-button type="primary" @click="addJob">保存任务</n-button>
+          </n-space>
       </n-form>
     </n-modal>
     <!-- 编辑任务模态框 -->
@@ -254,6 +263,16 @@
                   maxRows: 5,
                 }"
           />
+        </n-form-item>
+        <n-form-item label="启用">
+          <n-switch v-model:value="editingJob.is_active">
+            <template #checked>
+              停用
+            </template>
+            <template #unchecked>
+              启用
+            </template>
+          </n-switch>
         </n-form-item>
         <n-space justify="end" class="mt-4">
           <n-button @click="editJobModal = false">取消</n-button>
@@ -351,7 +370,8 @@ const editingJob = ref({
   name: '',
   schedule: '',
   command: '',
-  description: ''
+  description: '',
+  is_active: false
 })
 const editJobFormRef = ref(null)
 const newJob = ref({
@@ -364,7 +384,6 @@ const newJob = ref({
 })
 
 const jobFormRef = ref(null)
-
 // Cron 表达式正则（支持标准 5 位格式）
 const CRON_REGEX = /^(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?))*$/;
 
@@ -528,7 +547,8 @@ const openEditModal = (job) => {
     name: job.name,
     schedule: job.schedule,
     command: job.command,
-    description: job.description || ''
+    description: job.description || '',
+    is_active: job.is_active || false
   }
   editJobModal.value = true
 }
@@ -638,26 +658,13 @@ const formatDate = (isoString) => {
     second: '2-digit'
   })
 }
+
 const getJobTitle = (job) => {
   const nodeName = getNodeName(job.node_id)
   let title = `${nodeName}：${job.name}`
-
-  // 显示下次执行时间
-  if (job.next_run) {
-    const nextRun = new Date(job.next_run)
-    const formatted = nextRun.toLocaleString('zh-CN', {
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    title += `（下次：${formatted}）`
-  } else if (!job.is_active) {
-    title += '（已停用）'
-  }
-
   return title
 }
+
 
 const addJob = async () => {
   try {
@@ -797,5 +804,16 @@ onUnmounted(() => {
     padding: 0px !important;
   }
 }
+/*
+.n-collapse-item:hover {
+  cursor: pointer; !* 设置指针悬浮 *!
+  background-color: #f0f0f0; !* 改变背景色 *!
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); !* 添加阴影 *!
+  transition: all 0.3s ease; !* 添加过渡效果 *!
+}
 
+!* 如果需要自定义文字颜色或其他样式，可以进一步调整 *!
+.n-collapse-item:hover .n-collapse-item-title {
+  color: #007bff; !* 悬浮时改变标题文字颜色 *!
+}*/
 </style>

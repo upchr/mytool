@@ -1,70 +1,67 @@
 <template>
-  <n-message-provider>
-    <n-space vertical>
-
-      <!-- 固定顶部header -->
-      <n-page-header subtitle="让你的灵感有迹可循，让你的设备如臂使指。"  class="myheader">
-        <template #title>
-          <a href="https://github.com/upchr/mytool/" style="text-decoration: none; color: inherit">ToolsPlus</a>
-        </template>
-        <template #avatar>
-          <n-avatar src="/ICON_256.PNG"/>
-        </template>
-        <template #extra>
-          <n-button
-              text
-              tag="a"
-              href="https://github.com/upchr/mytool/"
-              target="_blank"
-              style="font-size: 24px; margin-right: 10px"
-          >
-            <n-icon>
-              <LogoGithub />
-            </n-icon>
-          </n-button>
-          <n-button text style="font-size: 24px" @click="toggleMenu">
+  <n-config-provider :hljs="hljs">
+    <n-message-provider>
+      <n-space vertical style="width: 100vw">
+        <!-- 固定顶部header -->
+        <n-page-header subtitle="让你的灵感有迹可循，让你的设备如臂使指。"  class="myheader">
+          <template #title>ToolsPlus
+          </template>
+          <template #avatar>
+            <n-avatar src="/ICON_256.PNG"/>
+          </template>
+          <template #extra>
+            <n-button
+                text
+                tag="a"
+                href="https://github.com/upchr/mytool/"
+                target="_blank"
+                style="font-size: 24px; margin-right: 10px"
+            >
               <n-icon>
-                <MenuIcon />
+                <LogoGithub />
               </n-icon>
             </n-button>
-        </template>
-      </n-page-header>
-
-      <n-layout has-sider class="mycontent">
-        <!-- 固定左侧菜单 -->
-        <n-layout-sider ref="siderRef"
-            bordered
-            collapse-mode="width"
-            :collapsed-width="48"
-            :width="190"
-            :collapsed="collapsed"
-            show-trigger
-            @collapse="collapsed = true"
-            @expand="collapsed = false"
-            class="fixed-sider"
-        >
-          <n-menu
-              v-model:value="activeKey"
-              :collapsed="collapsed"
+            <n-button text style="font-size: 24px" @click="toggleMenu">
+                <n-icon>
+                  <MenuIcon />
+                </n-icon>
+              </n-button>
+          </template>
+        </n-page-header>
+        <n-layout has-sider class="mycontent">
+          <!-- 固定左侧菜单 -->
+          <n-layout-sider ref="siderRef"
+              bordered
+              collapse-mode="width"
               :collapsed-width="48"
-              :collapsed-icon-size="22"
-              :options="menuOptions"
-          />
-        </n-layout-sider>
+              :width="190"
+              :collapsed="collapsed"
+              show-trigger
+              @collapse="collapsed = true"
+              @expand="collapsed = false"
+              class="fixed-sider"
+          >
+            <n-menu
+                v-model:value="activeKey"
+                :collapsed="collapsed"
+                :collapsed-width="48"
+                :collapsed-icon-size="22"
+                :options="menuOptions"
+            />
+          </n-layout-sider>
 
-        <!-- 右侧内容区域 -->
-        <n-layout class="content-layout" :style="collapsed?'margin-left: 60px;':'margin-left: 240px;'">
-          <router-view />
+          <!-- 右侧内容区域 -->
+          <n-layout class="content-layout" :style="collapsed?'margin-left: 60px;':'margin-left: 200px;'">
+            <router-view />
+          </n-layout>
         </n-layout>
-      </n-layout>
-
-      <!-- 固定底部footer -->
-      <n-layout-footer bordered class="myfooter">
-        ToolsPlus.ChrPlus
-      </n-layout-footer>
-
-    </n-space>
-  </n-message-provider>
+        <!-- 固定底部footer -->
+        <n-layout-footer bordered class="myfooter">
+          ToolsPlus.ChrPlus
+        </n-layout-footer>
+      </n-space>
+    </n-message-provider>
+  </n-config-provider>
 </template>
 
 <script setup>
@@ -79,6 +76,8 @@ import { NIcon } from "naive-ui";
 import { h, ref} from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import { onClickOutside } from "@vueuse/core";
+import hljs from './plugins/hljs' // 引入 hljs 配置
+
 // 图标渲染函数
 function renderIcon(icon) {
   return () => h(NIcon, null, { default: () => h(icon) });
@@ -162,7 +161,9 @@ const toggleMenu = () => {
   text-align: center;
   padding: 10px 0;
 }
+.mycontent{
 
+}
 /* 固定左侧菜单 */
 .mycontent .fixed-sider {
   position: fixed;
@@ -176,7 +177,7 @@ const toggleMenu = () => {
 @media (max-width: 2000px) {
   .mycontent .fixed-sider{
     top: 70px; /* header下方 */
-    height: calc(100vh - 70px); /* 满屏高度，减去header和footer */
+    height: 100vh; /* 满屏高度，减去header和footer */
   }
 }
 /* 中间内容区域 */

@@ -123,7 +123,7 @@
     <div v-if="nodes.length === 0" class="text-center text-gray-500 py-8">
       暂无节点，点击上方按钮添加
     </div>
-    <n-list v-else  style="height: 51vh;overflow-y: auto;">
+    <n-list v-else  style="height: 70vh;overflow-y: auto;">
       <n-list-item v-for="node in nodes" :key="node.id">
         <n-card hoverable size="small" :title="'节点名称：'+node.name" :bordered="false" class="shadow-sm"
                 :style="isBatchMode && selectedNodeIds.includes(node.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
