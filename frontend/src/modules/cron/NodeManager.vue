@@ -36,8 +36,18 @@
                   :options="credentialTemplates.map(t => ({ label: t.name, value: t.id }))"
                   placeholder="选择凭据模板（可选）"
                   clearable
-                  @update:value="applyCredentialTemplate"
-              />
+                  @update:value="applyCredentialTemplate">
+                <template #header>
+                  <n-button
+                      text
+                      size="small"
+                      block
+                      @click="manageTicket"
+                  >
+                    管理凭据
+                  </n-button>
+                </template>
+              </n-select>
             </n-form-item>
           </n-grid-item>
           <n-grid-item cols="1 600:2">
@@ -94,6 +104,8 @@
         </n-space>
       </n-form>
     </n-modal>
+
+    <!--    批量操作-->
     <n-space justify="end" class="mt-4" style="margin-top: 10px">
       <div v-if="isBatchMode" class="mb-4 flex justify-between items-center bg-gray-50 p-3 rounded">
         <n-space justify="end" >已选择 {{ selectedNodeIds.length }} 个节点</n-space>
@@ -116,7 +128,6 @@
         </n-space>
       </div>
     </n-space>
-
 
     <!-- 节点列表 -->
     <n-divider />
@@ -419,6 +430,9 @@ const saveAsTemplate = async () => {
   } catch (error) {
     message.error('保存失败')
   }
+}
+const manageTicket = async () => {
+  message.error('凭据模板管理功能未开发')
 }
 onMounted(async () => {
   await loadNodes()

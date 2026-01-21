@@ -76,7 +76,7 @@
             </div>
           </template>
 
-          <n-collapse :default-expanded-names="['3']">
+          <n-collapse :default-expanded-names="['3']" style="margin-bottom: 10px">
             <n-collapse-item title="命令详情" name="1">
               <div style="overflow: auto">
                 <n-code :code="job.command" language="shell" show-line-numbers/>

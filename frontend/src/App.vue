@@ -60,6 +60,19 @@
           ToolsPlus.ChrPlus
         </n-layout-footer>
       </n-space>
+
+<!--      <n-modal :show="showModal">
+        <n-card
+            style="width: 600px"
+            title="模态框"
+            size="huge"
+            :bordered="false"
+            role="dialog"
+            aria-modal="true"
+        >
+          倒计时 {{ timeout / 1000 }} 秒
+        </n-card>
+      </n-modal>-->
     </n-message-provider>
   </n-config-provider>
 </template>
@@ -73,7 +86,7 @@ import {
   LogoGithub
 } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
-import { h, ref} from "vue";
+import {h, onMounted, ref} from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import { onClickOutside } from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
@@ -129,6 +142,30 @@ onClickOutside(
 const toggleMenu = () => {
   collapsed.value = !collapsed.value;
 };
+
+
+
+/*const showModal = ref(false);
+const timeout = ref(6e3);
+
+function countdown() {
+  if (timeout.value <= 0) {
+    showModal.value = false;
+  } else {
+    timeout.value -= 1e3;
+    setTimeout(countdown, 1e3);
+  }
+}
+
+function handleClick() {
+  showModal.value = true;
+  timeout.value = 6e3;
+
+  countdown();
+}
+onMounted(async () => {
+  await handleClick()
+})*/
 </script>
 
 <style scoped>
