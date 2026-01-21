@@ -14,6 +14,8 @@ env:
   DOCKERHUB_USERNAME: chrplus
   DOCKERHUB_REPO: toolsplus
   TAG: ${{ github.ref_name }}
+  BARK_URL: "https://api.day.app/${{ secrets.BARK_TOKEN }}/toolsplus/docker push  "  # 修改为你的 Bark 推送 URL
+
 
 jobs:
   build:
@@ -58,3 +60,59 @@ jobs:
             ${{ env.ACR_REGISTRY }}/${{ env.ACR_REPO }}:latest
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:${{ env.TAG }}
             ${{ env.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPO }}:latest
+
+      # ====== Bark 通知 ======
+      - name: Send Bark notification (success)
+        if: success()
+        run: |
+          curl -X POST "https://api.day.app/${{ secrets.BARK_TOKEN }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d $'{
+              "title": "✅ Docker 构建成功",
+              "body": "Tag: ${{ env.TAG }}",
+              "group": "ToolsPlus",
+              "icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "sound": "minuet",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
+          curl -X POST "${{ secrets.WECHAT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d '{
+              "msgtype": "news",
+              "news": {
+                "articles" : [
+                  {
+                    "title" : "ToolsPlus✅",
+                    "description" : "Docker 构建成功\nTag: ${{ env.TAG }}",
+                    "url" : "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "picurl" : "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                  }
+                ]}
+            }'
+
+      - name: Send Bark notification (failure)
+        if: failure()
+        run: |
+          curl -X POST "https://api.day.app/${{ secrets.BARK_TOKEN }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d $'{
+              "title": "❌ Docker 构建失败",
+              "body": "Tag: ${{ env.TAG }}",
+              "group": "ToolsPlus",
+              "icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
+          curl -X POST "${{ secrets.WECHAT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d '{
+              "msgtype": "news",
+              "news": {
+                "articles" : [
+                  {
+                    "title" : "ToolsPlus❌",
+                    "description" : "Docker 构建失败\nTag: ${{ env.TAG }}",
+                    "url" : "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "picurl" : "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                  }
+                ]}
+            }'

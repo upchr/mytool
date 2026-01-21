@@ -77,3 +77,58 @@ jobs:
           git add .
           git commit -m "chore(toolsplus): release v${{ env.VERSION }}"
           git push
+
+      # ====== Bark 通知 ======
+      - name: Send Bark notification (success)
+        if: success()
+        run: |
+          curl -X POST "https://api.day.app/${{ secrets.BARK_TOKEN }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d $'{
+              "title": "✅ FPK 发布成功",
+              "body": "Version: ${{ env.VERSION }}",
+              "group": "toolsplus",
+              "icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
+          curl -X POST "${{ secrets.WECHAT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d '{
+              "msgtype": "news",
+              "news": {
+                "articles" : [
+                  {
+                    "title" : "ToolsPlus✅",
+                    "description" : "FPK 发布成功\nV: ${{ env.VERSION }}",
+                    "url" : "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "picurl" : "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                  }
+                ]}
+            }'
+
+      - name: Send Bark notification (failure)
+        if: failure()
+        run: |
+          curl -X POST "https://api.day.app/${{ secrets.BARK_TOKEN }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d $'{
+              "title": "❌ FPK 发布失败",
+              "body": "Version: ${{ env.VERSION }}",
+              "group": "toolsplus",
+              "icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
+              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }'
+          curl -X POST "${{ secrets.WECHAT_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json; charset=utf-8" \
+            -d '{
+              "msgtype": "news",
+              "news": {
+                "articles" : [
+                  {
+                    "title" : "ToolsPlus❌",
+                    "description" : "FPK 发布失败\nV: ${{ env.TAG }}",
+                    "url" : "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                    "picurl" : "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+                  }
+                ]}
+            }'
