@@ -638,11 +638,6 @@ const toggleJob = async (job) => {
   }
 }
 
-// const showLog = (execution) => {
-//   selectedExecution.value = execution
-//   logModal.value = true
-// }
-
 const getNodeName = (nodeId) => {
   const node = nodes.value.find(n => n.id === nodeId)
   return node ? node.name : `未知节点 (#${nodeId})`
@@ -735,6 +730,7 @@ const connectWebSocket = (executionId) => {
 
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
+    console.log(data)
     // 更新日志
     if (selectedExecution.value && selectedExecution.value.id === executionId) {
       selectedExecution.value.status = data.status
