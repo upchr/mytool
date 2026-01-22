@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException,WebSocket
 from fastapi.params import Body
 from . import services, schemas, models
@@ -149,7 +151,7 @@ def read_execution(execution_id: int):
         raise HTTPException(status_code=404, detail="执行记录不存在")
     return execution
 @router.post("/executions/{execution_id}/stop")
-def stop_execution(execution_id: int):
+async def stop_execution(execution_id: int):
     from .execution_manager import execution_manager
     execution_manager.stop_execution(execution_id)
     return {"status": "ok", "message": "中断请求已发送"}

@@ -693,18 +693,16 @@ const deleteJob = async (job) => {
 
 const stopExecution = async () => {
   if (!selectedExecution.value) return
-
+  if (ws) {
+    ws.close()  // 立即关闭连接
+    ws = null
+  }
   try {
     await axios.post(`/api/cron/executions/${selectedExecution.value.id}/stop`)
-    message.info('中断请求已发送')
+    message.info('中断请求已发送，等待日志加载完成')
 
-    // 更新本地状态（可选）
-    if (selectedExecution.value) {
-      selectedExecution.value.status = 'cancelled'
-    }
-
-    logModal.value = false
     await loadRecentExecutions(selectedExecution.value.job_id,true)
+    showLog(selectedExecution.value)
   } catch (error) {
     message.error('中断失败')
   }
@@ -716,35 +714,65 @@ const stdoutRef = ref(null)
 const stderrRef = ref(null)
 let ws = null
 
-const showLog = (execution) => {
-  selectedExecution.value = { ...execution }
+const showLog = async (execution) => {
+  selectedExecution.value = {...execution}
   logModal.value = true
 
-  // 建立 WebSocket 连接
-  connectWebSocket(execution.id)
+  try {
+    // 获取最新执行记录
+    const res = await axios.get(`/api/cron/executions/${execution.id}`)
+    const status = res.data.status
+    selectedExecution.value = {...res.data}
+
+    if('running' === status){
+      // 建立 WebSocket 连接
+      connectWebSocket(execution.id)
+    }
+  } catch (error) {
+    console.error('查看日志失败:', error)
+  }
 }
 
 const connectWebSocket = (executionId) => {
   const wsUrl = `/api/cron/executions/${executionId}/logs`
-  ws = new WebSocket(wsUrl)
+  selectedExecution.value.output = ''
+  selectedExecution.value.error = ''
 
+  ws = new WebSocket(wsUrl)
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
     console.log(data)
     // 更新日志
     if (selectedExecution.value && selectedExecution.value.id === executionId) {
-      selectedExecution.value.status = data.status
-      selectedExecution.value.output = data.output
-      selectedExecution.value.error = data.error
       if (data.end_time) {
         selectedExecution.value.end_time = data.end_time
+        selectedExecution.value.status = data.status
+        selectedExecution.value.output = data.output
+        selectedExecution.value.error = data.error
+      }else{
+        selectedExecution.value.output += data.output
+        selectedExecution.value.error  += data.error
       }
 
-      // 触发自动滚动
+      // 检查当前滚动位置，决定是否自动滚动到底部
       nextTick(() => {
-        scrollToBottom(stdoutRef.value)
-        scrollToBottom(stderrRef.value)
-      })
+        const isAtBottom = isScrollAtBottom(stdoutRef.value);
+        // 如果用户当前已经在底部，自动滚动到底部
+        if (isAtBottom) {
+          scrollToBottom(stdoutRef.value);
+          scrollToBottom(stderrRef.value);
+        }
+      });
+      // 检查是否滚动到接近底部
+      function isScrollAtBottom(element) {
+        const margin = 100;  // 容错范围：接近底部时也算作底部
+        return element.scrollHeight - element.scrollTop - element.clientHeight < margin;
+      }
+
+    // 自动滚动到底部
+      function scrollToBottom(element) {
+        element.scrollTop = element.scrollHeight;
+      }
     }
   }
 

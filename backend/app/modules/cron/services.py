@@ -273,8 +273,8 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                         output_buffer.append(line)
                         log_data = {
                             "status": "running",
-                            "output": "".join(output_buffer),
-                            "error": "".join(error_buffer),
+                            "output": line,
+                            "error": "",
                             "end_time": None
                         }
                         ws_manager.send_log_sync(execution_id, log_data)
@@ -284,8 +284,8 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                         error_buffer.append(line)
                         log_data = {
                             "status": "running",
-                            "output": "".join(output_buffer),
-                            "error": "".join(error_buffer),
+                            "output": "",
+                            "error": line,
                             "end_time": None
                         }
                         ws_manager.send_log_sync(execution_id, log_data)
@@ -303,7 +303,6 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                             stderr.channel.recv_stderr(4096).decode("utf-8", errors="replace")
                         )
                     break
-
             exit_code = stdout.channel.recv_exit_status()
             status = "success" if exit_code == 0 else "failed"
             final_log = {
@@ -340,6 +339,8 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                 ssh.close()
             # 清理资源
             execution_manager.cleanup(execution_id)
+            ws_manager.cleanup(execution_id)
+
     threading.Thread(target=run_task, daemon=True).start()
 
     # ✅ 返回初始执行记录
