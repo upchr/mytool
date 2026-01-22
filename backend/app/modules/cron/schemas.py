@@ -109,3 +109,10 @@ class JobExecutionRead(JobExecutionBase):
 class ManualExecutionRequest(BaseModel):
     node_ids: List[int] = Field(default_factory=list)
     job_ids: List[int] = Field(default_factory=list)
+
+
+class CronReq(BaseModel):
+    cron: str
+class CronNextRes(BaseModel):
+    next_run: Optional[datetime] = None
+

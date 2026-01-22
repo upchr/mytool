@@ -169,3 +169,7 @@ def remove_job(job_id: int):
     if success:
         return {"status": "ok", "id": job_id}
     return {"status": "not found", "id": job_id}
+
+@router.post("/jobs/crons", response_model=list[schemas.CronNextRes])
+def get_next_crons(cron: schemas.CronReq):
+    return services.get_next_crons(cron)

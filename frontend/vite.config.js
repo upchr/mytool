@@ -3,6 +3,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import Components from 'unplugin-vue-components/vite'
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
+import path from 'path' // 导入 path 模块
 
 export default defineConfig({
   plugins: [
@@ -12,9 +13,15 @@ export default defineConfig({
       resolvers: [NaiveUiResolver()]
     })
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')  // 配置 @ 指向 src 目录
+    }
+  },
   server: {
     port: 5173,
     host: '0.0.0.0',
+    allowedHosts: ['fnos.chrmjj.fun'],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',

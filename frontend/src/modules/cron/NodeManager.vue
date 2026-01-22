@@ -3,7 +3,7 @@
     <!--    按钮操作-->
     <n-space justify="end" style="margin-bottom: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
-      <n-button type="warning" @click="pjForm=true;isBatchMode = false;resetForm();">凭据管理</n-button>
+      <n-button type="warning" @click="manageTicket();isBatchMode = false;resetForm();">凭据管理</n-button>
       <n-button type="primary" @click="showForm=true;isBatchMode = false;resetForm();">添加节点</n-button>
     </n-space>
 
@@ -572,7 +572,7 @@ const saveAsTemplate = async () => {
   }
 }
 const manageTicket = async () => {
-  pjForm.value=true
+  // pjForm.value=true
   message.error('凭据模板管理功能未开发')
 }
 onMounted(async () => {

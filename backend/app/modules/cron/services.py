@@ -441,3 +441,13 @@ def _update_execution_log(engine: Engine, execution_id: int, output: str, error:
     with engine.begin() as conn:
         conn.execute(stmt)
 
+
+
+def get_next_crons(cron: schemas.CronReq) -> list[dict]:
+    cron = croniter(cron.cron, datetime.now())
+    # 获取最近的5次执行时间
+    recent_runs = []
+    for _ in range(5):
+        next_run = cron.get_next(datetime)
+        recent_runs.append(schemas.CronNextRes(next_run=next_run.isoformat()))
+    return recent_runs

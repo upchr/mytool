@@ -160,13 +160,26 @@
             <n-input v-model:value="newJob.name" placeholder="例如：每日备份" />
           </n-form-item>
           <n-form-item path="schedule" label="Cron表达式">
-            <n-input v-model:value="newJob.schedule" placeholder="* * * * *【分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)】" />
-            <template #footer>
-              <n-text depth="3" class="text-xs">
-                格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-6)<br/>
-                示例：0 2 * * * → 每天凌晨2点
-              </n-text>
-            </template>
+            <n-input v-model:value="newJob.schedule" placeholder="* * * * *【分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)】"
+            >
+              <template #suffix>
+                <n-button text @click="showCronGenerator = true" style="color: grey">
+                  <n-icon><CalendarOutline /></n-icon>
+                  生成器
+                </n-button>
+              </template>
+            </n-input>
+
+            <!-- Cron 生成器 -->
+            <CronGenerator
+                v-model:show="showCronGenerator"
+                @update:cron="newJob.schedule = $event"
+                @close="showCronGenerator = false"
+            />
+<!--            <CronGenerator
+                v-model:show="showCronGenerator"
+                @update:cron="handleCronUpdate"
+            />-->
           </n-form-item>
           <n-form-item path="command" label="执行命令">
             <n-input
@@ -234,13 +247,27 @@
           <n-input v-model:value="editingJob.name" placeholder="例如：每日备份" />
         </n-form-item>
         <n-form-item path="schedule" label="Cron表达式">
-          <n-input v-model:value="editingJob.schedule" placeholder="* * * * *" />
-          <template #footer>
-            <n-text depth="3" class="text-xs">
-              格式：分(0-59) 时(0-23) 日(1-31) 月(1-12) 周(0-6)<br/>
-              示例：0 2 * * * → 每天凌晨2点
-            </n-text>
-          </template>
+          <n-input v-model:value="editingJob.schedule" placeholder="* * * * *【分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)】"
+          >
+            <template #suffix>
+              <n-button text @click="showCronGenerator = true" style="color: grey">
+                <n-icon><CalendarOutline /></n-icon>
+                生成器
+              </n-button>
+            </template>
+          </n-input>
+
+          <!-- Cron 生成器 -->
+          <CronGenerator
+              v-model:show="showCronGenerator"
+              :cron="editingJob.schedule"
+              @update:cron="editingJob.schedule = $event"
+              @close="showCronGenerator = false"
+          />
+          <!--            <CronGenerator
+                          v-model:show="showCronGenerator"
+                          @update:cron="handleCronUpdate"
+                      />-->
         </n-form-item>
         <n-form-item path="command" label="执行命令">
           <n-input
@@ -353,6 +380,8 @@
 import {ref, onMounted, onUnmounted, computed, nextTick} from 'vue'
 import axios from 'axios'
 import {useMessage} from 'naive-ui'
+import CronGenerator from "@/components/CronGenerator.vue";
+import { CalendarOutline } from '@vicons/ionicons5'
 
 const message = useMessage()
 const nodes = ref([])
@@ -383,6 +412,15 @@ const newJob = ref({
   is_active: false
 })
 
+
+const showCronGenerator = ref(false)
+const job = ref({
+  cron: '* * * * *'
+})
+// 处理子组件传来的 Cron 表达式。。老式处理
+const handleCronUpdate = (newCron) => {
+  newJob.value.schedule = newCron
+}
 const jobFormRef = ref(null)
 // Cron 表达式正则（支持标准 5 位格式）
 const CRON_REGEX = /^(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?))*$/;
@@ -809,6 +847,9 @@ const getLogStatusType = (status) => {
     default: return 'default'
   }
 }
+
+
+
 onMounted(async () => {
   await loadNodes()
   await loadJobs()
