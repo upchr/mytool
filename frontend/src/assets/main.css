@@ -10,3 +10,10 @@ html, body {
   min-width: 100%;
   overflow-x: hidden; /* 防止横向滚动 */
 }
+
+@media (max-width: 2000px) {
+  .mediaModal {
+    height: calc(100vh);  /* 确保模态框本身占满屏幕 */
+    width: calc(100vw);  /* 确保模态框本身占满屏幕 */
+  }
+}

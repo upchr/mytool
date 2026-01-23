@@ -133,7 +133,7 @@
     </n-collapse>
 
     <!-- 添加任务模态框 -->
-    <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" style="width: 600px">
+    <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" class="mediaModal" style="width: 800px">
       <n-form ref="jobFormRef" :model="newJob" :rules="jobRules" label-placement="left" label-width="auto">
           <n-form-item path="node_id" label="所属节点">
 <!--            <n-select v-model:value="newJob.node_id" :options="nodeOptions" />-->
@@ -160,7 +160,7 @@
             <n-input v-model:value="newJob.name" placeholder="例如：每日备份" />
           </n-form-item>
           <n-form-item path="schedule" label="Cron表达式">
-            <n-input v-model:value="newJob.schedule" placeholder="* * * * *【分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)】"
+            <n-input v-model:value="newJob.schedule" placeholder="* * * * *【分 时 日 月 周】"
             >
               <template #suffix>
                 <n-button text @click="showCronGenerator = true" style="color: grey">
@@ -220,7 +220,7 @@
       </n-form>
     </n-modal>
     <!-- 编辑任务模态框 -->
-    <n-modal v-model:show="editJobModal" preset="card" title="编辑任务" style="width: 600px">
+    <n-modal v-model:show="editJobModal" preset="card" title="编辑任务" class="mediaModal" style="width: 800px">
       <n-form ref="editJobFormRef" :model="editingJob" :rules="jobRules" label-placement="left" label-width="auto">
         <n-form-item path="node_ids" label="所属节点">
           <n-select
@@ -247,7 +247,7 @@
           <n-input v-model:value="editingJob.name" placeholder="例如：每日备份" />
         </n-form-item>
         <n-form-item path="schedule" label="Cron表达式">
-          <n-input v-model:value="editingJob.schedule" placeholder="* * * * *【分 时 日 月 周 (例如: 0 2 * * * 表示每天凌晨2点)】"
+          <n-input v-model:value="editingJob.schedule" placeholder="* * * * *【分 时 日 月 周】"
           >
             <template #suffix>
               <n-button text @click="showCronGenerator = true" style="color: grey">

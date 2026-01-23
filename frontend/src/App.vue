@@ -1,5 +1,7 @@
 <template>
   <n-config-provider :hljs="hljs">
+    <n-notification-provider>
+    <n-dialog-provider>
     <n-message-provider>
       <n-space vertical style="width: 100vw">
         <!-- 固定顶部header -->
@@ -74,6 +76,8 @@
         </n-card>
       </n-modal>-->
     </n-message-provider>
+    </n-dialog-provider>
+    </n-notification-provider>
   </n-config-provider>
 </template>
 
@@ -224,6 +228,7 @@ onMounted(async () => {
   margin-top: 50px; /* 给content留出header的空间 */
   margin-bottom: 60px; /* 给content留出footer的空间 */
   padding: 20px; /* 给content添加内边距 */
+  height: calc(100vh - 50px); /* 满屏高度，减去header和footer */
 }
 
 @media (max-width: 2000px) {

@@ -1,7 +1,7 @@
 <template>
   <n-card title="💾 数据管理" class="mb-6">
     <n-space justify="end" style="margin-bottom: 10px">
-      <n-popconfirm :negative-text="null"
+<!--      <n-popconfirm :negative-text="null"
                     positive-text="清空数据"
                     :positive-button-props="{ type: 'error', size: 'small'}"
                     @positive-click="clearDatabase"
@@ -15,8 +15,11 @@
           <n-button type="error">清空数据</n-button>
         </template>
         一切都将一去杳然，任何人都无法将其捕获。
-      </n-popconfirm>
-
+      </n-popconfirm>-->
+      <n-button type="error"
+          @click="clearData">
+        清空数据
+      </n-button>
       <n-button
           type="primary"
           @click="exportDatabase"
@@ -44,9 +47,6 @@
           <n-text style="font-size: 16px">
             点击或者拖动文件到该区域来上传
           </n-text>
-<!--          <n-p depth="3" style="margin: 8px 0 0 0">-->
-<!--            请不要上传敏感数据，比如你的银行卡号和密码，信用卡号有效期和安全码-->
-<!--          </n-p>-->
         </n-upload-dragger>
       </n-upload>
 
@@ -56,21 +56,21 @@
         <template #icon>
           <n-icon><WarningOutline /></n-icon>
         </template>
-        清除数据库，重新开始。清除前，系统会自动创建备份文件。
+        清除数据库，重新开始。清除前，系统会自动创建备份文件（应用data目录下）。
       </n-alert>
       <n-alert type="warning" class="mt-4">
         <template #icon>
           <n-icon><WarningOutline /></n-icon>
         </template>
-        导入操作会<strong>覆盖当前数据库</strong>，系统会自动创建备份文件。
+        导入操作会<strong>覆盖当前数据库</strong>，系统会自动创建备份文件（应用data目录下）。
       </n-alert>
     </n-space>
   </n-card>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useMessage } from 'naive-ui'
+import {h, ref} from 'vue'
+import {useMessage, useDialog,useNotification , NIcon} from 'naive-ui'
 import { WarningOutline } from '@vicons/ionicons5'
 import axios from 'axios'
 import {
@@ -108,11 +108,35 @@ const exportDatabase = async () => {
     exporting.value = false
   }
 }
+const notification = useNotification()
+
+const dialog = useDialog()
+
+function clearData() {
+  dialog.error({
+    title: '清空数据',
+    content: '一切都将一去杳然，任何人都无法将其捕获。',
+    positiveText: '清空',
+    icon:renderIcon(DeleteIcon),
+    onPositiveClick: () => {
+      clearDatabase()
+    }
+  })
+}
+function renderIcon(icon) {
+  return () => h(icon,  { color: 'red' });
+}
+
 // 清除数据库
 const clearDatabase = async () => {
   try {
     const response = await axios.delete('/api/database/clear')
-    message.success(`数据库清除成功！备份文件: ${response.data.backup_file}`)
+    notification.success({
+      title: '清除成功！',
+      content: `原库备份文件: ${response.data.backup_file}`,
+      duration: 5000,
+      keepAliveOnHover: true
+    })
   } catch (error) {
     message.error(`清除失败: ${error.response?.data?.detail || error.message}`)
   }
@@ -143,8 +167,12 @@ const importDatabase = async () => {
         'Content-Type': 'multipart/form-data'
       }
     })
-
-    message.success(`导入成功！备份文件: ${response.data.backup_file}`)
+    notification.success({
+      title: '导入成功！',
+      content: `原库备份文件: ${response.data.backup_file}`,
+      duration: 5000,
+      keepAliveOnHover: true
+    })
     selectedFile.value = null
   } catch (error) {
     message.error(`导入失败: ${error.response?.data?.detail || error.message}`)

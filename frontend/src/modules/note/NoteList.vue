@@ -36,7 +36,7 @@
     <n-modal v-model:show="showForm"
              preset="card"
              :title="'📝 '+title"
-             style="width: auto;height: auto;min-width: 30vw"
+             class="noteModal mediaModal"
              :on-after-leave="()=>resetForm(true)">
       <n-form :model="currentNote" label-placement="left" label-width="auto" >
         <n-form-item path="title" label="标题">
@@ -63,9 +63,9 @@
     </n-modal>
 
     <!-- 便签列表 -->
-    <div v-if="notes.length === 0" class="text-center py-8 text-gray-500">
+    <n-space v-if="notes.length === 0" >
       暂无便签，快添加一条吧！
-    </div>
+    </n-space>
 
     <n-list v-else style="height: 70vh;overflow-y: auto;">
       <n-list-item v-for="note in notes" :key="note.id" class="mb-3">
@@ -262,3 +262,11 @@ const toggleAllNotesAdd = () => {
 
 onMounted(loadNotes)
 </script>
+<style>
+.noteModal{
+  width: auto;
+  height: auto;
+  min-width: 30vw;
+}
+
+</style>

@@ -10,7 +10,7 @@
     <!-- 添加节点表单 -->
     <n-modal v-model:show="showForm" preset="card"
              :title="'📝 '+title"
-             style="width: auto;height: auto;"
+             class="nodeModal mediaModal"
              draggable
              :on-after-leave="()=>resetForm(true)">
       <n-form v-if="showForm" ref="formRef" :model="currentNode" :rules="rules" label-placement="left" :label-width="100">
@@ -108,7 +108,6 @@
 
     <n-modal v-model:show="pjForm" preset="card"
              title="凭据管理"
-             style="width: auto;height: auto;"
              draggable
              :on-after-leave="()=>resetForm(true)">
       <n-space justify="end" style="margin-bottom: 15px">
@@ -580,3 +579,9 @@ onMounted(async () => {
   await loadCredentialTemplates() // 新增
 })
 </script>
+<style>
+.nodeModal{
+  width: auto;
+  height: auto;
+}
+</style>
