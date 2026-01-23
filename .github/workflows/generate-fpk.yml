@@ -35,7 +35,7 @@ jobs:
       - name: Run fnpack-builder to generate .fpk
         run: |
           pwd
-          ls -la ${{ github.workspace }}
+          ls -la ${{ github.workspace }}/docker/fnfpk/toolsplus
           docker run --rm \
             -e VERSION=${{ env.VERSION }} \
             -v ${{ github.workspace }}/docker/fnfpk/toolsplus:/workspace/toolsplus \
