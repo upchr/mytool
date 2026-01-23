@@ -23,10 +23,10 @@ REPO_NAME = "FnDepot"
 BRANCH = "main"
 
 PROXIES = [
-    {"name": "jsdelivr",    "type": "cdn",     "base": f"https://cdn.jsdelivr.net/gh/{REPO_USER}/{REPO_NAME}@{BRANCH}/"},
     {"name": "gh-proxy",    "type": "proxy",   "base": "https://gh-proxy.org/https://"},
     {"name": "hk-gh-proxy", "type": "proxy",   "base": "https://hk.gh-proxy.org/https://"},
     {"name": "cdn-gh-proxy","type": "proxy",   "base": "https://cdn.gh-proxy.org/https://"},
+    {"name": "jsdelivr",    "type": "cdn",     "base": f"https://cdn.jsdelivr.net/gh/{REPO_USER}/{REPO_NAME}@{BRANCH}/"},
     {"name": "direct",      "type": "raw",     "base": "https://"},
 ]
 

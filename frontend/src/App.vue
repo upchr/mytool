@@ -76,7 +76,7 @@
             <span style="width:20%;">ToolsPlus.ChrPlus</span>
             <span  style="padding-right: 10px">
 
-              <n-badge processing color="grey">
+              <n-badge processing type="warning" style="position: fixed;right:30px;bottom: 5px">
                 <n-avatar @click="goUpdate">{{versionInfo.current}}</n-avatar>
                 <template #value >
                   <n-icon v-if="versionInfo.updatable" :component="UpdateIcon" />
