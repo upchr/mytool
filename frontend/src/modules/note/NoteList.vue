@@ -66,11 +66,9 @@
     <n-space v-if="notes.length === 0" >
       暂无便签，快添加一条吧！
     </n-space>
-
     <n-list v-else style="height: 70vh;overflow-y: auto;">
       <n-list-item v-for="note in notes" :key="note.id" class="mb-3">
         <n-card hoverable size="small" :title="'标题：'+note.title" :bordered="false" class="shadow-sm"
-                :style="isBatchMode && selectedNoteIds.includes(note.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
                 @click="handleCardClick(note)">
           <template #header-extra>
             <n-checkbox
@@ -99,8 +97,7 @@
           <n-input
               v-model:value="note.content"
               type="textarea"
-              :disabled="true"
-              style="background-color: white;"
+              readonly
               :autosize="{
                   minRows: 3,
                   maxRows: 10,

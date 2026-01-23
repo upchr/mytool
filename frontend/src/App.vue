@@ -47,7 +47,7 @@
           <n-layout-sider ref="siderRef"
               bordered
               collapse-mode="width"
-              :collapsed-width="48"
+              :collapsed-width="60"
               :width="190"
               :collapsed="collapsed"
               show-trigger
@@ -58,7 +58,7 @@
             <n-menu
                 v-model:value="activeKey"
                 :collapsed="collapsed"
-                :collapsed-width="48"
+                :collapsed-width="60"
                 :collapsed-icon-size="22"
                 :options="menuOptions"
             />

@@ -273,7 +273,6 @@
     <n-list v-else  style="height: 70vh;overflow-y: auto;">
       <n-list-item v-for="node in nodes" :key="node.id">
         <n-card hoverable size="small" :title="'节点名称：'+node.name" :bordered="false" class="shadow-sm"
-                :style="isBatchMode && selectedNodeIds.includes(node.id) ? { backgroundColor: 'lightgray'}: {backgroundColor: 'whitesmoke'}"
                 @click="handleCardClick(node)">
 
           <template #header-extra>
