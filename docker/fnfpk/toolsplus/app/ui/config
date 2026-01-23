@@ -1,0 +1,18 @@
+{
+  ".url": {
+    "toolsplus.Application": {
+      "noDisplay": false,
+      "allUsers": false,
+      "fileTypes": [],
+      "control": {
+        "accessPerm": "readonly"
+      },
+      "title": "ToolsPlus",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "http",
+      "port": "16688",
+      "url": "/"
+    }
+  }
+}

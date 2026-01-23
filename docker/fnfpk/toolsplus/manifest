@@ -1,0 +1,14 @@
+appname=toolsplus
+version=24.0.0
+display_name=ToolsPlus
+desc="""主要功能为个人便签速记，轻量级多设备定时任务管理。它基于 Vue 3 和 Python3 构建，旨在为开发、多设备用户提供集中定时任务管理、以及事项备忘。"""
+source=thirdparty
+maintainer=chrplus
+maintainer_url=https://github.com/upchr/mytool
+distributor=chrplus
+distributor_url=https://github.com/upchr/mytool
+desktop_uidir=ui
+desktop_applaunchname=toolsplus.Application
+service_port=16688
+checkport=true
+platform=all

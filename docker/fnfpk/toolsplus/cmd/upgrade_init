@@ -1,0 +1,7 @@
+#!/bin/bash
+
+### This script is called before the user upgrades the application.
+
+docker rm -f toolsplus && docker pull chrplus/toolsplus:latest
+  
+exit 0

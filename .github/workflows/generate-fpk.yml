@@ -36,6 +36,7 @@ jobs:
         run: |
           docker run --rm \
             -e VERSION=${{ env.VERSION }} \
+            -v ${{ github.workspace }}/docker/fnfpk/toolsplus:/workspace/toolsplus \
             -v /tmp/fnpack-workspace/files:/workspace/files \
             chrplus/fnpack-builder:v1.2.0
 

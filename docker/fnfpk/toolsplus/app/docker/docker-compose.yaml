@@ -1,0 +1,11 @@
+services:
+  toolsplus:
+    image: chrplus/toolsplus:v24.0.0
+    container_name: toolsplus
+    ports:
+      - "16688:80"
+    volumes:
+      - "/$TRIM_APPDEST_VOL/@appshare/toolsplus/data:/data"
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped

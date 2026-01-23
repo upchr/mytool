@@ -1,0 +1,10 @@
+#!/bin/bash
+
+### This script is called after the user uninstalls the application.
+
+#关闭卸载导航
+#if [ "$wizard_data_action" = "delete" ]; then
+ # rm -rf $TRIM_APPDEST_VOL/@appshare/toolsplus
+#fi
+  
+exit 0

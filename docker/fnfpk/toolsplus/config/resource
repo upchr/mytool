@@ -1,0 +1,38 @@
+{
+    "docker-project":
+    {
+        "projects":
+        [
+            {
+                "name": "toolsplus",
+                "path": "docker"
+            }
+        ]
+    },
+    "data-share":
+    {
+        "shares":
+        [
+            {
+                "name": "toolsplus",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "docker-toolsplus"
+                    ]
+                }
+            },
+            {
+                "name": "toolsplus/data",
+                "permission":
+                {
+                    "rw":
+                    [
+                        "docker-toolsplus"
+                    ]
+                }
+            }
+        ]
+    }
+}

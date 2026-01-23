@@ -1,14 +1,14 @@
 .idea
-
 *.iml
+*/.gitignore
 
+*.db
 notes.db*
+
 
 frontend/dist
 frontend/node_modules
 
-*.db
-
-*/.gitignore
-
 docker/data
+
+#*/fnfpk
