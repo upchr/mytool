@@ -1,4 +1,5 @@
 @import './base.css';
+@import './version.css';
 #app {
   margin: 0 auto;
   padding: 1rem;
@@ -20,6 +21,7 @@ html, body {
   .mediaModal {
     width: auto;
     min-width: 75vw;
+    overflow-y: auto;
     height: calc(100vh);  /* 确保模态框本身占满屏幕 */
   }
 }

@@ -103,6 +103,7 @@ import {
   SunnyOutline as SunIcon,
   MoonOutline as MoonIcon,
   CloudDownloadOutline as UpdateIcon,
+  AccessibilityOutline as AboutIcon,
 } from "@vicons/ionicons5";
 import {NIcon,NButton } from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
@@ -128,10 +129,11 @@ function renderIcon(icon) {
 
 // 路由配置（与 router.js 保持一致）
 const routes = [
-  { path: '/', label: '📝 便签管理', icon: NoteIcon, key: 'notes' },
-  { path: '/nodes', label: '🖥️ 节点管理', icon: PCIcon, key: 'nodes' },
-  { path: '/jobs', label: '⏰ 任务管理', icon: ClockIcon, key: 'jobs' },
-  { path: '/database', label: '💾 数据管理', icon: DatabaseIcon, key: 'database' }
+  { path: '/', label: '便签管理', icon: NoteIcon, key: 'notes' },
+  { path: '/nodes', label: '节点管理', icon: PCIcon, key: 'nodes' },
+  { path: '/jobs', label: '任务管理', icon: ClockIcon, key: 'jobs' },
+  { path: '/database', label: '数据管理', icon: DatabaseIcon, key: 'database' },
+  { path: '/versions', label: '关于', icon: AboutIcon, key: 'versions' }
 ];
 
 // 动态生成菜单项
@@ -177,7 +179,7 @@ const subtitle = computed(() => {
   }
 });
 
-const versionInfo = ref({ current: '', latest: '', updatable: false,versionInfo:'' })
+const versionInfo = ref({ current: '', latest: '', updatable: false,updated_at:'' })
 const formatDate = (isoString) => {
   const date = new Date(isoString)
   return date.toLocaleString('zh-CN', {
@@ -206,16 +208,74 @@ const goUpdate = async () => {
     let markAsRead = false;
     const n = window.$notification.info({
       title: "升级提醒",
-      content: `有版本可升级
-当前版本：${versionInfo.value.current}
-最新版本：${versionInfo.value.latest}
-获取Git地址：
-https://github.com/upchr/FnDepot
-https://gitee.com/upchr/FnDepot
-https://github.com/upchr/mytool
-最新docker镜像：
-chrplus/toolsplus:${versionInfo.value.latest}
-      `,
+      content: () => {
+        const links = [
+          { url: 'https://github.com/upchr/FnDepot', text: 'GitHub - FnDepot' },
+          { url: 'https://gitee.com/upchr/FnDepot', text: 'Gitee - FnDepot' },
+          { url: 'https://github.com/upchr/mytool', text: 'GitHub - mytool' }
+        ]
+
+        return h('div', { class: 'upgrade-notification' }, [
+          // 版本信息
+          h('div', { class: 'version-section' }, [
+            h('p', { class: 'section-title' }, '版本信息'),
+            h('div', { class: 'version-info' }, [
+              h('div', { class: 'version-row' }, [
+                h('span', { class: 'label ' }, '最新版本：'),
+                h('span', { class: 'value newVersion' }, versionInfo.value.latest)
+              ]),
+              h('div', { class: 'version-row' }, [
+                h('span', { class: 'label' }, '当前版本：'),
+                h('span', { class: 'value' }, versionInfo.value.current)
+              ])
+            ])
+          ]),
+
+          // Git 地址
+          h('div', { class: 'links-section' }, [
+            h('p', { class: 'section-title' }, '获取Git地址：'),
+            ...links.map(link =>
+                h('div', { class: 'link-item' }, [
+                  h('a', {
+                    href: link.url,
+                    target: '_blank',
+                    class: 'git-link',
+                    onClick: (e) => {
+                      e.stopPropagation()
+                      window.open(link.url, '_blank')
+                    }
+                  }, link.text)
+                ])
+            )
+          ]),
+
+          // Docker 镜像
+          h('div', { class: 'docker-section' }, [
+            h('p', { class: 'section-title' }, '最新docker镜像：'),
+            h('div', { class: 'docker-image' }, [
+              h('code', { class: 'docker-tag' }, `chrplus/toolsplus:${versionInfo.value.latest}`),
+              h('button', {
+                class: 'copy-btn',
+                onClick: (e) => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(`chrplus/toolsplus:${versionInfo.value.latest}`)
+                  window.$message.success('已复制到剪贴板')
+                }
+              }, '复制')
+            ])
+          ]),
+
+          // 提示信息
+          h('div', { class: 'hint-section' }, [
+            h('p', { class: 'section-title' }, '应用升级'),
+            h('div', { class: '' }, [
+              h('div', { class: '' }, [
+                h('span', { class: 'label' }, '飞牛可去"关于"菜单，查看详细说明。'),
+              ])
+            ])
+          ])
+        ])
+      },
       meta: formatDate(versionInfo.value.updated_at),
       action: () => h(
           NButton,

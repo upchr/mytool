@@ -48,8 +48,8 @@
               type="textarea"
               placeholder="请输入内容..."
               :autosize="{
-                  minRows: 6,
-                  maxRows: 10,
+                  minRows: 10,
+                  maxRows: 18,
                 }"
           />
         </n-form-item>
@@ -99,8 +99,8 @@
               type="textarea"
               readonly
               :autosize="{
-                  minRows: 3,
-                  maxRows: 10,
+                  minRows: 10,
+                  maxRows: 18,
                 }"
           />
         </n-card>
