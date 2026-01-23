@@ -1,11 +1,16 @@
 <template>
-  <n-config-provider :hljs="hljs">
+  <n-config-provider :hljs="hljs" :theme="theme">
     <n-notification-provider>
     <n-dialog-provider>
     <n-message-provider>
       <n-space vertical style="width: 100vw">
         <!-- 固定顶部header -->
-        <n-page-header subtitle="让你的灵感有迹可循，让你的设备如臂使指。"  class="myheader">
+        <n-page-header :subtitle="subtitle"  class="myheader"
+                       :style="{
+                        backgroundColor: theme?.name === 'dark' ? 'rgb(24, 24, 28)' : 'white',
+                        color: theme?.name === 'dark' ? 'white' : 'black'
+                      }"
+        >
           <template #title>ToolsPlus
           </template>
           <template #avatar>
@@ -23,11 +28,18 @@
                 <LogoGithub />
               </n-icon>
             </n-button>
-            <n-button text style="font-size: 24px" @click="toggleMenu">
-                <n-icon>
-                  <MenuIcon />
-                </n-icon>
-              </n-button>
+            <n-button text style="font-size: 24px;margin-right: 10px" @click="toggleTheme">
+              <n-icon>
+                <SunIcon v-if="theme?.name === 'dark'" />
+                <MoonIcon v-else />
+              </n-icon>
+            </n-button>
+            <n-button text style="font-size: 24px;" @click="toggleMenu">
+              <n-icon>
+                <MenuIcon />
+              </n-icon>
+            </n-button>
+
           </template>
         </n-page-header>
         <n-layout has-sider class="mycontent">
@@ -62,19 +74,6 @@
           ToolsPlus.ChrPlus
         </n-layout-footer>
       </n-space>
-
-<!--      <n-modal :show="showModal">
-        <n-card
-            style="width: 600px"
-            title="模态框"
-            size="huge"
-            :bordered="false"
-            role="dialog"
-            aria-modal="true"
-        >
-          倒计时 {{ timeout / 1000 }} 秒
-        </n-card>
-      </n-modal>-->
     </n-message-provider>
     </n-dialog-provider>
     </n-notification-provider>
@@ -88,13 +87,25 @@ import {
   AlarmOutline as ClockIcon,
   MenuOutline as MenuIcon,
   LogoGithub,
-  ServerOutline as DatabaseIcon
+  ServerOutline as DatabaseIcon,
+  SunnyOutline as SunIcon,
+  MoonOutline as MoonIcon,
 } from "@vicons/ionicons5";
 import { NIcon } from "naive-ui";
-import {h, onMounted, ref} from "vue";
+import {computed, h, onMounted, ref, watch} from "vue";
 import { RouterLink, RouterView } from "vue-router";
-import { onClickOutside } from "@vueuse/core";
+import {onClickOutside, useWindowSize} from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
+
+import { darkTheme, useOsTheme } from "naive-ui";
+const osTheme = useOsTheme();
+const theme = ref(null);
+const initTheme =()=>{
+ theme.value = osTheme.value === "dark" ? darkTheme : null;
+}
+const toggleTheme = () => {
+  theme.value = theme.value?.name === 'dark' ? null :darkTheme;
+};
 
 // 图标渲染函数
 function renderIcon(icon) {
@@ -145,36 +156,34 @@ onClickOutside(
       ignore: ['.n-button', '.menu-trigger']
     }
 )*/
+
 const toggleMenu = () => {
   collapsed.value = !collapsed.value;
 };
 
 
 
-/*const showModal = ref(false);
-const timeout = ref(6e3);
+const { width } = useWindowSize(); // 获取窗口宽度
 
-function countdown() {
-  if (timeout.value <= 0) {
-    showModal.value = false;
+// 计算 subtitle 根据窗口宽度的变化
+const subtitle = computed(() => {
+  if (width.value < 2000) {
+    return '猜猜怎么用。'; // 如果宽度小于 2000px, subtitle 设置为空
   } else {
-    timeout.value -= 1e3;
-    setTimeout(countdown, 1e3);
+    return '让你的灵感有迹可循，让你的设备如臂使指。'; // 否则显示默认的 subtitle 文本
   }
-}
+});
 
-function handleClick() {
-  showModal.value = true;
-  timeout.value = 6e3;
-
-  countdown();
-}
 onMounted(async () => {
-  await handleClick()
-})*/
+  initTheme()
+})
 </script>
 
 <style scoped>
+.myheader,
+.myfooter {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
 /* 保证页面占满全屏 */
 .myheader {
   position: fixed;
@@ -182,7 +191,7 @@ onMounted(async () => {
   left: 0;
   right: 0;
   z-index: 1000;
-  background-color: white;
+  //background-color: white;
   padding: 10px 20px;
   height: 50px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
@@ -190,7 +199,7 @@ onMounted(async () => {
 
 @media (max-width: 2000px) {
   .myheader {
-    height: 70px;
+    height: 50px;
   }
 }
 /* 固定footer，底部 */
@@ -200,7 +209,7 @@ onMounted(async () => {
   left: 0;
   right: 0;
   z-index: 1000;
-  background-color: #f0f0f0;
+  //background-color: #f0f0f0;
   text-align: center;
   padding: 10px 0;
 }
@@ -219,7 +228,7 @@ onMounted(async () => {
 
 @media (max-width: 2000px) {
   .mycontent .fixed-sider{
-    top: 70px; /* header下方 */
+    top: 50px; /* header下方 */
     height: 100vh; /* 满屏高度，减去header和footer */
   }
 }
@@ -233,7 +242,7 @@ onMounted(async () => {
 
 @media (max-width: 2000px) {
   .mycontent .content-layout {
-    margin-top: 70px !important; /* 小屏幕时 margin-left 为 0px */
+    margin-top: 20px !important; /* 小屏幕时 margin-left 为 0px */
     margin-left: 5vw !important; /* 小屏幕时 margin-left 为 0px */
   }
 }
