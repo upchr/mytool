@@ -1,6 +1,6 @@
 services:
   toolsplus:
-    image: chrplus/toolsplus:v24.0.0
+    image: chrplus/toolsplus:v1.2.3
     container_name: toolsplus
     ports:
       - "16688:80"
