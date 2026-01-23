@@ -13,13 +13,20 @@ html, body {
 
 .mediaModal{
   width: auto;
+  min-width: 35vw;
   height: auto;
-  min-width: 30vw;
 }
-@media (max-width: 1100px) {
+@media (max-width: 1500px) {
   .mediaModal {
+    width: auto;
+    min-width: 75vw;
     height: calc(100vh);  /* 确保模态框本身占满屏幕 */
+  }
+}
+@media (max-width: 1000px) {
+  .mediaModal {
     width: calc(100vw);  /* 确保模态框本身占满屏幕 */
+    height: calc(100vh);  /* 确保模态框本身占满屏幕 */
   }
 }
 
