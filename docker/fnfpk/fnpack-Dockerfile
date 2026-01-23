@@ -1,0 +1,17 @@
+FROM debian:13
+
+# 设置工作目录
+WORKDIR /workspace/files
+
+COPY toolsplus /workspace/toolsplus/
+COPY fnpack /usr/local/bin/
+
+RUN chmod +x /usr/local/bin/fnpack
+
+RUN echo '#!/bin/bash\n\
+sed -i "s/version=.*/version=$VERSION/" /workspace/toolsplus/manifest\n\
+sed -i "s/latest/v$VERSION/" /workspace/toolsplus/app/docker/docker-compose.yaml\n\
+fnpack build --directory /workspace/toolsplus\n\
+' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

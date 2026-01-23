@@ -19,6 +19,11 @@ RUN apt-get update && apt-get install -y nginx \
 COPY --from=frontend-builder /app/dist /var/www/html
 
 WORKDIR /app
+
+#当前版本标识
+ARG VERSION=dev
+RUN echo "${VERSION}" > /app/version.txt
+
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

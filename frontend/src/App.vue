@@ -1,8 +1,8 @@
 <template>
   <n-config-provider :hljs="hljs" :theme="theme">
+    <n-message-provider>
     <n-notification-provider>
     <n-dialog-provider>
-    <n-message-provider>
       <n-space vertical style="width: 100vw">
         <!-- 固定顶部header -->
         <n-page-header :subtitle="subtitle"  class="myheader"
@@ -71,12 +71,24 @@
         </n-layout>
         <!-- 固定底部footer -->
         <n-layout-footer bordered class="myfooter">
-          ToolsPlus.ChrPlus
+          <n-flex justify="space-between" size="large">
+            <span></span>
+            <span style="width:20%;">ToolsPlus.ChrPlus</span>
+            <span  style="padding-right: 10px">
+
+              <n-badge processing color="grey">
+                <n-avatar @click="goUpdate">{{versionInfo.current}}</n-avatar>
+                <template #value >
+                  <n-icon v-if="versionInfo.updatable" :component="UpdateIcon" />
+                </template>
+              </n-badge>
+            </span>
+          </n-flex>
         </n-layout-footer>
       </n-space>
-    </n-message-provider>
     </n-dialog-provider>
     </n-notification-provider>
+    </n-message-provider>
   </n-config-provider>
 </template>
 
@@ -90,14 +102,16 @@ import {
   ServerOutline as DatabaseIcon,
   SunnyOutline as SunIcon,
   MoonOutline as MoonIcon,
+  CloudDownloadOutline as UpdateIcon,
 } from "@vicons/ionicons5";
-import { NIcon } from "naive-ui";
+import {NIcon,NButton } from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
 import { RouterLink, RouterView } from "vue-router";
 import {onClickOutside, useWindowSize} from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
 
 import { darkTheme, useOsTheme } from "naive-ui";
+import axios from "axios";
 const osTheme = useOsTheme();
 const theme = ref(null);
 const initTheme =()=>{
@@ -147,21 +161,10 @@ onClickOutside(
       capture: true
     }
 )
-/*onClickOutside(
-    siderRef,
-    () => {
-      collapsed.value = true
-    },
-    {
-      ignore: ['.n-button', '.menu-trigger']
-    }
-)*/
 
 const toggleMenu = () => {
   collapsed.value = !collapsed.value;
 };
-
-
 
 const { width } = useWindowSize(); // 获取窗口宽度
 
@@ -174,8 +177,75 @@ const subtitle = computed(() => {
   }
 });
 
+const versionInfo = ref({ current: '', latest: '', updatable: false,versionInfo:'' })
+const formatDate = (isoString) => {
+  const date = new Date(isoString)
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+const getVersion = async () => {
+  try {
+    const res = await axios.get(`/api/version/`)
+    versionInfo.value = res.data
+  } catch (error) {
+    window.$message?.error('获取当前版本失败')
+  }
+}
+
+const goUpdate = async () => {
+  if(!versionInfo.value.updatable){
+    return
+  }
+
+  function notice() {
+    let markAsRead = false;
+    const n = window.$notification.info({
+      title: "升级提醒",
+      content: `有版本可升级
+当前版本：${versionInfo.value.current}
+最新版本：${versionInfo.value.latest}
+获取Git地址：
+https://github.com/upchr/FnDepot
+https://gitee.com/upchr/FnDepot
+https://github.com/upchr/mytool
+最新docker镜像：
+chrplus/toolsplus:${versionInfo.value.latest}
+      `,
+      meta: formatDate(versionInfo.value.updated_at),
+      action: () => h(
+          NButton,
+          {
+            text: true,
+            type: "primary",
+            onClick: () => {
+              markAsRead = true;
+              n.destroy();
+            }
+          },
+          {
+            default: () => "已读"
+          }
+      ),
+      onClose: () => {
+        if (!markAsRead) {
+          window.$message.warning("请设为已读");
+          return false;
+        }
+      }
+    });
+  }
+  const res = await axios.get(`/api/version/lastVersion`)
+  versionInfo.value = res.data
+  notice()
+}
 onMounted(async () => {
   initTheme()
+  await getVersion()
 })
 </script>
 

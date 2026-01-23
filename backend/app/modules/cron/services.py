@@ -228,12 +228,14 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
         job_stmt = select(models.cron_jobs_table).where(models.cron_jobs_table.c.id == job_id)
         job = conn.execute(job_stmt).mappings().first()
         if not job:
-            raise ValueError(f"任务 {job_id} 不存在")
+            scheduler.remove_job(job_id, '该任务不存在')
+            raise ValueError(f"任务 {job_id} 不存在，已移除计划")
 
         node_stmt = select(models.nodes_table).where(models.nodes_table.c.id == job['node_id'])
         node = conn.execute(node_stmt).mappings().first()
         if not node:
-            raise ValueError(f"任务 {job_id} 的节点不存在")
+            scheduler.remove_job(job_id, f"任务 {job_id} 的节点{job['node_id']}不存在")
+            raise ValueError(f"任务 {job_id} 的节点{job['node_id']}不存在，已移除计划")
 
     # 创建执行记录
     stmt = insert(models.job_executions_table).values(

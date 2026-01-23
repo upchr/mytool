@@ -101,7 +101,7 @@ const message = useMessage()
 import { SwapHorizontal as SwapHorizontalIcon } from '@vicons/ionicons5'
 
 const minute = ref('*/5')
-const hour = ref('*/6')
+const hour = ref('*')
 const day = ref('*')
 const month = ref('*')
 const weekday = ref('*')

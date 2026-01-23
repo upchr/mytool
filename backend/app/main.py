@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.modules.note.api import router as note_router
 from app.modules.cron.api import router as cron_router
 from app.modules.database.api import router as database_router
+from app.modules.version.api import router as version_router
 from contextlib import asynccontextmanager
 from app.modules.cron.scheduler import scheduler
 from app.modules.cron.ws_manager import ws_manager
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(note_router)
 app.include_router(cron_router)
 app.include_router(database_router)
+app.include_router(version_router)
 
 if __name__ == "__main__":
     import uvicorn
