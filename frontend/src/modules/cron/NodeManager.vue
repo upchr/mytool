@@ -10,7 +10,7 @@
     <!-- 添加节点表单 -->
     <n-modal v-model:show="showForm" preset="card"
              :title="'📝 '+title"
-             class="nodeModal mediaModal"
+             class=" mediaModal"
              draggable
              :on-after-leave="()=>resetForm(true)">
       <n-form v-if="showForm" ref="formRef" :model="currentNode" :rules="rules" label-placement="left" :label-width="100">
@@ -579,8 +579,5 @@ onMounted(async () => {
 })
 </script>
 <style>
-.nodeModal{
-  width: auto;
-  height: auto;
-}
+
 </style>

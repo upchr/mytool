@@ -167,8 +167,8 @@ const { width } = useWindowSize(); // 获取窗口宽度
 
 // 计算 subtitle 根据窗口宽度的变化
 const subtitle = computed(() => {
-  if (width.value < 2000) {
-    return '猜猜怎么用。'; // 如果宽度小于 2000px, subtitle 设置为空
+  if (width.value < 1100) {
+    return '猜猜怎么用。'; // 如果宽度小于 1100px, subtitle 设置为空
   } else {
     return '让你的灵感有迹可循，让你的设备如臂使指。'; // 否则显示默认的 subtitle 文本
   }
@@ -197,7 +197,7 @@ onMounted(async () => {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
 }
 
-@media (max-width: 2000px) {
+@media (max-width: 1100px) {
   .myheader {
     height: 50px;
   }
@@ -226,7 +226,7 @@ onMounted(async () => {
   z-index: 1000;
 }
 
-@media (max-width: 2000px) {
+@media (max-width: 1100px) {
   .mycontent .fixed-sider{
     top: 50px; /* header下方 */
     height: 100vh; /* 满屏高度，减去header和footer */
@@ -240,7 +240,7 @@ onMounted(async () => {
   height: calc(100vh - 50px); /* 满屏高度，减去header和footer */
 }
 
-@media (max-width: 2000px) {
+@media (max-width: 1100px) {
   .mycontent .content-layout {
     margin-top: 20px !important; /* 小屏幕时 margin-left 为 0px */
     margin-left: 5vw !important; /* 小屏幕时 margin-left 为 0px */

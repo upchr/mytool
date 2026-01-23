@@ -36,7 +36,7 @@
     <n-modal v-model:show="showForm"
              preset="card"
              :title="'📝 '+title"
-             class="noteModal mediaModal"
+             class=" mediaModal"
              :on-after-leave="()=>resetForm(true)">
       <n-form :model="currentNote" label-placement="left" label-width="auto" >
         <n-form-item path="title" label="标题">
@@ -260,10 +260,6 @@ const toggleAllNotesAdd = () => {
 onMounted(loadNotes)
 </script>
 <style>
-.noteModal{
-  width: auto;
-  height: auto;
-  min-width: 30vw;
-}
+
 
 </style>

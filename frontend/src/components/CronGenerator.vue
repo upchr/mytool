@@ -1,5 +1,5 @@
 <template>
-  <n-modal v-model:show="show" preset="card" title="Cron 生成器" class="mediaModal" style="width: 800px">
+  <n-modal v-model:show="show" preset="card" title="Cron 生成器" class="mediaModal " >
       <n-form label-placement="left" label-width="auto">
         <n-form-item label="分钟">
           <!--            <n-select v-model:value="newJob.node_id" :options="nodeOptions" />-->
@@ -233,30 +233,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.cron-generator {
-  display: grid;
-  gap: 16px;
-}
 
-.field-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.field-group label {
-  width: 80px;
-  text-align: right;
-}
 
 .time-item {
   margin: 4px 0;
-}
-
-.actions {
-  margin-top: 24px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 }
 </style>

@@ -133,7 +133,7 @@
     </n-collapse>
 
     <!-- 添加任务模态框 -->
-    <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" class="mediaModal" style="width: 800px">
+    <n-modal v-model:show="addJobModal" preset="card" title="添加新任务" class="mediaModal " >
       <n-form ref="jobFormRef" :model="newJob" :rules="jobRules" label-placement="left" label-width="auto">
           <n-form-item path="node_id" label="所属节点">
 <!--            <n-select v-model:value="newJob.node_id" :options="nodeOptions" />-->
@@ -220,7 +220,7 @@
       </n-form>
     </n-modal>
     <!-- 编辑任务模态框 -->
-    <n-modal v-model:show="editJobModal" preset="card" title="编辑任务" class="mediaModal" style="width: 800px">
+    <n-modal v-model:show="editJobModal" preset="card" title="编辑任务" class="mediaModal " >
       <n-form ref="editJobFormRef" :model="editingJob" :rules="jobRules" label-placement="left" label-width="auto">
         <n-form-item path="node_ids" label="所属节点">
           <n-select
@@ -881,4 +881,5 @@ onUnmounted(() => {
 .n-collapse-item:hover .n-collapse-item-title {
   color: #007bff; !* 悬浮时改变标题文字颜色 *!
 }*/
+
 </style>
