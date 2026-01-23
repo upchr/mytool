@@ -34,6 +34,8 @@ jobs:
 
       - name: Run fnpack-builder to generate .fpk
         run: |
+          pwd
+          ls -la ${{ github.workspace }}
           docker run --rm \
             -e VERSION=${{ env.VERSION }} \
             -v ${{ github.workspace }}/docker/fnfpk/toolsplus:/workspace/toolsplus \
@@ -70,14 +72,14 @@ jobs:
               .toolsplus.history += { ("v" + $ver): $log }' \
              fnpack.json > fnpack.json.tmp && mv fnpack.json.tmp fnpack.json
 
-      - name: Commit and push to FnDepot
-        working-directory: fnpack-repo
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "chore(toolsplus): release v${{ env.VERSION }}"
-          git push
+#      - name: Commit and push to FnDepot
+#        working-directory: fnpack-repo
+#        run: |
+#          git config --global user.name "github-actions[bot]"
+#          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+#          git add .
+#          git commit -m "chore(toolsplus): release v${{ env.VERSION }}"
+#          git push
 
       # ====== Bark 通知 ======
       - name: Send Bark notification (success)
