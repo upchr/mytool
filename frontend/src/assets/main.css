@@ -17,3 +17,10 @@ html, body {
     width: calc(100vw);  /* 确保模态框本身占满屏幕 */
   }
 }
+
+/* 全局 CSS */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
