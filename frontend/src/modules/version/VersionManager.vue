@@ -1,18 +1,30 @@
 <template>
   <n-card title="👤 关于" class="mb-6">
     <n-space justify="end" style="margin-bottom: 10px">
-      <n-button type="error"
+      <n-badge processing type="warning">
+        <n-button type="error"
+                  :loading="goUpdateIng"
+                  @click="goUpdate">
+          检查更新
+        </n-button>
+        <template #value >
+          <n-icon v-if="versionInfo.updatable" :component="UpdateIcon" />
+        </template>
+      </n-badge>
+
+<!--      <n-button type="error"
           :loading="goUpdateIng"
           @click="goUpdate">
         检查更新
-      </n-button>
+      </n-button>-->
     </n-space>
-
     <n-space vertical>
       <n-card title="版本" hoverable>
-        <n-space>当前版本：{{versionInfo.current}}</n-space>
-        <n-space v-if="versionInfo.updatable">最新版本：{{versionInfo.latest}}</n-space>
-        <n-space v-if="versionInfo.updatable">更新日期：{{formatDate(versionInfo.updated_at)}}</n-space>
+        <n-space>当前版本：<n-space >{{versionInfo.current}}</n-space></n-space>
+        <n-space v-if="versionInfo.updatable">最新版本：<n-space wrap-item item-style="color: red;font-weight: bold">{{versionInfo.latest}}</n-space></n-space>
+        <n-space v-if="versionInfo.updatable">更新日期：<n-space >{{formatDate(versionInfo.updated_at)}}</n-space></n-space>
+        <n-space v-else>已是最新版本！</n-space>
+
       </n-card>
       <n-card title="飞牛升级脚本" hoverable style="overflow-y: auto;overflow-x: auto">
         <template #header-extra>
@@ -39,7 +51,7 @@
 <script setup>
 import {h, onMounted, ref} from 'vue'
 import { NIcon, NButton} from 'naive-ui'
-import { WarningOutline } from '@vicons/ionicons5'
+import {CloudDownloadOutline as UpdateIcon, WarningOutline} from '@vicons/ionicons5'
 import axios from 'axios'
 
 const goUpdateIng = ref(false)
@@ -89,6 +101,7 @@ const versionInfo = ref({ current: '', latest: '', updatable: false,updated_at:'
 const formatDate = (isoString) => {
   const date = new Date(isoString)
   return date.toLocaleString('zh-CN', {
+    year: 'numeric',  // 显示四位年份
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
@@ -96,11 +109,14 @@ const formatDate = (isoString) => {
     second: '2-digit'
   })
 }
-const getVersion = async () => {
+const getVersion = async (flag = false) => {
   try {
     goUpdateIng.value = true
     const res = await axios.get(`/api/version/lastVersion`)
     versionInfo.value = res.data
+    if(flag && versionInfo.value.updatable){
+      window.$message?.warning(`有版本可更新！${versionInfo.value.latest}`)
+    }
   } catch (error) {
     window.$message?.error('获取当前版本失败')
   }finally {
@@ -270,7 +286,7 @@ const goUpdate = async () => {
 }
 
 onMounted(async () => {
-  await getVersion()
+  await getVersion(true)
 })
 </script>
 

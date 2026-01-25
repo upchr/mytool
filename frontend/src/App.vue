@@ -107,7 +107,7 @@ import {
 } from "@vicons/ionicons5";
 import {NIcon,NButton } from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
-import { RouterLink, RouterView } from "vue-router";
+import {RouterLink, RouterView, useRouter} from "vue-router";
 import {onClickOutside, useWindowSize} from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
 
@@ -199,6 +199,11 @@ const getVersion = async () => {
   }
 }
 
+
+const router = useRouter()  // 获取 router 实例
+const goToAbout = () => {
+  router.push('/versions')  // 跳转到 /versions 路由
+}
 const goUpdate = async () => {
   if(!versionInfo.value.updatable){
     return
@@ -271,6 +276,13 @@ const goUpdate = async () => {
             h('div', { class: '' }, [
               h('div', { class: '' }, [
                 h('span', { class: 'label' }, '飞牛可去"关于"菜单，查看详细说明。'),
+                h('button', {
+                  class: 'copy-btn',
+                  onClick: (e) => {
+                    e.stopPropagation()
+                    goToAbout()  // 使用 goToAbout 函数
+                  }
+                }, '关于')
               ])
             ])
           ])
