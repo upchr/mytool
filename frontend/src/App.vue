@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :hljs="hljs" :theme="theme">
+  <n-config-provider :hljs="hljs" :theme="themeStore.theme">
     <n-message-provider>
     <n-notification-provider>
     <n-dialog-provider>
@@ -7,8 +7,8 @@
         <!-- 固定顶部header -->
         <n-page-header :subtitle="subtitle"  class="myheader"
                        :style="{
-                        backgroundColor: theme?.name === 'dark' ? 'rgb(24, 24, 28)' : 'white',
-                        color: theme?.name === 'dark' ? 'white' : 'black'
+                        backgroundColor: themeStore.theme?.name === 'dark' ? 'rgb(24, 24, 28)' : 'white',
+                        color: themeStore.theme?.name === 'dark' ? 'white' : 'black'
                       }"
         >
           <template #title>ToolsPlus
@@ -28,9 +28,9 @@
                 <LogoGithub />
               </n-icon>
             </n-button>
-            <n-button text style="font-size: 24px;margin-right: 10px" @click="toggleTheme">
+            <n-button text style="font-size: 24px;margin-right: 10px" @click="themeStore.toggleTheme">
               <n-icon>
-                <SunIcon v-if="theme?.name === 'dark'" />
+                <SunIcon v-if="themeStore.theme?.name === 'dark'" />
                 <MoonIcon v-else />
               </n-icon>
             </n-button>
@@ -140,8 +140,8 @@ import {RouterLink, RouterView, useRouter} from "vue-router";
 import {useWindowSize} from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
 
-import { darkTheme, useOsTheme } from "naive-ui";
 import axios from "axios";
+/*import { darkTheme, useOsTheme } from "naive-ui";
 const osTheme = useOsTheme();
 const theme = ref(null);
 const initTheme =()=>{
@@ -149,7 +149,9 @@ const initTheme =()=>{
 }
 const toggleTheme = () => {
   theme.value = theme.value?.name === 'dark' ? null :darkTheme;
-};
+};*/
+import { useThemeStore } from '@/stores/theme'
+const themeStore = useThemeStore()
 
 // 图标渲染函数
 function renderIcon(icon) {
@@ -346,7 +348,9 @@ const goUpdate = async () => {
   notice()
 }
 onMounted(async () => {
-  initTheme()
+  console.log(themeStore.theme)
+
+  themeStore.initTheme()
   await getVersion()
 })
 </script>

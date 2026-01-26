@@ -337,16 +337,7 @@
           <n-text depth="3">STDOUT:</n-text>
           <div
               ref="stdoutRef"
-              class="bg-gray-50 p-2 rounded text-sm font-mono"
-              style="
-                  height: 25vh;
-                  overflow-y: auto;
-                  overflow-x: auto;
-                  white-space: pre-wrap;
-                  word-break: break-word;
-                  background-color: whitesmoke;
-                  padding: 10px;
-              "
+              :class="stdOutClass"
           >
             {{ selectedExecution?.output || '无输出' }}
           </div>
@@ -357,16 +348,7 @@
           <n-text depth="3">STDERR:</n-text>
           <div
               ref="stderrRef"
-              class="bg-red-50 p-2 rounded text-sm font-mono text-red-700"
-              style="
-                height: 25vh;
-                overflow-y: auto;
-                overflow-x: auto;
-                white-space: pre-wrap;
-                word-break: break-word;
-                background-color: wheat;
-                padding: 10px;
-              "
+              :class="stdErrClass"
           >
             {{ selectedExecution?.error || '无错误' }}
           </div>
@@ -382,6 +364,8 @@ import axios from 'axios'
 import {useMessage} from 'naive-ui'
 import CronGenerator from "@/components/CronGenerator.vue";
 import { CalendarOutline } from '@vicons/ionicons5'
+import { useThemeStore } from '@/stores/theme'
+const themeStore = useThemeStore()
 
 const message = useMessage()
 const nodes = ref([])
@@ -848,6 +832,20 @@ const getLogStatusType = (status) => {
   }
 }
 
+const stdOutClass = computed(() => {
+  if (themeStore.theme?.name === 'dark') {
+    return ['stdClass','stdOutClassM']
+  } else {
+    return ['stdClass','stdOutClass']
+  }
+})
+const stdErrClass = computed(() => {
+  if (themeStore.theme?.name === 'dark') {
+    return ['stdClass','stdErrClassM']
+  } else {
+    return ['stdClass','stdErrClass']
+  }
+})
 
 
 onMounted(async () => {
@@ -869,17 +867,25 @@ onUnmounted(() => {
     padding: 0px !important;
   }
 }
-/*
-.n-collapse-item:hover {
-  cursor: pointer; !* 设置指针悬浮 *!
-  background-color: #f0f0f0; !* 改变背景色 *!
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); !* 添加阴影 *!
-  transition: all 0.3s ease; !* 添加过渡效果 *!
+
+.stdClass{
+  height: 25vh;
+  overflow-y: auto;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 10px;
 }
-
-!* 如果需要自定义文字颜色或其他样式，可以进一步调整 *!
-.n-collapse-item:hover .n-collapse-item-title {
-  color: #007bff; !* 悬浮时改变标题文字颜色 *!
-}*/
-
+.stdOutClass{
+  background-color: whitesmoke;
+}
+.stdErrClass{
+  background-color: wheat;
+}
+.stdOutClassM{
+  background-color: rgb(24, 24, 28);
+}
+.stdErrClassM{
+  background-color: gray;
+}
 </style>

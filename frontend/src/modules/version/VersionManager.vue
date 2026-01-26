@@ -30,7 +30,7 @@
       <n-card title="升级脚本" style="margin-bottom: 16px">
         <n-tabs type="line" animated>
           <n-tab-pane name="飞牛" tab="飞牛">
-            <n-card title="飞牛升级脚本" hoverable style="overflow-y: auto;overflow-x: auto">
+            <n-card title="飞牛升级脚本" hoverable style="height:60vh;overflow-y: auto;overflow-x: auto">
               <template #header-extra>
                 <n-button type="info" size="small" @click="copy(fpk_code)">
                   复制
@@ -47,7 +47,7 @@
             </n-alert>
           </n-tab-pane>
           <n-tab-pane name="Docker" tab="Docker">
-            <n-card title="Docker脚本" hoverable style="overflow-y: auto;overflow-x: auto">
+            <n-card title="Docker脚本" hoverable style="height:60vh;overflow-y: auto;overflow-x: auto">
               <template #header-extra>
                 <n-button type="info" size="small" @click="copy(docker_code)">
                   复制
