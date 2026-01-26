@@ -63,7 +63,36 @@
                 :options="menuOptions"
             />
           </n-layout-sider>
+          <div class="menu-container" :class="{ 'menu-open': !collapsed }">
+            <!-- 遮罩层 -->
+            <div
+                v-show="!collapsed"
+                class="menu-overlay"
+                @click="collapsed = true"
+                @touchstart="collapsed = true"
+            ></div>
 
+            <n-layout-sider ref="siderRef"
+                            bordered
+                            collapse-mode="width"
+                            :collapsed-width="60"
+                            :width="190"
+                            :collapsed="collapsed"
+                            show-trigger
+                            @collapse="collapsed = true"
+                            @expand="collapsed = false"
+                            class="fixed-sider"
+            >
+              <n-menu
+                  v-model:value="activeKey"
+                  :collapsed="collapsed"
+                  :collapsed-width="60"
+                  :collapsed-icon-size="22"
+                  :options="menuOptions"
+              />
+            </n-layout-sider>
+
+          </div>
           <!-- 右侧内容区域 -->
           <n-layout class="content-layout" :style="collapsed?'margin-left: 60px;':'margin-left: 200px;'">
             <router-view />
@@ -108,7 +137,7 @@ import {
 import {NIcon,NButton } from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
 import {RouterLink, RouterView, useRouter} from "vue-router";
-import {onClickOutside, useWindowSize} from "@vueuse/core";
+import {useWindowSize} from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
 
 import { darkTheme, useOsTheme } from "naive-ui";
@@ -151,18 +180,18 @@ const activeKey = ref(null);
 const collapsed = ref(true);
 const siderRef = ref(null)
 
-onClickOutside(
-    siderRef,
-    () => {
-      collapsed.value = true
-    },
-    {
-      ignore: ['.n-button', '.menu-trigger'],
-      detectIframe: false,
-      event: 'click',
-      capture: true
-    }
-)
+// onClickOutside(
+//     siderRef,
+//     () => {
+//       collapsed.value = true
+//     },
+//     {
+//       ignore: ['.n-button', '.menu-trigger'],
+//       detectIframe: false,
+//       event: 'click',
+//       capture: true
+//     }
+// )
 
 const toggleMenu = () => {
   collapsed.value = !collapsed.value;
@@ -333,7 +362,7 @@ onMounted(async () => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 1001;
   //background-color: white;
   padding: 10px 20px;
   height: 50px;
@@ -351,7 +380,7 @@ onMounted(async () => {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 1001;
   //background-color: #f0f0f0;
   text-align: center;
   padding: 10px 0;
@@ -387,6 +416,41 @@ onMounted(async () => {
   .mycontent .content-layout {
     margin-top: 20px !important; /* 小屏幕时 margin-left 为 0px */
     margin-left: 5vw !important; /* 小屏幕时 margin-left 为 0px */
+  }
+}
+
+.menu-container {
+  position: relative;
+}
+
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999; /* 确保在菜单下层 */
+}
+
+.n-layout-sider {
+  z-index: 1000; /* 确保在遮罩层上层 */
+  position: relative;
+}
+
+/* 移动端样式 */
+@media (max-width: 1000px) {
+  .menu-overlay {
+    display: block;
+  }
+
+  .n-layout-sider {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 1000;
+    //box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
   }
 }
 </style>
