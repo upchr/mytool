@@ -99,7 +99,7 @@
               type="textarea"
               readonly
               :autosize="{
-                  minRows: 10,
+                  minRows: 3,
                   maxRows: 18,
                 }"
           />

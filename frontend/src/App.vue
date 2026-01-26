@@ -199,7 +199,6 @@ const getVersion = async () => {
   }
 }
 
-
 const router = useRouter()  // 获取 router 实例
 const goToAbout = () => {
   router.push('/versions')  // 跳转到 /versions 路由
@@ -262,9 +261,11 @@ const goUpdate = async () => {
               h('button', {
                 class: 'copy-btn',
                 onClick: (e) => {
-                  e.stopPropagation()
+                  window.$copyCode(`chrplus/toolsplus:${versionInfo.value.latest}`,e)
+                  // handleCopy
+                  /*e.stopPropagation()
                   navigator.clipboard.writeText(`chrplus/toolsplus:${versionInfo.value.latest}`)
-                  window.$message.success('已复制到剪贴板')
+                  window.$message.success('已复制到剪贴板')*/
                 }
               }, '复制')
             ])
@@ -275,7 +276,7 @@ const goUpdate = async () => {
             h('p', { class: 'section-title' }, '应用升级'),
             h('div', { class: '' }, [
               h('div', { class: '' }, [
-                h('span', { class: 'label' }, '飞牛可去"关于"菜单，查看详细说明。'),
+                h('span', { class: 'label' }, '可去"关于"菜单，查看详细说明。'),
                 h('button', {
                   class: 'copy-btn',
                   onClick: (e) => {
