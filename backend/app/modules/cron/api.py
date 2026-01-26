@@ -97,6 +97,15 @@ def delete_credential_template(template_id: int):
     if not success:
         raise HTTPException(404, "模板不存在")
     return {"status": "ok"}
+@router.put("/credentials/{template_id}", response_model=dict)
+def update_node(template_id: int, pj: schemas.CredentialTemplateCreate):
+    updated = services.update_pj(engine, template_id, pj)
+    if updated:
+        return updated
+    return {"detail": "not found", "id": template_id}
+
+
+
 
 # 任务管理
 @router.post("/jobs")

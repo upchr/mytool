@@ -1,13 +1,17 @@
 import asyncio
 
 from croniter import croniter
-from sqlalchemy import select, insert, update, delete
+from fastapi import HTTPException
+from sqlalchemy import select, insert, update, delete, desc
 from sqlalchemy.engine import Engine
 from datetime import datetime
 import threading
+
+from sqlalchemy.exc import IntegrityError
+
 from . import models, schemas
-from .models import nodes_table
-from .schemas import NodeCreate
+from .models import nodes_table, credential_templates_table
+from .schemas import NodeCreate, CredentialTemplateCreate
 from .ssh_client import SSHClient
 from .scheduler import scheduler
 from .ws_manager import ws_manager
@@ -115,29 +119,42 @@ def batch_delete_nodes(engine: Engine, node_ids: list[int]) -> int:
     return deleted_count
 
 def create_credential_template(engine, template_data):
-    """
-    创建凭据模板
-    :param engine: SQLAlchemy 引擎
-    :param template_data: dict 或 Pydantic 模型（含 name, username, auth_type, password/private_key）
-    :return: 创建后的模板字典（含 id）
-    """
     table = models.credential_templates_table
 
     # 转为字典（兼容 Pydantic 模型）
     data = template_data if isinstance(template_data, dict) else template_data.model_dump()
 
     with engine.connect() as conn:
-        # 插入
-        stmt = insert(table).values(**data)
-        result = conn.execute(stmt)
-        conn.commit()
+        try:
+            # 插入
+            stmt = insert(table).values(**data)
+            result = conn.execute(stmt)
+            conn.commit()
 
-        # 获取刚插入的记录
-        new_id = result.inserted_primary_key[0]
-        query = select(table).where(table.c.id == new_id)
-        row = conn.execute(query).fetchone()
-        return row._asdict() if row else None
-
+            # 获取刚插入的记录
+            new_id = result.inserted_primary_key[0]
+            query = select(table).where(table.c.id == new_id)
+            row = conn.execute(query).fetchone()
+            return row._asdict() if row else None
+        except IntegrityError as e:
+            conn.rollback()  # 回滚事务
+            # 检查是否是名称重复
+            if "UNIQUE constraint failed: credential_templates.name" in str(e) or "Duplicate entry" in str(e):
+                raise HTTPException(
+                    status_code=400,
+                    detail="凭据模板名称已存在，请使用其他名称"
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="数据校验失败"
+                )
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="服务器内部错误"
+)
 
 def get_credential_templates(engine):
     """
@@ -148,7 +165,7 @@ def get_credential_templates(engine):
     table = models.credential_templates_table
 
     with engine.connect() as conn:
-        query = select(table).order_by(table.c.id)
+        query = select(table).order_by(table.c.name,desc(table.c.id))
         result = conn.execute(query)
         return [row._asdict() for row in result.fetchall()]
 
@@ -168,8 +185,40 @@ def delete_credential_template(engine, template_id: int) -> bool:
         conn.commit()
         return result.rowcount > 0
 
-
-
+def update_pj(engine: Engine, template_id: int, pj: CredentialTemplateCreate) -> dict:
+    stmt = (
+        update(credential_templates_table)
+        .where(credential_templates_table.c.id == template_id)
+        .values(**pj.__dict__)
+    )
+    with engine.begin() as conn:
+        try:
+            result = conn.execute(stmt)
+            if result.rowcount == 0:
+                return None
+            # 返回更新后的数据
+            select_stmt = select(credential_templates_table).where(credential_templates_table.c.id == template_id)
+            row = conn.execute(select_stmt).mappings().first()
+            return dict(row)
+        except IntegrityError as e:
+            conn.rollback()  # 回滚事务
+            # 检查是否是名称重复
+            if "UNIQUE constraint failed: credential_templates.name" in str(e) or "Duplicate entry" in str(e):
+                raise HTTPException(
+                    status_code=400,
+                    detail="凭据模板名称已存在，请使用其他名称"
+                )
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="数据校验失败"
+                )
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail="服务器内部错误"
+            )
 
 
 

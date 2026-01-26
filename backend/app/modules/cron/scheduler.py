@@ -27,8 +27,16 @@ class CronJobScheduler:
     def load_all_jobs(self):
         """从数据库加载所有启用的定时任务"""
         with engine.connect() as conn:
-            stmt = select(models.cron_jobs_table).where(
-                models.cron_jobs_table.c.is_active == True
+            stmt = (
+                select(models.cron_jobs_table)
+                .join(
+                    models.nodes_table,
+                    models.cron_jobs_table.c.node_id == models.nodes_table.c.id
+                )
+                .where(
+                    models.nodes_table.c.is_active == True,
+                    models.cron_jobs_table.c.is_active == True
+                )
             )
             results = conn.execute(stmt).mappings().all()
 

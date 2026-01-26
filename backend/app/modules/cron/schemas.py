@@ -75,13 +75,13 @@ class CredentialTemplateCreate(BaseModel):
     password: Optional[str] = None
     private_key: Optional[str] = None
 
-    @model_validator(mode='after')
-    def check_auth_fields(self):
-        if self.auth_type == 'password' and not self.password:
-            raise ValueError('密码认证必须提供密码')
-        if self.auth_type == 'ssh_key' and not self.private_key:
-            raise ValueError('SSH密钥认证必须提供私钥')
-        return self
+    # @model_validator(mode='after')
+    # def check_auth_fields(self):
+    #     if self.auth_type == 'password' and not self.password:
+    #         raise ValueError('密码认证必须提供密码')
+    #     if self.auth_type == 'ssh_key' and not self.private_key:
+    #         raise ValueError('SSH密钥认证必须提供私钥')
+    #     return self
 
 class CredentialTemplateRead(CredentialTemplateCreate):
     id: int

@@ -23,7 +23,7 @@
         <n-space>当前版本：<n-space >{{versionInfo.current}}</n-space></n-space>
         <n-space v-if="versionInfo.updatable">最新版本：<n-space wrap-item item-style="color: red;font-weight: bold">{{versionInfo.latest}}</n-space></n-space>
         <n-space v-if="versionInfo.updatable">更新日期：<n-space >{{formatDate(versionInfo.updated_at)}}</n-space></n-space>
-        <n-space v-if="!versionInfo.updatable">已是最新版本！</n-space>
+        <n-space v-if="!goUpdateIng && !versionInfo.updatable">已是最新版本！</n-space>
 
       </n-card>
 

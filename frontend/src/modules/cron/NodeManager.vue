@@ -106,34 +106,38 @@
       </n-form>
     </n-modal>
 
-    <n-modal v-model:show="pjForm" preset="card"
+    <n-modal v-model:show="pjForm" preset="card" class="mediaModal"
              title="凭据管理"
              draggable
              :on-after-leave="()=>resetForm(true)">
       <n-space justify="end" style="margin-bottom: 15px">
-        <n-button type="success" @click="pjEditForm=true">新增</n-button>
+        <n-button type="success" @click="pjEditForm=true;pjNewFlag=true">新增</n-button>
       </n-space>
 
       <n-form  :model="credentialTemplates" label-placement="left" :label-width="100">
-        <n-space vertical>
+        <n-space vertical style="height: 80vh;overflow-y: auto">
           <n-table striped>
             <thead>
             <tr>
-              <th>name</th>
-              <th>auth_type</th>
-              <th>username</th>
-              <th>操作</th>
+              <th width="15%" >名称</th>
+              <th width="15%">用户名</th>
+              <th width="10%">类型</th>
+              <th width="40%">操作</th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="node in credentialTemplates" :key="node.id">
               <td>{{node.name}}</td>
-              <td>{{node.auth_type}}</td>
               <td>{{node.username}}</td>
               <td>
+                <n-tag :type="node.auth_type === 'password' ? 'success' : 'warning'">
+                  {{ node.auth_type === 'password' ? '密码' : '密钥' }}
+                </n-tag>
+              </td>
+              <td>
                 <n-space>
-                  <n-button size="small" type="info" @click="pjEditForm=true">编辑</n-button>
-                  <n-button size="small" type="error">删除</n-button>
+                  <n-button size="small" type="info" @click="editPj(node)">编辑</n-button>
+                  <n-button size="small" type="error" @click="deletePj(node)">删除</n-button>
                 </n-space>
               </td>
             </tr>
@@ -142,52 +146,20 @@
         </n-space>
       </n-form>
     </n-modal>
-    <n-modal v-model:show="pjEditForm" preset="card"
-             :title="'📝 '+title"
-             style="width: auto;height: auto;"
+    <n-modal v-model:show="pjEditForm" preset="card" class="mediaModal"
+             :title="pjTitle"
              draggable
-             :on-after-leave="()=>resetForm(true)">
-      <n-form :model="currentNode" :rules="rules" label-placement="left" :label-width="100">
+             :on-after-leave="()=>resetFormPj(true)">
+      <n-form :model="credentialForm"  ref="credentialFormRef" :rules="pjrules" label-placement="left" :label-width="100">
         <n-grid cols="1 s:2" responsive="screen">
           <n-grid-item>
-            <n-form-item path="name" label="节点名称">
-              <n-input v-model:value="currentNode.name" placeholder="例如：生产服务器" />
-            </n-form-item>
-          </n-grid-item>
-          <n-grid-item>
-            <n-form-item path="host" label="主机地址">
-              <n-input v-model:value="currentNode.host" placeholder="IP 或域名" />
-            </n-form-item>
-          </n-grid-item>
-          <n-grid-item>
-            <n-form-item path="port" label="SSH端口">
-              <n-input-number v-model:value="currentNode.port" :min="1" :max="65535" />
-            </n-form-item>
-          </n-grid-item>
-          <n-grid-item cols="1 600:2">
-            <n-form-item label="凭据模板">
-              <n-select
-                  v-model:value="selectedCredentialId"
-                  :options="credentialTemplates.map(t => ({ label: t.name, value: t.id }))"
-                  placeholder="选择凭据模板（可选）"
-                  clearable
-                  @update:value="applyCredentialTemplate">
-                <template #header>
-                  <n-button
-                      text
-                      size="small"
-                      block
-                      @click="manageTicket"
-                  >
-                    管理凭据
-                  </n-button>
-                </template>
-              </n-select>
+            <n-form-item path="name" label="凭证名称">
+              <n-input v-model:value="credentialForm.name" placeholder="root / admin" />
             </n-form-item>
           </n-grid-item>
           <n-grid-item cols="1 600:2">
             <n-form-item path="auth_type" label="认证方式">
-              <n-radio-group v-model:value="currentNode.auth_type">
+              <n-radio-group v-model:value="credentialForm.auth_type">
                 <n-space>
                   <n-radio value="password">密码认证</n-radio>
                   <n-radio value="ssh_key">SSH密钥</n-radio>
@@ -197,16 +169,16 @@
           </n-grid-item>
           <n-grid-item>
             <n-form-item path="username" label="用户名">
-              <n-input v-model:value="currentNode.username" placeholder="root / admin" />
+              <n-input v-model:value="credentialForm.username" placeholder="root / admin" />
             </n-form-item>
           </n-grid-item>
-          <n-grid-item v-if="currentNode.auth_type === 'password'">
+          <n-grid-item v-if="credentialForm.auth_type === 'password'">
             <n-form-item path="password" label="密码">
               <n-input
                   type="password"
                   show-password-on="mousedown"
                   placeholder="密码"
-                  v-model:value="currentNode.password"
+                  v-model:value="credentialForm.password"
                   :maxlength="8"
               />
             </n-form-item>
@@ -214,7 +186,7 @@
           <n-grid-item v-else>
             <n-form-item path="private_key" label="私钥">
               <n-input
-                  v-model:value="currentNode.private_key"
+                  v-model:value="credentialForm.private_key"
                   type="textarea"
                   placeholder="粘贴私钥内容（PEM格式）"
                   :autosize="{
@@ -226,15 +198,8 @@
           </n-grid-item>
         </n-grid>
         <n-space justify="end" class="mt-4">
-          <n-button type="primary" @click="addNode">
-            {{ isEditing ? '更新节点' : '添加节点' }}
-          </n-button>
-          <n-button
-              type="warning"
-              @click="saveAsTemplate"
-              :disabled="!currentNode.name || !currentNode.username"
-          >
-            保存凭据模板
+          <n-button type="primary" @click="savePj">
+            {{ pjNewFlag ?  '添加模板':'更新模板' }}
           </n-button>
         </n-space>
       </n-form>
@@ -329,7 +294,7 @@
 <script setup>
 import {ref, onMounted, computed} from 'vue'
 import axios from 'axios'
-import { useMessage } from 'naive-ui'
+import {NInput, useMessage} from 'naive-ui'
 
 const message = useMessage()
 const nodes = ref([])
@@ -344,26 +309,37 @@ const defaultNode = ref({
   is_active: true
 })
 const showForm = ref(false)
-const pjForm = ref(false)
-const pjEditForm = ref(false)
 
 // 表单验证规则
 const rules = {
   name: { required: true, message: '请输入节点名称', trigger: ['blur'] },
   host: { required: true, message: '请输入主机地址', trigger: ['blur'] ,pattern: /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:[a-zA-Z]{2,})$|^(?:\d{1,3}\.){3}\d{1,3}$/},
   username: { required: true, message: '请输入用户名', trigger: ['blur'],min: 3,max: 20,},
-  password: ({ value }) => {
-    if (currentNode.value.auth_type === 'password' && !value) {
-      return '请输入密码'
+  /*password: [
+    {
+      validator: (rule, value, callback) => {
+        if (currentNode.value.auth_type === 'password' && (!value || !value.trim())) {
+          callback(new Error('请输入密码'))
+        } else {
+          callback() // 验证通过
+        }
+      },
+      trigger: ['blur', 'input']
     }
-    return true
-  },
-  private_key: ({ value }) => {
-    if (currentNode.value.auth_type === 'ssh_key' && !value) {
-      return '请粘贴私钥'
+  ],*/
+  private_key: [
+    {
+      validator: (rule, value, callback) => {
+        if (currentNode.value.auth_type === 'ssh_key' && (!value || !value.trim())) {
+          callback(new Error('请粘贴私钥'))
+        } else {
+          callback()
+        }
+      },
+      trigger: ['blur', 'input'],
+      required: true,
     }
-    return true
-  }
+  ],
 }
 
 const formRef = ref(null)
@@ -434,6 +410,8 @@ const currentNode = ref({
   private_key: '',
   is_active: true
 })
+
+
 const editNode = async (node) => {
   currentNode.value = {...node}
   isEditing.value = true
@@ -526,13 +504,37 @@ const toggleAllNodesAdd = () => {
   }
 }
 
+
+
+const pjForm = ref(false)
+const pjEditForm = ref(false)
+const pjNewFlag = ref(true)
+const pjTitle = computed(() => {
+  if(pjNewFlag.value){
+    return '新增凭据'
+  }else{
+    return `修改凭据  ${credentialForm?.value.name}`
+  }
+})
+const credentialForm = ref({
+  name: '',
+  username: '',
+  auth_type: 'password',
+  password: '',
+  private_key: '',
+})
+const credentialFormRef = ref(null)
+const editPj = async (node) => {
+  pjEditForm.value = true;
+  pjNewFlag.value = false;
+  credentialForm.value = { ...node };
+};
 const credentialTemplates = ref([])
 const selectedCredentialId = ref(null) // 当前选中的模板ID
 const loadCredentialTemplates = async () => {
   try {
     const res = await axios.get('/api/cron/credentials')
     credentialTemplates.value = res.data
-    console.log(credentialTemplates.value)
   } catch (error) {
     console.warn('加载凭据模板失败:', error)
   }
@@ -548,13 +550,90 @@ const applyCredentialTemplate = (templateId) => {
     currentNode.value.private_key = template.private_key || ''
   }
 }
-const saveAsTemplate = async () => {
-  // 弹出模态框让用户输入模板名称
-  // 使用 Naive UI 的 Input Modal 或自定义
-  const name = prompt('请输入凭据模板名称（如：root@dev）')
-  if (!name) return
+const pjrules = {
+  name: { required: true, message: '请输入凭据名称', trigger: ['blur'] },
+  username: { required: true, message: '请输入用户名', trigger: ['blur'],min: 3,max: 20,},
+  /*password: [
+    {
+      validator: (rule, value, callback) => {
+        if (credentialForm.value.auth_type === 'password' && (!value || !value.trim())) {
+          callback(new Error('请输入密码'))
+        } else {
+          callback() // 验证通过
+        }
+      },
+      trigger: ['blur', 'input']
+    }
+  ],*/
+  private_key: [
+    {
+      validator: (rule, value, callback) => {
+        if (credentialForm.value.auth_type === 'ssh_key' && (!value || !value.trim())) {
+          callback(new Error('请粘贴私钥'))
+        } else {
+          callback()
+        }
+      },
+      trigger: ['blur', 'input'],
+      required: true,
+    }
+  ],
+}
+import { prompt } from '@/utils/dialog.js'
+const resetFormPj = (afterFlag=false) => {
+  if(afterFlag){
+    pjEditForm.value=false
+  }
 
+  credentialForm.value = {
+    name: '',
+    username: '',
+    auth_type: 'password',
+    password: '',
+    private_key: '',
+  }
+}
+const savePj = async () => {
   try {
+    await credentialFormRef.value?.validate() // 验证失败会抛出错误
+    if(pjNewFlag.value){
+      await axios.post('/api/cron/credentials', credentialForm.value)
+      message.success('凭据模板保存成功')
+    }else{
+      // 更新节点
+      const res = await axios.put(`/api/cron/credentials/${credentialForm.value.id}`, credentialForm.value)
+      message.success('凭据模板更新成功')
+    }
+    await loadCredentialTemplates() // 刷新列表
+    pjEditForm.value=false
+    resetFormPj(true)
+  } catch (error) {
+    message.error('凭据模板保存失败')
+  }
+}
+const deletePj = async (pj) => {
+  try {
+    await axios.delete(`/api/cron/credentials/${pj.id}`)
+    message.success('凭据删除成功')
+    await loadCredentialTemplates() // 刷新列表
+
+  } catch (error) {
+    if (error.response?.data?.detail) {
+      message.error(error.response.data.detail)
+    } else {
+      message.error('保存失败，请重试')
+    }
+  }
+}
+const saveAsTemplate = async () => {
+  try {
+    const name = await prompt({
+      title: '新建凭据',
+      placeholder: '请输入凭据名称',
+      validate: (value) => value.trim().length >= 2,
+      validateMessage: '名称至少2个字符'
+    })
+
     const payload = {
       name,
       username: currentNode.value.username,
@@ -564,14 +643,18 @@ const saveAsTemplate = async () => {
     }
     await axios.post('/api/cron/credentials', payload)
     message.success('凭据模板保存成功')
-    loadCredentialTemplates() // 刷新列表
+    await loadCredentialTemplates() // 刷新列表
   } catch (error) {
-    message.error('保存失败')
+    if (error.response?.data?.detail) {
+      message.error(error.response.data.detail)
+    } else {
+      message.error('保存失败，请重试')
+    }
   }
 }
-const manageTicket = async () => {
-  // pjForm.value=true
-  message.error('凭据模板管理功能未开发')
+const manageTicket = () => {
+  pjForm.value=true
+  // message.error('凭据模板管理功能未开发')
 }
 onMounted(async () => {
   await loadNodes()
