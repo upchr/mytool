@@ -70,11 +70,19 @@
             <n-form-item path="password" label="密码">
               <n-input
                   type="password"
-                  show-password-on="mousedown"
+                  show-password-on="click"
                   placeholder="密码"
                   v-model:value="currentNode.password"
                   :maxlength="8"
-              />
+              >
+                <template #password-visible-icon>
+                  <n-icon :size="16" :component="GlassesOutline" />
+                </template>
+                <template #password-invisible-icon>
+                  <n-icon :size="16" :component="Glasses" />
+                </template>
+              </n-input>
+
             </n-form-item>
           </n-grid-item>
           <n-grid-item v-else>
@@ -176,11 +184,19 @@
             <n-form-item path="password" label="密码">
               <n-input
                   type="password"
-                  show-password-on="mousedown"
+                  show-password-on="click"
                   placeholder="密码"
                   v-model:value="credentialForm.password"
                   :maxlength="8"
-              />
+              >
+                <template #password-visible-icon>
+                  <n-icon :size="16" :component="GlassesOutline" />
+                </template>
+                <template #password-invisible-icon>
+                  <n-icon :size="16" :component="Glasses" />
+                </template>
+              </n-input>
+
             </n-form-item>
           </n-grid-item>
           <n-grid-item v-else>
@@ -295,6 +311,7 @@
 import {ref, onMounted, computed} from 'vue'
 import axios from 'axios'
 import {NInput, useMessage} from 'naive-ui'
+import { Glasses, GlassesOutline } from '@vicons/ionicons5'
 
 const message = useMessage()
 const nodes = ref([])
