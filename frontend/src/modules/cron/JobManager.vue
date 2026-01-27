@@ -763,7 +763,6 @@ const connectWebSocket = (executionId) => {
   ws = new WebSocket(wsUrl)
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
-    console.log(data)
     // 更新日志
     if (selectedExecution.value && selectedExecution.value.id === executionId) {
       if (data.end_time) {
