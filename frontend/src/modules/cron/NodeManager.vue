@@ -124,26 +124,26 @@
 
       <n-form  :model="credentialTemplates" label-placement="left" :label-width="100">
         <n-space vertical style="height: 80vh;overflow-y: auto">
-          <n-table striped>
+          <n-table striped size="small">
             <thead>
             <tr>
-              <th width="15%" >名称</th>
-              <th width="15%">用户名</th>
-              <th width="10%">类型</th>
-              <th width="40%">操作</th>
+              <th style="text-align: center" width="25%" >名称</th>
+              <th style="text-align: center" width="25%">用户名</th>
+              <th style="text-align: center" width="12%">类型</th>
+              <th style="text-align: center" width="38%">操作</th>
             </tr>
             </thead>
             <tbody>
             <tr v-for="node in credentialTemplates" :key="node.id">
-              <td>{{node.name}}</td>
-              <td>{{node.username}}</td>
-              <td>
+              <td style="text-align: center">{{node.name}}</td>
+              <td style="text-align: center">{{node.username}}</td>
+              <td style="text-align: center">
                 <n-tag :type="node.auth_type === 'password' ? 'success' : 'warning'">
                   {{ node.auth_type === 'password' ? '密码' : '密钥' }}
                 </n-tag>
               </td>
-              <td>
-                <n-space>
+              <td >
+                <n-space justify="center">
                   <n-button size="small" type="info" @click="editPj(node)">编辑</n-button>
                   <n-button size="small" type="error" @click="deletePj(node)">删除</n-button>
                 </n-space>
