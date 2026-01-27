@@ -627,6 +627,13 @@ const pollExecutionStatus = async (executionId, jobId) => {
 
       // 如果任务已完成
       if (['success', 'failed', 'cancelled'].includes(status)) {
+        if(logModal.value){
+          logModal.value = false
+          setTimeout(async () => {
+            await showLog(res.data)
+          },500)
+        }
+
         console.log('任务已完成，刷新历史')
         message.success(`任务 "${jobId}" 已完成。`)
         await loadRecentExecutions(jobId, true) // 强制刷新
@@ -763,6 +770,7 @@ const connectWebSocket = (executionId) => {
   ws = new WebSocket(wsUrl)
   ws.onmessage = (event) => {
     const data = JSON.parse(event.data)
+    // console.log(data)
     // 更新日志
     if (selectedExecution.value && selectedExecution.value.id === executionId) {
       if (data.end_time) {

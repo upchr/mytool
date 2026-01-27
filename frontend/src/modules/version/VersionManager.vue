@@ -78,8 +78,7 @@ import {CloudDownloadOutline as UpdateIcon, WarningOutline} from '@vicons/ionico
 import axios from 'axios'
 
 const goUpdateIng = ref(false)
-const fpk_code = ref(`
-#!/bin/bash
+const fpk_code = ref(`#!/bin/bash
 BASE_DIR="/mydata/fpk"
 mkdir -p $BASE_DIR
 
@@ -97,6 +96,10 @@ set -e  # 遇错即停
 FPK_DIR="$FPK_DIR"
 REPO_URL="$REPO_URL"
 COMPOSE_FILE="$COMPOSE_FILE"
+
+echo "-----------------------"
+START_TIME=\\$(date +%s)
+echo "[\\$(date +'%Y-%m-%d %H:%M:%S')] 开始更新 ..."
 
 # === 1. 更新或克隆仓库 ===
 if [ -d "$FPK_DIR" ]; then
@@ -159,11 +162,14 @@ appcenter-cli install-fpk toolsplus.fpk
 echo "正在启动 toolsplus..."
 appcenter-cli start toolsplus
 
-echo "✅ toolsplus 已更新至 v\\$LATEST_VERSION"
+END_TIME=\\$(date +%s)
+DURATION=\\$((END_TIME - START_TIME))
+echo "[\\$(date +'%Y-%m-%d %H:%M:%S')] ✅ toolsplus 已更新至 v\\$LATEST_VERSION！（耗时: \\\${DURATION}秒）"
+echo "脚本执行完成！"
+echo "-----------------------"
 EOF
 
 main() {
-  echo "-----------------------"
   echo "开始执行检测更新任务~"
   if [ -f "$LOG_FILE" ]; then
     TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -192,8 +198,7 @@ main() {
   fi
 }
 main`)
-const docker_code = ref(`
-#!/bin/bash
+const docker_code = ref(`#!/bin/bash
 CONTAINER_NAME="toolsplus"
 IMAGE_NAME="chrplus/toolsplus:latest"
 
@@ -215,7 +220,9 @@ IMAGE_NAME="$IMAGE_NAME"
 BACKUP_DIR="$BACKUP_DIR"
 DATA_DIR="$DATA_DIR"
 
-echo "开始更新 \\$CONTAINER_NAME..."
+echo "-----------------------"
+START_TIME=\\$(date +%s)
+echo "[\\$(date +'%Y-%m-%d %H:%M:%S')] 开始更新 \\$CONTAINER_NAME..."
 
 # 1. 创建备份目录
 mkdir -p "\\$BACKUP_DIR"
@@ -281,12 +288,15 @@ if [ -n "\\$CURRENT_IMAGE_ID" ]; then
       xargs -r docker rmi > /dev/null 2>&1 || true
 fi
 
-echo "✅ \\$CONTAINER_NAME 更新完成！"
+END_TIME=\\$(date +%s)
+DURATION=\\$((END_TIME - START_TIME))
+echo "[\\$(date +'%Y-%m-%d %H:%M:%S')] ✅ \\$CONTAINER_NAME 更新完成！（耗时: \\\${DURATION}秒）"
+echo "脚本执行完成！"
+echo "-----------------------"
 EOF
 
 
 main() {
-  echo "-----------------------"
   echo "开始执行检测更新任务~"
   if [ -f "$LOG_FILE" ]; then
       TIMESTAMP=$(date +%Y%m%d_%H%M%S)

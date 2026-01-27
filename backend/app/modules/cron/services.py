@@ -355,7 +355,6 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
                         )
                     break
             exit_code = stdout.channel.recv_exit_status()
-            print(f'退出码：{exit_code}')
             status = "success" if exit_code == 0 else "failed"
             final_log = {
                 "status": status,
