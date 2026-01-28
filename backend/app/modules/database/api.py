@@ -70,6 +70,8 @@ async def import_database(file: UploadFile):
 
     try:
         content = await file.read()
+        if len(content) > 50 * 1024 * 1024:  # 50MB
+            raise HTTPException(status_code=413, detail="文件太大")
         db_data = json.loads(content.decode('utf-8'))
 
         # 创建备份（先关闭所有连接）

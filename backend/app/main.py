@@ -10,6 +10,7 @@ from app.modules.version.api import router as version_router
 from contextlib import asynccontextmanager
 from app.modules.cron.scheduler import scheduler
 from app.modules.cron.ws_manager import ws_manager
+from app.modules.notify.api import router as notify_router
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.include_router(note_router)
 app.include_router(cron_router)
 app.include_router(database_router)
 app.include_router(version_router)
+app.include_router(notify_router)
 
 if __name__ == "__main__":
     import uvicorn

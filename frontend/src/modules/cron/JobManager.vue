@@ -182,7 +182,7 @@
             />-->
           </n-form-item>
           <n-form-item path="command" label="执行命令">
-            <n-input
+<!--            <n-input
                 v-model:value="newJob.command"
                 type="textarea"
                 placeholder="例如: echo 'Hello World'"
@@ -190,6 +190,12 @@
                   minRows: 3,
                   maxRows: 10,
                 }"
+            />-->
+            <MonacoEditor
+                v-model="newJob.command"
+                language="shell"
+                height="200px"
+                :style="{ marginTop: '8px' }"
             />
           </n-form-item>
           <n-form-item path="description" label="描述">
@@ -270,7 +276,7 @@
                       />-->
         </n-form-item>
         <n-form-item path="command" label="执行命令">
-          <n-input
+<!--          <n-input
               v-model:value="editingJob.command"
               type="textarea"
               placeholder="例如: echo 'Hello World'"
@@ -278,6 +284,12 @@
                   minRows: 3,
                   maxRows: 10,
                 }"
+          />-->
+          <MonacoEditor
+              v-model="editingJob.command"
+              language="shell"
+              height="200px"
+              :style="{ marginTop: '8px' }"
           />
         </n-form-item>
         <n-form-item path="description" label="描述">
@@ -365,6 +377,7 @@ import {useMessage} from 'naive-ui'
 import CronGenerator from "@/components/CronGenerator.vue";
 import { CalendarOutline } from '@vicons/ionicons5'
 import { useThemeStore } from '@/stores/theme'
+import MonacoEditor from "@/components/MonacoEditor.vue";
 const themeStore = useThemeStore()
 
 const message = useMessage()
@@ -577,7 +590,7 @@ const openEditModal = (job) => {
 
 const updateJob = async () => {
   try {
-    await editJobFormRef.value.validate()
+    await editJobFormRef.value?.validate()
     await axios.put(`/api/cron/jobs/${editingJob.value.id}`, editingJob.value)
     message.success('任务更新成功')
     editJobModal.value = false
@@ -602,7 +615,7 @@ const executeJob = async (job) => {
     if (!executionId) return
 
     // 3. 开始轮询状态
-    await pollExecutionStatus(executionId, job.id)
+    await pollExecutionStatus(executionId, job.id,job.name)
 
   } catch (error) {
     message.error(`执行任务失败: ${error.response?.data?.detail || error.message}`)
@@ -610,7 +623,7 @@ const executeJob = async (job) => {
 }
 
 // 轮询任务状态
-const pollExecutionStatus = async (executionId, jobId) => {
+const pollExecutionStatus = async (executionId, jobId,jobName) => {
   let attempts = 0
   const maxAttempts = 60 // 最多轮询 60 秒
 
@@ -635,7 +648,7 @@ const pollExecutionStatus = async (executionId, jobId) => {
         }
 
         console.log('任务已完成，刷新历史')
-        message.success(`任务 "${jobId}" 已完成。`)
+        message.success(`任务 "${jobId}-${jobName}" 已完成。`)
         await loadRecentExecutions(jobId, true) // 强制刷新
         return
       }

@@ -11,6 +11,7 @@
     "@vueuse/core": "^14.1.0",
     "axios": "^1.7.0",
     "highlight.js": "^11.11.1",
+    "monaco-editor": "^0.55.1",
     "naive-ui": "^2.43.2",
     "pinia": "^3.0.4",
     "vue": "^3.4.0",

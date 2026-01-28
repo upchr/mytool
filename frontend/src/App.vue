@@ -133,6 +133,7 @@ import {
   MoonOutline as MoonIcon,
   CloudDownloadOutline as UpdateIcon,
   AccessibilityOutline as AboutIcon,
+  ChatbubbleEllipsesOutline as NotifyIcon,
 } from "@vicons/ionicons5";
 import {NIcon,NButton } from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
@@ -164,7 +165,9 @@ const routes = [
   { path: '/nodes', label: '节点管理', icon: PCIcon, key: 'nodes' },
   { path: '/jobs', label: '任务管理', icon: ClockIcon, key: 'jobs' },
   { path: '/database', label: '数据管理', icon: DatabaseIcon, key: 'database' },
-  { path: '/versions', label: '关于', icon: AboutIcon, key: 'versions' }
+  { path: '/notify', label: '消息通知', icon: NotifyIcon, key: 'notify' },
+  { path: '/versions', label: '关于', icon: AboutIcon, key: 'versions' },
+  { path: '/example', label: '示例', icon: AboutIcon, key: 'example' },
 ];
 
 // 动态生成菜单项
