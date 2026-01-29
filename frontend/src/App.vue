@@ -63,7 +63,7 @@
                 :options="menuOptions"
             />
           </n-layout-sider>
-          <div class="menu-container" :class="{ 'menu-open': !collapsed }">
+          <div v-if="width<1000" class="menu-container" :class="{ 'menu-open': !collapsed }">
             <!-- 遮罩层 -->
             <div
                 v-show="!collapsed"
