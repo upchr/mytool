@@ -2,7 +2,7 @@ import os
 import sys
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
-
+"""数据库链接配置"""
 if sys.platform.startswith("win"):
     # Windows 下使用绝对路径
     BASE_DIR = os.path.abspath("./data")

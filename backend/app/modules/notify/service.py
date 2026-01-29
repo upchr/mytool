@@ -1,10 +1,9 @@
 import httpx
-import asyncio
 import json
 from typing import Dict, Any, Optional
 from sqlalchemy import select
 
-from app.core.database import engine
+from app.core.db.database import engine
 from app.modules.notify.models import notification_services_table, notification_settings_table
 
 

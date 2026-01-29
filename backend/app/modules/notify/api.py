@@ -3,7 +3,7 @@ from fastapi.params import Body
 from sqlalchemy import select, update, insert, func
 import json
 
-from app.core.database import engine, metadata
+from app.core.db.database import engine, metadata
 from app.modules.notify.models import notification_services_table, notification_settings_table
 from app.modules.notify.service import send_test_notification
 

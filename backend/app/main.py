@@ -3,20 +3,22 @@ import asyncio
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+from contextlib import asynccontextmanager
+from app.modules.cron.scheduler import scheduler
+from app.core.ws.ws_manager import ws_manager
+
 from app.modules.note.api import router as note_router
 from app.modules.cron.api import router as cron_router
 from app.modules.database.api import router as database_router
 from app.modules.version.api import router as version_router
-from contextlib import asynccontextmanager
-from app.modules.cron.scheduler import scheduler
-from app.modules.cron.ws_manager import ws_manager
 from app.modules.notify.api import router as notify_router
+from app.modules.node.api import router as node_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     ws_manager.set_event_loop(asyncio.get_running_loop())
-
     # 启动时
     scheduler.start()
     yield
@@ -35,6 +37,7 @@ app.add_middleware(
 
 app.include_router(note_router)
 app.include_router(cron_router)
+app.include_router(node_router)
 app.include_router(database_router)
 app.include_router(version_router)
 app.include_router(notify_router)

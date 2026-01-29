@@ -1,9 +1,10 @@
 from threading import Event
 from typing import Dict
 
+"""中断异常"""
 class ExecutionCancelledError(Exception):
-    """任务被用户主动中断"""
     pass
+"""状态管理"""
 class ExecutionManager:
     def __init__(self):
         # execution_id -> Event

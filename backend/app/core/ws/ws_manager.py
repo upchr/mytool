@@ -1,10 +1,9 @@
 import asyncio
-from datetime import datetime
 from fastapi import WebSocket
 from typing import Dict, Set, Deque
 from collections import deque
 
-from app.modules.cron.execution_manager import execution_manager
+from app.core.interrupt.execution_manager import execution_manager
 
 class ConnectionManager:
     def __init__(self):

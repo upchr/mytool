@@ -5,8 +5,7 @@ import os
 import tempfile
 from datetime import datetime
 from sqlalchemy import MetaData, Table, select, delete
-from sqlalchemy.exc import SQLAlchemyError
-from app.core.database import engine, metadata
+from app.core.db.database import engine, metadata, DATABASE_URL
 import shutil
 
 router = APIRouter(prefix="/database", tags=["database"])
@@ -81,7 +80,6 @@ async def import_database(file: UploadFile):
         engine.dispose()
 
         # 重新创建引擎
-        from app.core.database import DATABASE_URL
         new_engine = engine  # 使用现有的 engine，但已 dispose
 
         # 反射目标数据库结构
@@ -140,7 +138,6 @@ async def import_database(file: UploadFile):
 
 def create_backup():
     """创建数据库备份（处理 Windows 路径）"""
-    from app.core.database import DATABASE_URL
 
     # 正确解析数据库路径
     if DATABASE_URL.startswith("sqlite:///"):
@@ -162,7 +159,6 @@ def create_backup():
 
 def restore_backup(backup_path):
     """恢复数据库备份"""
-    from app.core.database import DATABASE_URL
 
     if DATABASE_URL.startswith("sqlite:///"):
         path_part = DATABASE_URL[10:]

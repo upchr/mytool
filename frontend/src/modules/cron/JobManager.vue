@@ -454,7 +454,7 @@ const nodeOptions = computed(() => [
 
 const loadNodes = async () => {
   try {
-    const res = await axios.get('/api/cron/nodes/true')
+    const res = await axios.get('/api/nodes/only_active/true')
     nodes.value = res.data
   } catch (error) {
     message.error('加载节点失败')

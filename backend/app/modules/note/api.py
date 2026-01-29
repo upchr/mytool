@@ -1,14 +1,9 @@
 # backend/app/modules/note/api.py
 from fastapi import APIRouter, Depends, HTTPException
+from app.core.db.database import engine, metadata
 from . import services, schemas, models
-from app.core.database import engine, metadata
-from .schemas import NoteRequest
 
 router = APIRouter(prefix="/notes", tags=["notes"])
-
-metadata.create_all(engine, tables=[
-    models.notes_table
-])
 
 @router.get("", response_model=list[schemas.NoteRead])
 def read_notes():
@@ -34,7 +29,7 @@ def update_note(note_id: int, note: schemas.NoteCreate):
     return {"status": "not found", "id": note_id}
 
 @router.post("/deleteBatch")
-def batch_delete_notes(req:NoteRequest):
+def batch_delete_notes(req:schemas.NoteRequest):
     if not req.note_ids:
         raise HTTPException(status_code=400, detail="便签ID列表不能为空")
 

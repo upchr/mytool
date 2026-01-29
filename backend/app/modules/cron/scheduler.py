@@ -1,9 +1,11 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from . import services, models
 from sqlalchemy import select
-from app.core.database import engine
+from app.core.db.database import engine
 import logging
+
+from . import models
+from .models import cron_jobs_table
 
 # 关闭 APScheduler 日志（可选）
 logging.getLogger('apscheduler').setLevel(logging.WARNING)
@@ -27,14 +29,15 @@ class CronJobScheduler:
     def load_all_jobs(self):
         """从数据库加载所有启用的定时任务"""
         with engine.connect() as conn:
+            from app.modules.node.models import nodes_table
             stmt = (
                 select(models.cron_jobs_table)
                 .join(
-                    models.nodes_table,
-                    models.cron_jobs_table.c.node_id == models.nodes_table.c.id
+                    nodes_table,
+                    cron_jobs_table.c.node_id == nodes_table.c.id
                 )
                 .where(
-                    models.nodes_table.c.is_active == True,
+                    nodes_table.c.is_active == True,
                     models.cron_jobs_table.c.is_active == True
                 )
             )

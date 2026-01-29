@@ -116,7 +116,7 @@ const formFields = [
     name: 'config',
     label: '配置 (JSON)',
     type: 'textarea',
-    placeholder: `对应config：${props.config}`,
+    placeholder: `${props.config}`,
     rows: 3
   },
   {

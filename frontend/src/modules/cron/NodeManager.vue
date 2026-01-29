@@ -363,7 +363,7 @@ const formRef = ref(null)
 
 const loadNodes = async () => {
   try {
-    const res = await axios.get('/api/cron/nodes/false')
+    const res = await axios.get('/api/nodes/only_active/false')
     nodes.value = res.data
   } catch (error) {
     message.error('加载节点失败')
@@ -375,11 +375,11 @@ const addNode = async () => {
   try {
     if (isEditing.value) {
       // 更新节点
-      const res = await axios.put(`/api/cron/nodes/${currentNode.value.id}`, currentNode.value)
+      const res = await axios.put(`/api/nodes/${currentNode.value.id}`, currentNode.value)
       message.success('节点更新成功')
     } else {
       // 新增节点
-      const res = await axios.post('/api/cron/nodes', currentNode.value)
+      const res = await axios.post('/api/nodes', currentNode.value)
       message.success('节点添加成功')
     }
     resetForm(true)
@@ -394,7 +394,7 @@ const testConnection = async (node) => {
   try {
     message.info(`正在测试 ${node.name} 的连接...`)
     // 👇 调用后端真实 SSH 测试接口（需后端实现）
-    const res = await axios.post(`/api/cron/nodes/${node.id}/test`)
+    const res = await axios.post(`/api/nodes/${node.id}/test`)
     if (res.data.success) {
       message.success(`✅ ${node.name} 连接成功！`)
     } else {
@@ -409,7 +409,7 @@ const toggleNode = async (node) => {
   try {
     node.is_active = !node.is_active
     // 👇 调用后端更新接口（需后端实现）
-    await axios.patch(`/api/cron/nodes/${node.id}/toggle`, { is_active: node.is_active })
+    await axios.patch(`/api/nodes/${node.id}/toggle`, { is_active: node.is_active })
     message.success(`节点 ${node.name} 已${node.is_active ? '启用' : '停用'}`)
   } catch (error) {
     message.error('操作失败')
@@ -451,7 +451,7 @@ const resetForm = (afterFlag=false) => {
 
 const deleteNode = async (node) => {
   try {
-    await axios.delete(`/api/cron/nodes/${node.id}`)
+    await axios.delete(`/api/nodes/${node.id}`)
     message.success('节点删除成功')
     loadNodes()
   } catch (error) {
@@ -485,7 +485,7 @@ const batchDeleteNodes = async () => {
   if (selectedNodeIds.value.length === 0) return
 
   try {
-    await axios.post('/api/cron/nodes/deleteBatch', { node_ids: selectedNodeIds.value })
+    await axios.post('/api/nodes/deleteBatch', { node_ids: selectedNodeIds.value })
     message.success(`成功删除 ${selectedNodeIds.value.length} 个节点`)
     cancelBatch()
     loadNodes()
@@ -550,7 +550,7 @@ const credentialTemplates = ref([])
 const selectedCredentialId = ref(null) // 当前选中的模板ID
 const loadCredentialTemplates = async () => {
   try {
-    const res = await axios.get('/api/cron/credentials')
+    const res = await axios.get('/api/nodes/credentials/')
     credentialTemplates.value = res.data
   } catch (error) {
     console.warn('加载凭据模板失败:', error)
@@ -614,11 +614,11 @@ const savePj = async () => {
   try {
     await credentialFormRef.value?.validate() // 验证失败会抛出错误
     if(pjNewFlag.value){
-      await axios.post('/api/cron/credentials', credentialForm.value)
+      await axios.post('/api/nodes/credentials/', credentialForm.value)
       message.success('凭据模板保存成功')
     }else{
       // 更新节点
-      const res = await axios.put(`/api/cron/credentials/${credentialForm.value.id}`, credentialForm.value)
+      const res = await axios.put(`/api/nodes/credentials/${credentialForm.value.id}`, credentialForm.value)
       message.success('凭据模板更新成功')
     }
     await loadCredentialTemplates() // 刷新列表
@@ -630,7 +630,7 @@ const savePj = async () => {
 }
 const deletePj = async (pj) => {
   try {
-    await axios.delete(`/api/cron/credentials/${pj.id}`)
+    await axios.delete(`/api/nodes/credentials/${pj.id}`)
     message.success('凭据删除成功')
     await loadCredentialTemplates() // 刷新列表
 
@@ -658,7 +658,7 @@ const saveAsTemplate = async () => {
       password: currentNode.value.auth_type === 'password' ? currentNode.value.password : undefined,
       private_key: currentNode.value.auth_type === 'ssh_key' ? currentNode.value.private_key : undefined
     }
-    await axios.post('/api/cron/credentials', payload)
+    await axios.post('/api/nodes/credentials/', payload)
     message.success('凭据模板保存成功')
     await loadCredentialTemplates() // 刷新列表
   } catch (error) {

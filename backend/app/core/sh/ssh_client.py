@@ -1,6 +1,8 @@
 import paramiko
 import io
-from app.modules.cron.schemas import NodeRead
+
+from app.modules.node.schemas import NodeRead
+
 
 class SSHClient:
     def __init__(self, node: NodeRead):

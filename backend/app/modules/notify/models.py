@@ -1,8 +1,6 @@
 from sqlalchemy import Table, Column, Integer, String, Boolean, Text, DateTime, ForeignKey, func, select
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import registry
-
-from app.core.database import engine
+from app.core.db.database import engine
 
 # 使用 registry 替代已弃用的 declarative_base
 mapper_registry = registry()

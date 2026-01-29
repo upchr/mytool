@@ -97,37 +97,37 @@ const typeConfig = ref({
     name: '钉钉',
     subtitle: '1231',
     icon: markRaw(StarOutline),
-    config: {webhook_url: ''}
+    config: {"webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=..."}
   },
   feishu: {
     name: '飞书',
     subtitle: '',
     icon: markRaw(StarOutline),
-    config: {webhook_url: ''}
+    config: {"webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/..."}
   },
   bark: {
     name: 'Bark',
     subtitle: '',
     icon: markRaw(StarOutline),
-    config: {bark_url: ''}
+    config: {"device_key": "xxx", "server_url": "https://api.day.app"}
   },
   email: {
     name: 'QQ邮箱',
     subtitle: '',
     icon: markRaw(StarOutline),
-    config: {smtp_host: '', smtp_port: '25', username: '', password: ''}
+    config: {"smtp_server": "...", "smtp_port": "587", "email_user": "...", "email_password": "...", "recipient_email": "..."}
   },
   wecom: {
     name: '企业微信',
     subtitle: '',
     icon: markRaw(StarOutline),
-    config: {webhook_url: ''}
+    config: {"webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."}
   },
   webhook: {
     name: '自定义',
     subtitle: '',
     icon: markRaw(StarOutline),
-    config: {url: '', method: 'POST'}
+    config: {"webhook_url": "https://..."}
   },
 })
 
