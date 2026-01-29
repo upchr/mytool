@@ -1,9 +1,13 @@
+import logging
+from pathlib import Path
+
 from fastapi import APIRouter
 import os
 import sys
 import httpx
 import asyncio
 from datetime import datetime, timedelta
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/version", tags=["version"])
 
@@ -52,10 +56,12 @@ def build_github_url(path: str, is_api: bool = False) -> list[str]:
 def get_current_version():
     try:
         if sys.platform.startswith("win"):
-            base = os.path.abspath("./data")
-            version_file = os.path.join(base, "version.txt")
+            version_dir = Path.cwd().parent
         else:
-            version_file = "/app/version.txt"
+            version_dir=Path("/toolsplus")
+        version_file = f"{version_dir}/version.txt"
+        logger.info(f"version版本文件路径：{version_file}")
+
         with open(version_file, 'r') as f:
             return f.read().strip()
     except FileNotFoundError:
@@ -159,4 +165,17 @@ async def get_version_with_time():
         "latest": latest,
         "updatable": updatable,
         "updated_at": updated_at or ""
+    }
+
+@router.get("/health")
+async def health_check():
+    from pathlib import Path
+    import os
+    return {
+        "code": 200,
+        "message": "服务运行正常",
+        "data": {
+            "cwd": os.getcwd(),
+            "file": Path(__file__),
+        }
     }

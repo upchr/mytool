@@ -9,7 +9,4 @@ notes_table = Table(
     Column("title", String(100), nullable=False),
     Column("content", Text),
 )
-if __name__ != "__main__":
-    metadata.create_all(engine, tables=[
-        notes_table,
-    ])
+__all__ = ["notes_table"]

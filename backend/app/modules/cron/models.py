@@ -28,8 +28,4 @@ job_executions_table = Table(
     Column("triggered_by", String(20)), # manual/system
 )
 
-if __name__ != "__main__":
-    metadata.create_all(engine, tables=[
-        cron_jobs_table,
-        job_executions_table,
-    ])
+__all__ = ["cron_jobs_table","job_executions_table"]

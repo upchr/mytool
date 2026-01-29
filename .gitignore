@@ -5,7 +5,7 @@
 *.db
 notes.db*
 
-
+data/**
 frontend/dist
 frontend/node_modules
 

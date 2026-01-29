@@ -5,7 +5,7 @@ services:
     ports:
       - "16688:80"
     volumes:
-      - "/$TRIM_APPDEST_VOL/@appshare/toolsplus/data:/data"
+      - "/$TRIM_APPDEST_VOL/@appshare/toolsplus/data:/toolsplus/data"
     environment:
       - TZ=Asia/Shanghai
     restart: unless-stopped

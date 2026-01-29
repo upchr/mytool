@@ -2,7 +2,7 @@
 # 第一阶段：构建 Vue 前端
 # ======================
 FROM node:18-alpine AS frontend-builder
-WORKDIR /app
+WORKDIR /frontend
 COPY frontend/package*.json ./
 RUN npm install
 COPY frontend/ .
@@ -16,13 +16,18 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y nginx \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=frontend-builder /app/dist /var/www/html
+COPY --from=frontend-builder /frontend/dist /var/www/html
 
-WORKDIR /app
+WORKDIR /toolsplus
 
-#当前版本标识
-ARG VERSION=dev
-RUN echo "${VERSION}" > /app/version.txt
+# action替换写入
+ARG VERSION=unknow
+# 启动docker环境
+ENV OS_ENV=prod
+ENV TZ=Asia/Shanghai
+
+
+RUN echo "${VERSION}" > /toolsplus/version.txt
 
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

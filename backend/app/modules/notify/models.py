@@ -1,10 +1,8 @@
-from sqlalchemy import Table, Column, Integer, String, Boolean, Text, DateTime, ForeignKey, func, select
-from sqlalchemy.orm import registry
-from app.core.db.database import engine
+import logging
 
-# 使用 registry 替代已弃用的 declarative_base
-mapper_registry = registry()
-metadata = mapper_registry.metadata
+from sqlalchemy import Table, Column, Integer, String, Boolean, Text, DateTime, ForeignKey, func, select
+from app.core.db.database import engine, metadata
+logger = logging.getLogger(__name__)
 
 # 通知服务配置表
 notification_services_table = Table(
@@ -34,8 +32,7 @@ def init_default_notification_services():
         # 检查是否已存在数据
         count = conn.execute(select(func.count()).select_from(notification_services_table)).scalar()
         if count == 0:
-            print("正在初始化默认通知服务...")
-
+            logger.debug("🔧正在初始化默认通知服务...")
             # 插入默认服务
             default_services = [
                 {"service_type": "wecom", "service_name": "企业微信", "is_enabled": False},
@@ -52,21 +49,9 @@ def init_default_notification_services():
             settings_count = conn.execute(select(func.count()).select_from(notification_settings_table)).scalar()
             if settings_count == 0:
                 conn.execute(notification_settings_table.insert().values(id=1))
+            logger.debug("默认通知服务初始化完成！")
 
-            print("✅ 默认通知服务初始化完成！")
         else:
-            print("✅ 通知服务已存在，跳过初始化")
+            logger.debug("通知服务已存在，跳过初始化！")
 
-# ========== 创建表并初始化 ==========
-# 在应用启动时调用
-if __name__ != "__main__":
-    metadata.create_all(engine, tables=[
-        notification_services_table,
-        notification_settings_table
-    ])
-    init_default_notification_services()
-
-
-# 在现有任务表中添加 notify_enabled 字段
-# 假设你已有 cron_jobs_table，添加以下字段：
-# Column("notify_enabled", Boolean, default=False, nullable=False)
+__all__ = ["notification_services_table","notification_settings_table","init_default_notification_services"]

@@ -3,6 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.db.database import engine, metadata
 from . import services, schemas, models
 
+import logging
+
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/notes", tags=["notes"])
 
 @router.get("", response_model=list[schemas.NoteRead])

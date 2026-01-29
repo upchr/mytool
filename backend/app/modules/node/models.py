@@ -27,8 +27,4 @@ credential_templates_table = Table(
     Column("is_active", Boolean, default=True)
 )
 
-if __name__ != "__main__":
-    metadata.create_all(engine, tables=[
-        nodes_table,
-        credential_templates_table,
-    ])
+__all__ = ["nodes_table","credential_templates_table"]

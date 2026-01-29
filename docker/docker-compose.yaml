@@ -1,6 +1,6 @@
 services:
   note-app:
-    image: chrplus/toolsplus:latest
+    image: chrplus6/toolsplus:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -8,5 +8,5 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./data:/data
+      - ../data:/toolsplus/data
     restart: unless-stopped

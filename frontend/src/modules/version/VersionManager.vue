@@ -231,11 +231,11 @@ mkdir -p "\\$BACKUP_DIR"
 if docker ps -a --format '{{.Names}}' | grep -q "^\\\${CONTAINER_NAME}\\$"; then
     echo "检测到现有容器，正在处理数据..."
 
-    if docker exec "\\$CONTAINER_NAME" test -d /data 2>/dev/null; then
+    if docker exec "\\$CONTAINER_NAME" test -d /toolsplus/data 2>/dev/null; then
         if [ ! -d "\\$DATA_DIR" ] || [ -z "\\$(ls -A "\\$DATA_DIR" 2>/dev/null)" ]; then
             echo "从容器复制数据到持久化目录..."
             mkdir -p "\\$DATA_DIR"
-            docker cp "\\\${CONTAINER_NAME}:/data/." "\\$DATA_DIR/"
+            docker cp "\\\${CONTAINER_NAME}:/toolsplus/data/." "\\$DATA_DIR/"
         else
             echo "持久化目录已存在数据，跳过复制"
         fi
@@ -246,13 +246,13 @@ if docker ps -a --format '{{.Names}}' | grep -q "^\\\${CONTAINER_NAME}\\$"; then
           mv "\\$BACKUP_DIR" "\\\${BACKUP_DIR}.\\$TIMESTAMP.bak"
         fi
         mkdir -p "\\$BACKUP_DIR"
-        docker cp "\\\${CONTAINER_NAME}:/data/." "\\$BACKUP_DIR/"
+        docker cp "\\\${CONTAINER_NAME}:/toolsplus/data/." "\\$BACKUP_DIR/"
 
         echo "停止并删除旧容器..."
         docker stop "\\$CONTAINER_NAME" 2>/dev/null || true
         docker rm "\\$CONTAINER_NAME" 2>/dev/null || true
     else
-        echo "容器中没有 /data 目录，创建空数据目录..."
+        echo "容器中没有 /toolsplus/data 目录，创建空数据目录..."
         mkdir -p "\\$DATA_DIR"
     fi
 else
@@ -273,7 +273,7 @@ echo "启动新容器..."
 docker run -d \\\\
   --name "\\$CONTAINER_NAME" \\\\
   -e TZ=Asia/Shanghai \\\\
-  -v "\\$DATA_DIR":/data \\\\
+  -v "\\$DATA_DIR":/toolsplus/data \\\\
   -p 16688:80 \\\\
   --restart unless-stopped \\\\
   "\\$IMAGE_NAME"

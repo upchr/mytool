@@ -10,10 +10,8 @@ from .scheduler import scheduler
 from app.core.ws.ws_manager import ws_manager
 from app.core.interrupt.execution_manager import execution_manager, ExecutionCancelledError
 
-from app.core.log.logger import setup_logger
 from app.modules.node.models import nodes_table
 
-logger = setup_logger()
 
 # 任务管理
 def create_cron_job(engine: Engine, job: schemas.CronJobCreate) -> dict:

@@ -123,17 +123,11 @@
 
 <script setup>
 import {
-  ReaderOutline as NoteIcon,
-  TvOutline as PCIcon,
-  AlarmOutline as ClockIcon,
   MenuOutline as MenuIcon,
   LogoGithub,
-  ServerOutline as DatabaseIcon,
   SunnyOutline as SunIcon,
   MoonOutline as MoonIcon,
   CloudDownloadOutline as UpdateIcon,
-  AccessibilityOutline as AboutIcon,
-  ChatbubbleEllipsesOutline as NotifyIcon,
 } from "@vicons/ionicons5";
 import {NIcon,NButton } from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
@@ -160,15 +154,8 @@ function renderIcon(icon) {
 }
 
 // 路由配置（与 router.js 保持一致）
-const routes = [
-  { path: '/', label: '便签管理', icon: NoteIcon, key: 'notes' },
-  { path: '/nodes', label: '节点管理', icon: PCIcon, key: 'nodes' },
-  { path: '/jobs', label: '任务管理', icon: ClockIcon, key: 'jobs' },
-  { path: '/database', label: '数据管理', icon: DatabaseIcon, key: 'database' },
-  { path: '/notify', label: '消息通知', icon: NotifyIcon, key: 'notify' },
-  { path: '/versions', label: '关于', icon: AboutIcon, key: 'versions' },
-  { path: '/example', label: '示例', icon: AboutIcon, key: 'example' },
-];
+import {routeLabels} from "./router/index.js";
+const routes = routeLabels;
 
 // 动态生成菜单项
 const menuOptions = routes.map(route => ({

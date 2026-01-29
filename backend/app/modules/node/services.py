@@ -8,11 +8,9 @@ from . import models, schemas
 from .models import nodes_table, credential_templates_table
 from .schemas import NodeCreate, CredentialTemplateCreate
 
-from app.core.log.logger import setup_logger
 from ..cron.models import cron_jobs_table
 from ..cron.scheduler import scheduler
 
-logger = setup_logger()
 
 def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
     data = node.model_dump()
