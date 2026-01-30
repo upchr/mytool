@@ -81,6 +81,23 @@
                   </n-space>
                 </n-radio-group>
               </template>
+              <template v-else-if="field.type === 'checkbox'">
+                <n-checkbox-group
+                    v-model:value="localFormData[field.name]"
+                    :name="field.name"
+                    :disabled="field.disabled || props.disabled"
+                    @update:value="handleFieldChange(field.name, $event)"
+                >
+                  <n-space>
+                    <n-checkbox
+                        v-for="option in field.options"
+                        :key="option.value"
+                        :value="option.value"
+                        :label="option.label"
+                    />
+                  </n-space>
+                </n-checkbox-group>
+              </template>
               <template v-else-if="field.type === 'upload'">
                 <n-upload
                     v-bind="getFieldProps(field)"
@@ -130,6 +147,23 @@
                   />
                 </n-space>
               </n-radio-group>
+            </template>
+            <template v-else-if="field.type === 'checkbox'">
+              <n-checkbox-group
+                  v-model:value="localFormData[field.name]"
+                  :name="field.name"
+                  :disabled="field.disabled || props.disabled"
+                  @update:value="handleFieldChange(field.name, $event)"
+              >
+                <n-space>
+                  <n-checkbox
+                      v-for="option in field.options"
+                      :key="option.value"
+                      :value="option.value"
+                      :label="option.label"
+                  />
+                </n-space>
+              </n-checkbox-group>
             </template>
             <!-- Upload 特殊处理 -->
             <template v-else-if="field.type === 'upload'">
@@ -206,12 +240,12 @@ const componentMap = {
   datetime: NDatePicker,
   switch: NSwitch,
   textarea: NInput,
-  checkbox: NCheckbox,
-  radio: NRadioGroup,
+  // checkbox: NCheckbox,
+  // radio: NRadioGroup,
   time: NTimePicker,
   cascader: NCascader,
   color: NColorPicker,
-  upload: NUpload,
+  // upload: NUpload,
   dynamic: NDynamicInput,
   rate: NRate,
   slider: NSlider,
@@ -424,6 +458,12 @@ const getFieldProps = (field) => {
         showCount: field.showCount
       }
     case 'radio':
+      return {
+        ...baseProps,
+        options: field.options || [],
+        name: field.name
+      }
+    case 'checkbox':
       return {
         ...baseProps,
         options: field.options || [],

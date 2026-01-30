@@ -1,244 +1,303 @@
 <template>
-  <n-card title="12312">
-    <!-- 添加按钮 -->
-    <n-button @click="showAddDialog">
-      添加用户
-    </n-button>
+  <div style="padding: 20px">
+    <h2>用户设置</h2>
+    <p>当前主题: {{ formData.theme }}</p>
+    <p>通知方式: {{ formData.notifyMethods?.join(', ') || '无' }}</p>
 
-    <!-- 编辑按钮 -->
-    <n-button @click="showEditDialog(item)">
-      编辑
-    </n-button>
+    <n-button @click="showDialog = true" type="primary">打开设置</n-button>
 
-    <!-- 对话框表单组件 -->
+    <!-- 使用通用表单对话框 -->
     <DialogForm
-        v-model:visible="dialogVisible"
-        v-model:formData="formData"
-        type="warning"
-        :title="dialogTitle"
-        :fields="formFields"
+        v-model:visible="showDialog"
+        v-model:form-data="formData"
+        :use-field-groups="true"
+        :field-groups="fieldGroups"
         :rules="formRules"
-        :positive-text="dialogType === 'add' ? '添加' : '保存'"
+        title="用户设置"
+        positive-text="保存"
+        :validate-on-submit="true"
+        :show-success-message="true"
+        success-message="设置已保存！"
         @submit="handleSubmit"
-        @cancel="handleCancel"
+        @field-change="handleFieldChange"
     >
-      <!-- 自定义内容插槽 -->
-      <template #header>
-        <div style="font-weight: bold;">
-          用户信息
-        </div>
+      <!-- 自定义底部按钮 -->
+      <template #footer="{ formData }">
+        <n-space justify="start">
+          <n-button @click="resetToDefault">恢复默认</n-button>
+          <n-button type="primary" @click="saveAndClose(formData)">保存并关闭</n-button>
+        </n-space>
       </template>
-      <template #icon>
-        <n-icon>
-          <ChatbubbleOutline />
-        </n-icon>
-      </template>
-
+<!--      <template #action="{ formData }">
+        &lt;!&ndash;覆盖对话框默认&ndash;&gt;
+        <n-button @click="resetToDefault">恢复默认</n-button>
+        <n-button type="primary" @click="saveAndClose(formData)">保存并关闭</n-button>
+      </template>-->
     </DialogForm>
-  </n-card>
+  </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import DialogForm from '@/components/DialogForm.vue'
-import {NIcon, useMessage} from 'naive-ui'
-import {ChatbubbleOutline} from "@vicons/ionicons5";
 
-const message = useMessage()
-
-// 对话框状态
-const dialogVisible = ref(false)
-const dialogType = ref('add') // 'add' | 'edit'
-const editingId = ref(null)
-const item = ref(null)
-
-// 计算标题
-const dialogTitle = computed(() => {
-  return dialogType.value === 'add' ? '添加用户' : '编辑用户'
+// 表单数据
+const formData = reactive({
+  name: '张三',
+  email: 'zhangsan@example.com',
+  age: 28,
+  theme: 'dark',
+  language: 'zh-CN',
+  notifyMethods: ['email'],
+  enableNotifications: true,
+  birthday: new Date('1995-08-15').getTime(),
+  bio: '热爱编程，喜欢开源项目。',
+  avatar: [],
+  tags: ['developer', 'vue'],
+  rating: 4,
+  volume: 70,
+  schedule: '0 8 * * *'
 })
 
-// 表单字段配置
-const formFields = [
+// 字段分组配置
+const fieldGroups = [
   {
-    name: 'username',
-    label: '用户名',
-    type: 'input',
-    placeholder: '请输入用户名',
-    description:'123',
-  },
-  {
-    name: 'email',
-    label: '邮箱',
-    type: 'input',
-    placeholder: '请输入邮箱',
-  },
-  {
-    name: 'age',
-    label: '年龄',
-    type: 'number',
-    placeholder: '请输入年龄',
-    min: 0,
-    max: 150,
-  },
-  {
-    name: 'gender',
-    label: '性别',
-    type: 'select',
-    placeholder: '请选择性别',
-    options: [
-      { label: '男', value: 'male' },
-      { label: '女', value: 'female' }
+    title: '基本信息',
+    description: '用于个人资料展示',
+    fields: [
+      {
+        name: 'name',
+        label: '姓名',
+        type: 'input',
+        placeholder: '请输入真实姓名',
+        maxlength: 20,
+        showCount: true
+      },
+      {
+        name: 'email',
+        label: '邮箱',
+        type: 'input',
+        inputType: 'email',
+        placeholder: '用于接收通知'
+      },
+      {
+        name: 'age',
+        label: '年龄',
+        type: 'number',
+        min: 1,
+        max: 120,
+        precision: 0
+      },
+      {
+        name: 'birthday',
+        label: '生日',
+        type: 'date',
+        valueFormat: 'yyyy-MM-dd'
+      }
     ]
   },
   {
-    name: 'status',
-    label: '状态',
-    type: 'switch',
-    checkedValue: true,
-    uncheckedValue: false
+    title: '偏好设置',
+    fields: [
+      {
+        name: 'theme',
+        label: '主题',
+        type: 'select',
+        options: [
+          { label: '浅色', value: 'light' },
+          { label: '深色', value: 'dark' },
+          { label: '自动', value: 'auto' }
+        ]
+      },
+      {
+        name: 'language',
+        label: '语言',
+        type: 'select',
+        filterable: true,
+        options: [
+          { label: '简体中文', value: 'zh-CN' },
+          { label: 'English', value: 'en-US' },
+          { label: '日本語', value: 'ja-JP' }
+        ]
+      },
+      {
+        name: 'bio',
+        label: '个人简介',
+        type: 'textarea',
+        rows: 3,
+        maxlength: 200,
+        showCount: true
+      }
+    ]
   },
   {
-    name: 'birthday',
-    label: '生日',
-    type: 'date',
-    placeholder: '请选择生日'
+    title: '通知设置',
+    fields: [
+      {
+        name: 'enableNotifications',
+        label: '启用通知',
+        type: 'switch'
+      },
+      {
+        name: 'notifyRadios',
+        label: '通知方式1',
+        type: 'radio',
+        options: [
+          { label: '邮件', value: 'email' },
+          { label: '短信', value: 'sms' },
+          { label: '站内信', value: 'in-app' }
+        ]
+      },
+      {
+        name: 'notifyMethods',
+        label: '通知方式2',
+        type: 'checkbox',
+        options: [
+          { label: '邮件', value: 'email' },
+          { label: '短信', value: 'sms' },
+          { label: '站内信', value: 'in-app' }
+        ]
+      }
+    ]
   },
   {
-    name: 'description',
-    label: '描述',
-    type: 'textarea',
-    placeholder: '请输入描述',
-    rows: 3
-  },
-  {
-    name: 'role',
-    label: '角色',
-    type: 'radio',
-    options: [
-      { label: '用户', value: 'user' },
-      { label: '管理员', value: 'admin' },
-      { label: '超级管理员', value: 'superadmin' }
+    title: '高级选项',
+    visible: true, // 可动态控制
+    fields: [
+      {
+        name: 'avatar',
+        label: '头像',
+        type: 'upload',
+        action: '/api/upload',  // 必须指定上传地址
+        multiple: true,
+        accept: '.jpg,.png,.pdf,.doc,.docx',
+        listType: 'image-card',  // text, image, image-card
+        max: 1,
+        showPreviewButton: true,
+        // 可以自定义上传请求头
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        // 上传前验证
+        beforeUpload: ({ file }) => {
+          if (file.file.size > 10 * 1024 * 1024) {
+            window.$message.error('文件不能超过10MB')
+            return false
+          }
+          return true
+        }
+      },
+      {
+        name: 'tags',
+        label: '标签',
+        type: 'dynamic',
+        placeholder: '输入标签后按回车'
+      },
+      {
+        name: 'rating',
+        label: '满意度',
+        type: 'rate'
+      },
+      {
+        name: 'volume',
+        label: '音量',
+        type: 'slider',
+        min: 0,
+        max: 100
+      },
+      {
+        name: 'schedule',
+        label: '定时任务',
+        type: 'input',
+        placeholder: 'Cron 表达式，如 0 8 * * *'
+      }
     ]
   }
 ]
 
-// 表单数据
-const formData = reactive({
-  username: '',
-  email: '',
-  age: null,
-  gender: 'male',
-  status: true,
-  birthday: null,
-  description: '',
-  role: 'user'
-})
-
 // 验证规则
 const formRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
+  name: [
+    { required: true, message: '请输入姓名', trigger: 'blur' },
+    { min: 2, message: '姓名至少2个字符', trigger: 'blur' }
   ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
   ],
   age: [
-    { type: 'number', min: 0, max: 150, message: '年龄必须在 0-150 之间', trigger: 'blur' }
+    {
+      required: true,
+      message: '请输入年龄',
+      trigger: ['blur', 'change']  // 添加 change 触发
+    },
+    {
+      type: 'number',
+      required: true, // 明确声明需要数字
+      message: '年龄必须是数字',
+      trigger: ['blur', 'change']
+    },
+    {
+      validator: (rule, value) => {
+        // 自定义验证器，处理各种情况
+        if (value === '' || value === null || value === undefined) {
+          return false
+        }
+        const num = Number(value)
+        return !isNaN(num) && num >= 1 && num <= 120
+      },
+      message: '年龄必须在1-120之间',
+      trigger: ['blur', 'change']
+    }
   ]
 }
 
-// 重置表单数据.默认非‘’的要配置
-const resetFormData = ()=>{
-  // 重置表单数据
-  Object.keys(formData).forEach(key => {
-    if (key === 'status') {
-      formData[key] = true
-    } else if (key === 'gender') {
-      formData[key] = 'male'
-    } else if (key === 'role') {
-      formData[key] = 'user'
-    } else if (key === 'age') {
-      formData[key] = null
-    } else if (key === 'birthday') {
-      formData[key] = null
-    } else {
-      formData[key] = ''
-    }
-  })
+const showDialog = ref(false)
+
+// 处理提交
+const handleSubmit = (data) => {
+  console.log('表单提交:', data)
+  // 这里可以调用 API 保存数据
 }
 
-
-// 显示添加对话框
-const showAddDialog = () => {
-  dialogType.value = 'add'
-  editingId.value = null
-
-  resetFormData()
-
-  dialogVisible.value = true
-}
-
-// 显示编辑对话框
-const showEditDialog = (item) => {
-  dialogType.value = 'edit'
-  editingId.value = item.id
-
-  // 填充表单数据
-  Object.keys(formData).forEach(key => {
-    formData[key] = item[key] ?? ''
-  })
-
-  dialogVisible.value = true
-}
-
-
-// 回调
-// 取消
-const handleCancel = () => {
-  console.log('用户取消')
-}
-
-// 提交表单
-const handleSubmit = async (data) => {
-  console.log('表单数据:', data)
-
-  try {
-    if (dialogType.value === 'add') {
-      // 调用添加API
-      await apiAddUser(data)
-      message.success('添加成功')
-    } else {
-      // 调用更新API
-      await apiUpdateUser({ id: editingId.value, ...data })
-      message.success('更新成功')
-    }
-
-    // 刷新列表
-    loadData()
-
-  } catch (error) {
-    message.error(error.message || '操作失败')
+// 字段变更监听（用于联动）
+const handleFieldChange = ({ fieldName, value }) => {
+  if (fieldName === 'theme') {
+    console.log('主题切换为:', value)
+    // 可以在这里触发动态主题切换
   }
+  console.log(`字段 ${fieldName} 变化:`, {
+    值: value,
+    类型: typeof value,
+    是否为数字: !isNaN(Number(value))
+  })
+
 }
 
-// API 示例
-const apiAddUser = async (data) => {
-  // 模拟 API 调用
-  return new Promise(resolve => {
-    setTimeout(() => resolve({ code: 200, data }), 500)
+// 恢复默认
+const resetToDefault = () => {
+  Object.assign(formData, {
+    name: '张三',
+    email: 'zhangsan@example.com',
+    age: 28,
+    theme: 'dark',
+    language: 'zh-CN',
+    notifyMethods: ['email'],
+    enableNotifications: true,
+    birthday: new Date('1995-08-15').getTime(),
+    bio: '热爱编程，喜欢开源项目。',
+    avatar: [],
+    tags: ['developer', 'vue'],
+    rating: 4,
+    volume: 70,
+    schedule: '0 8 * * *'
   })
 }
 
-const apiUpdateUser = async (data) => {
-  // 模拟 API 调用
-  return new Promise(resolve => {
-    setTimeout(() => resolve({ code: 200, data }), 500)
-  })
-}
-
-const loadData = () => {
-  // 加载数据
+// 自定义保存逻辑
+const saveAndClose = (data) => {
+  console.log('自定义保存:', data)
+  handleSubmit(data)
+  showDialog.value = false
 }
 </script>

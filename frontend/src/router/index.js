@@ -31,6 +31,7 @@ const routeLabels = [
     { path: '/database', label: '数据管理', icon: DatabaseIcon, key: 'database' },
     { path: '/notify', label: '消息通知', icon: NotifyIcon, key: 'notify' },
     { path: '/versions', label: '关于', icon: AboutIcon, key: 'versions' },
+    { path: '/example', label: 'example', icon: AboutIcon, key: 'example' },
 ];
 
 export default createRouter({
