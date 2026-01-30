@@ -26,3 +26,7 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.mount('#app')
+
+import { useThemeStore } from '@/stores/theme'
+const themeStore = useThemeStore()
+window.$themeStore = themeStore

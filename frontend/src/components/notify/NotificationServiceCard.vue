@@ -1,58 +1,66 @@
 <template>
-  <n-card hoverable style="height: 16vh;">
+  <n-card hoverable style="height: 13vh;min-height: 135px">
     <template #header>
-      <div class="card-header">
+      <n-flex justify="center" align="center">
         <n-icon :component="icon" size="24" />
-        <div class="header-text">
+        <n-flex vertical justify="center" align="center">
           <div class="title">{{ title }}</div>
           <div v-if="subtitle" class="subtitle">{{ subtitle }}</div>
-        </div>
-      </div>
+        </n-flex>
+      </n-flex>
     </template>
-    <n-space>
-      <n-button v-if="!service.is_configured" type="info" size="small" @click="showEditDialog">
-        + 配置
-      </n-button>
-      <n-space v-else>
-        <n-button text size="small" @click="showEditDialog" >
-          <n-tag type="info">
-            编辑
-          </n-tag>
+    <n-flex vertical justify="center" align="center" style="height: 100%;">
+      <template v-if="!service.is_configured">
+        <n-button type="info" size="small" @click="showEditDialog">
+          + 配置
         </n-button>
-        <n-button text size="small" @click="updateServiceStatus" >
-          <n-tag v-if="service.is_enabled" type="primary">
-            已启用
-          </n-tag>
-          <n-tag v-else type="warning">
-            已禁用
-          </n-tag>
-        </n-button>
-      </n-space>
+      </template>
+      <template v-else>
+        <n-flex justify="center" align="center" :wrap="false">
+          <n-button text size="small" @click="showEditDialog">
+            <n-tag type="info">编辑</n-tag>
+          </n-button>
+          <n-button text size="small" @click="updateServiceStatus">
+            <n-tag v-if="service.is_enabled" type="primary">已启用</n-tag>
+            <n-tag v-else type="warning">已禁用</n-tag>
+          </n-button>
+        </n-flex>
+      </template>
       <DialogForm
           v-model:visible="dialogVisible"
           v-model:formData="formData"
           type="warning"
-          :title="dialogTitle"
+          :title="dialogTitle(service.service_name)"
+          dialogPreset="card"
           :fields="formFields"
           :rules="formRules"
           :positive-text="dialogType === 'add' ? '添加' : '保存'"
           @submit="handleSubmit"
           @cancel="handleCancel"
       >
-        <!-- 自定义内容插槽 -->
-        <template #header>
-          <div style="font-weight: bold;">
-            {{service.service_name}}
-          </div>
-        </template>
+
         <template #icon>
           <n-icon>
             <ChatbubbleOutline />
           </n-icon>
         </template>
+        <template #action="{ formData }">
+          <!--modal预设为dialog不要用action，会覆盖默认positive-click，negative-click对应触发@submit="handleSubmit"，@cancel="handleCancel"-->
+          <!--获取子组件值formData：<slot name="action" :formData="localFormData"/>-->
+          <n-space justify="end">
+            <n-button size="small" type="default" @click="handleCancel">取消</n-button>
+            <n-button size="small" type="success" @click="handleSubmit(formData)">确定</n-button>
+          </n-space>
+        </template>
+        <template #footer>
+          请根据对应格式填写。
+        </template>
+        <template #css>
+          css11。
+        </template>
 
       </DialogForm>
-    </n-space>
+    </n-flex>
   </n-card>
 </template>
 
@@ -100,9 +108,10 @@ const editingId = ref(null)
 const item = ref(null)
 
 // 计算标题
-const dialogTitle = computed(() => {
-  return dialogType.value === 'add' ? '添加用户' : '编辑用户'
-})
+const dialogTitle = (name) => {
+  // return dialogType.value === 'add' ? '添加渠道' : '编辑渠道'
+  return `编辑 ${name}`
+}
 
 // 表单字段配置
 const formFields = [
@@ -117,7 +126,10 @@ const formFields = [
     label: '配置 (JSON)',
     type: 'textarea',
     placeholder: `${props.config}`,
-    rows: 3
+    autosize: {
+        minRows: 5,
+        maxRows: 10,
+    }
   },
   {
     name: 'is_enabled',
@@ -125,6 +137,11 @@ const formFields = [
     type: 'switch',
     checkedValue: true,
     uncheckedValue: false
+  },
+  {
+    name: 'upload',
+    label: '状态',
+    type: 'upload',
   },
 ]
 
@@ -203,6 +220,7 @@ const updateServiceStatus = async () => {
 // 取消
 const handleCancel = () => {
   console.log('用户取消')
+  dialogVisible.value=false//控制隐藏，card模式使用
 }
 
 // 提交表单
@@ -211,6 +229,7 @@ const handleSubmit = async (data) => {
   formData.value={...data}
   try {
       await saveService(data)
+      dialogVisible.value=false//控制隐藏，card模式使用
       // 刷新列表
       loadData()
   } catch (error) {
@@ -230,12 +249,6 @@ const loadData = () => {
   // 加载数据
   emit('success')
 }
-
-
-
-
-
-
 
 </script>
 
@@ -261,12 +274,21 @@ const loadData = () => {
   font-weight: 600;
   color: var(--text-color);
 }
+@media (max-width: 1000px) {
+  .title {
+    font-size: 13px;
+  }
+}
 
 .subtitle {
   font-size: 12px;
   color: var(--text-color-2);
 }
-
+@media (max-width: 1000px) {
+  .subtitle {
+    font-size: 10px;
+  }
+}
 .config-form {
   padding-top: 12px;
   border-top: 1px solid var(--border-color);

@@ -7,9 +7,7 @@
                      :key="service.id">
           <NotificationServiceCard
               style="border-radius: 15px"
-              :style="{
-                        backgroundColor: service.is_enabled? '' : 'lightcyan',
-                      }"
+              :class="['disableNotify', themeClass(service)]"
               :title="typeConfig[service.service_type]?.name"
               :subtitle="typeConfig[service.service_type]?.subtitle"
               :service="service"
@@ -197,6 +195,13 @@ const refreshServices = async () => {
     message.error('刷新失败')
   }
 }
+const themeClass = (service) =>{
+  if(window.$themeStore.isDark){
+    return 'theme-dark'
+  }else{
+    return service.is_configured && !service.is_enabled ? 'theme-light' :''
+  }
+}
 
 onMounted(() => {
   refreshServices()
@@ -216,4 +221,13 @@ onMounted(() => {
 .font-medium {
   font-weight: 600;
 }
+
+
+.disableNotify.theme-light {
+  background-color: #e8e8e8;
+}
+.disableNotify.theme-dark {
+  background-color: #1a1a1a;
+}
+
 </style>

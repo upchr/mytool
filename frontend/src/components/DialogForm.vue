@@ -12,10 +12,12 @@
       @positive-click="handleSubmit"
       @negative-click="handleCancel"
       @close="handleClose"
+      class="mediaModal"
   >
-    <template #header v-if="$slots.header">
+<!--    直接title控制-->
+<!--    <template #header v-if="$slots.header">
       <slot name="header" />
-    </template>
+    </template>-->
 
     <template #icon v-if="$slots.icon">
       <slot name="icon" />
@@ -61,6 +63,14 @@
                 </n-space>
               </n-radio-group>
             </template>
+            <!-- Upload 特殊处理 -->
+<!--            <template v-else-if="field.type === 'upload'">
+              <n-upload
+                  v-bind="getFieldProps(field)"
+                  :file-list="localFormData[field.name] || []"
+                  @update:file-list="handleUploadChange(field.name, $event)"
+              />
+            </template>-->
             <component
                 v-else
                 :is="getComponent(field.type)"
@@ -86,7 +96,7 @@
     </div>
 
     <template #action v-if="$slots.action">
-      <slot name="action" />
+      <slot name="action" :formData="localFormData"/>
     </template>
   </n-modal>
 </template>
@@ -340,7 +350,7 @@ const getFieldProps = (field) => {
       return {
         ...baseProps,
         type: 'textarea',
-        rows: field.rows || 3,
+        rows: field.rows || 3,//会被autosize覆盖
         autosize: field.autosize,
         maxlength: field.maxlength,
         showCount: field.showCount
