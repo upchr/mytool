@@ -5,7 +5,7 @@ from .base import NotificationStrategy
 class WechatStrategy(NotificationStrategy):
     """企业微信机器人通知策略"""
 
-    strategy_name = "wechat"
+    strategy_name = "wecom"
 
     def _validate_config(self):
         """验证企业微信配置"""
@@ -34,8 +34,8 @@ class WechatStrategy(NotificationStrategy):
             }
         elif msg_type == 'markdown':
             data = {
-                "msgtype": "markdown",
-                "markdown": {
+                "msgtype": "markdown_v2",
+                "markdown_v2": {
                     "content": f"**{title}**\n\n{content}"
                 }
             }

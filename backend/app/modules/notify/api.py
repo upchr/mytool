@@ -113,53 +113,42 @@ def set_default_service(default_service_id: int):
 
 @router.post("/test/{service_id}")
 async def test_notification_service(service_id: int):
-    """测试通知服务"""
-    with engine.connect() as conn:
-        stmt = select(notification_services_table).where(
-            notification_services_table.c.id == service_id
+    service = notification_manager.get_service(service_id)
+    try:
+        # 使用异步方式发送
+        result = await notification_manager.send_notification(
+            title='测试通知',
+            content='这是一个测试通知，用于验证系统功能。',
+            service_id=service['id']
         )
-        service = conn.execute(stmt).mappings().first()
+        print(f"    结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
+    except Exception as e:
+        print(f"    失败: {e}")
 
-        if not service:
-            raise HTTPException(status_code=404, detail="服务不存在")
 
-        if not service["is_enabled"]:
-            raise HTTPException(status_code=400, detail="服务未启用")
+    """测试通知服务"""
+    # with engine.connect() as conn:
+    #     stmt = select(notification_services_table).where(
+    #         notification_services_table.c.id == service_id
+    #     )
+    #     service = conn.execute(stmt).mappings().first()
+    #
+    #     if not service:
+    #         raise HTTPException(status_code=404, detail="服务不存在")
+    #
+    #     if not service["is_enabled"]:
+    #         raise HTTPException(status_code=400, detail="服务未启用")
+    #
+    #     config = json.loads(service["config"]) if service["config"] else {}
+    #     try:
+    #         success = await send_test_notification(service["service_type"], config)
+    #         if success:
+    #             return {"message": "测试通知发送成功"}
+    #         else:
+    #             raise HTTPException(status_code=500, detail="测试通知发送失败")
+    #     except Exception as e:
+    #         raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
-        config = json.loads(service["config"]) if service["config"] else {}
-        try:
-            success = await send_test_notification(service["service_type"], config)
-            if success:
-                return {"message": "测试通知发送成功"}
-            else:
-                raise HTTPException(status_code=500, detail="测试通知发送失败")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
-
-@router.post("/init-default")
-def init_default_services():
-    """初始化默认通知服务（可选）"""
-    default_services = [
-        {"service_type": "wecom", "service_name": "企业微信", "is_enabled": False},
-        {"service_type": "bark", "service_name": "Bark", "is_enabled": False},
-        {"service_type": "dingtalk", "service_name": "钉钉", "is_enabled": False},
-        {"service_type": "email", "service_name": "邮件", "is_enabled": False}
-    ]
-
-    with engine.begin() as conn:
-        # 检查是否已初始化
-        count = conn.execute(select(func.count()).select_from(notification_services_table)).scalar()
-        if count > 0:
-            raise HTTPException(status_code=400, detail="服务已初始化")
-
-        # 插入默认服务
-        for service in default_services:
-            conn.execute(notification_services_table.insert().values(**service))
-
-        # 初始化全局设置
-        conn.execute(notification_settings_table.insert().values(id=1))
-
-        return {"message": "默认服务初始化成功"}
 
 
 @router.get("/cs")
