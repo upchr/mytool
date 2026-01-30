@@ -37,6 +37,7 @@
           :positive-text="dialogType === 'add' ? '添加' : '保存'"
           @submit="handleSubmit"
           @cancel="handleCancel"
+          @field-change="handleFieldChange"
       >
 
         <template #icon>
@@ -139,10 +140,28 @@ const formFields = [
     uncheckedValue: false
   },
   {
-    name: 'upload',
-    label: '状态',
+    name: 'files',
+    label: '文件上传',
     type: 'upload',
-  },
+    action: '/api/upload',  // 必须指定上传地址
+    multiple: true,
+    accept: '.jpg,.png,.pdf,.doc,.docx',
+    listType: 'image-card',  // text, image, image-card
+    max: 1,
+    showPreviewButton: true,
+    // 可以自定义上传请求头
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    // 上传前验证
+    beforeUpload: ({ file }) => {
+      if (file.file.size > 10 * 1024 * 1024) {
+        message.error('文件不能超过10MB')
+        return false
+      }
+      return true
+    }
+  }
 ]
 
 // 表单数据
@@ -217,6 +236,10 @@ const updateServiceStatus = async () => {
 }
 
 // 回调
+// 字段变动
+const handleFieldChange = ({ fieldName, value }) => {
+  // console.log(fieldName,value)
+}
 // 取消
 const handleCancel = () => {
   console.log('用户取消')

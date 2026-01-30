@@ -64,13 +64,13 @@
               </n-radio-group>
             </template>
             <!-- Upload 特殊处理 -->
-<!--            <template v-else-if="field.type === 'upload'">
+            <template v-else-if="field.type === 'upload'">
               <n-upload
                   v-bind="getFieldProps(field)"
                   :file-list="localFormData[field.name] || []"
                   @update:file-list="handleUploadChange(field.name, $event)"
               />
-            </template>-->
+            </template>
             <component
                 v-else
                 :is="getComponent(field.type)"
@@ -364,11 +364,12 @@ const getFieldProps = (field) => {
     case 'upload':
       return {
         ...baseProps,
-        action: field.action,
+        action: field.action||'',
         multiple: field.multiple,
         accept: field.accept,
         listType: field.listType || 'text',
-        max: field.max
+        max: field.max||1,
+        showPreviewButton: field.showPreviewButton || true,
       }
     default:
       return { ...baseProps, ...field.props }
@@ -378,6 +379,14 @@ const getFieldProps = (field) => {
 // 字段值变化
 const handleFieldChange = (fieldName, value) => {
   emit('field-change', { fieldName, value, formData: localFormData.value })
+}
+const handleUploadChange = (fieldName, fileList) => {
+  localFormData.value[fieldName] = fileList
+  emit('field-change', {
+    fieldName,
+    value: fileList,
+    formData: localFormData.value
+  })
 }
 
 // 提交表单
@@ -499,237 +508,3 @@ defineExpose({
   background: #a8a8a8;
 }
 </style>
-
-<!--
-<template>
-  <n-card title="12312">222</n-card>
-
-  <n-modal
-      v-model:show="visible"
-      preset="dialog"
-      :title="title"
-      :positive-text="positiveText"
-      :negative-text="negativeText"
-      @positive-click="handleSubmit"
-      @negative-click="handleCancel"
-      @close="handleClose"
-  >
-    <n-form
-        ref="formRef"
-        :model="formData"
-        :rules="rules"
-        label-placement="left"
-        label-width="auto"
-        :style="{ marginTop: '20px' }"
-    >
-      <n-form-item
-          v-for="field in fields"
-          :key="field.name"
-          :label="field.label"
-          :path="field.name"
-      >
-        &lt;!&ndash; 文本框 &ndash;&gt;
-        <n-input
-            v-if="field.type === 'input'"
-            v-model:value="formData[field.name]"
-            :placeholder="field.placeholder || `请输入${field.label}`"
-            clearable
-        />
-
-        &lt;!&ndash; 数字输入框 &ndash;&gt;
-        <n-input-number
-            v-else-if="field.type === 'number'"
-            v-model:value="formData[field.name]"
-            :placeholder="field.placeholder"
-            :min="field.min"
-            :max="field.max"
-            :step="field.step"
-            clearable
-        />
-
-        &lt;!&ndash; 选择器 &ndash;&gt;
-        <n-select
-            v-else-if="field.type === 'select'"
-            v-model:value="formData[field.name]"
-            :options="field.options"
-            :placeholder="field.placeholder || `请选择${field.label}`"
-            clearable
-            filterable
-        />
-
-        &lt;!&ndash; 日期选择 &ndash;&gt;
-        <n-date-picker
-            v-else-if="field.type === 'date'"
-            v-model:value="formData[field.name]"
-            type="date"
-            :placeholder="field.placeholder || `请选择${field.label}`"
-            clearable
-        />
-
-        &lt;!&ndash; 开关 &ndash;&gt;
-        <n-switch
-            v-else-if="field.type === 'switch'"
-            v-model:value="formData[field.name]"
-            :checked-value="field.checkedValue ?? true"
-            :unchecked-value="field.uncheckedValue ?? false"
-        />
-
-        &lt;!&ndash; 多行文本 &ndash;&gt;
-        <n-input
-            v-else-if="field.type === 'textarea'"
-            v-model:value="formData[field.name]"
-            type="textarea"
-            :placeholder="field.placeholder || `请输入${field.label}`"
-            :rows="field.rows || 3"
-            clearable
-        />
-
-        &lt;!&ndash; 自定义插槽 &ndash;&gt;
-        <slot
-            v-else-if="field.type === 'custom'"
-            :name="field.slotName"
-            :field="field"
-            :formData="formData"
-        />
-      </n-form-item>
-    </n-form>
-  </n-modal>
-</template>
-
-<script setup>
-import { ref, watch, computed, nextTick } from 'vue'
-import {
-  NModal,
-  NForm,
-  NFormItem,
-  NInput,
-  NInputNumber,
-  NSelect,
-  NDatePicker,
-  NSwitch,
-  useMessage
-} from 'naive-ui'
-
-const message = useMessage()
-const formRef = ref(null)
-
-// Props
-const props = defineProps({
-  // 对话框显示控制
-  visible: {
-    type: Boolean,
-    default: false
-  },
-  // 标题
-  title: {
-    type: String,
-    default: '表单'
-  },
-  // 确认按钮文本
-  positiveText: {
-    type: String,
-    default: '确认'
-  },
-  // 取消按钮文本
-  negativeText: {
-    type: String,
-    default: '取消'
-  },
-  // 表单字段配置
-  fields: {
-    type: Array,
-    default: () => []
-  },
-  // 表单数据
-  formData: {
-    type: Object,
-    default: () => ({})
-  },
-  // 验证规则
-  rules: {
-    type: Object,
-    default: () => ({})
-  },
-  // 是否在提交时验证
-  validateOnSubmit: {
-    type: Boolean,
-    default: true
-  }
-})
-
-// Emits
-const emit = defineEmits([
-  'update:visible',
-  'update:formData',
-  'submit',
-  'cancel',
-  'close'
-])
-
-// 对话框显示状态
-const visible = computed({
-  get: () => props.visible,
-  set: (value) => emit('update:visible', value)
-})
-
-// 本地表单数据（深度拷贝，避免直接修改props）
-const localFormData = ref({})
-
-// 初始化表单数据
-watch(() => props.formData, (newVal) => {
-  localFormData.value = JSON.parse(JSON.stringify(newVal))
-}, { immediate: true, deep: true })
-
-// 提交表单
-const handleSubmit = async () => {
-  if (props.validateOnSubmit && formRef.value) {
-    try {
-      await formRef.value.validate()
-      emit('submit', localFormData.value)
-      emit('update:formData', localFormData.value)
-      visible.value = false
-    } catch (errors) {
-      message.error('请检查表单填写是否正确')
-    }
-  } else {
-    emit('submit', localFormData.value)
-    emit('update:formData', localFormData.value)
-    visible.value = false
-  }
-}
-
-// 取消
-const handleCancel = () => {
-  emit('cancel')
-  visible.value = false
-}
-
-// 关闭
-const handleClose = () => {
-  emit('close')
-}
-
-// 暴露方法给父组件
-defineExpose({
-  validate: () => formRef.value?.validate(),
-  restoreValidation: () => formRef.value?.restoreValidation(),
-  getFormData: () => localFormData.value,
-  resetFormData: () => {
-    localFormData.value = JSON.parse(JSON.stringify(props.formData))
-    formRef.value?.restoreValidation()
-  }
-})
-</script>
-
-<style scoped>
-/* 自定义样式 */
-:deep(.n-dialog) {
-  width: 600px;
-  max-width: 90vw;
-}
-
-:deep(.n-form-item) {
-  margin-bottom: 24px;
-}
-</style>
--->
