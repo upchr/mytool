@@ -36,7 +36,7 @@
 
           <template #suffix>
             <n-space style="width: 10vw;" justify="space-around">
-              <n-button text size="small" @click="testService(service.service_type)">
+              <n-button text size="small" @click="testService(service.id)">
                 <n-icon><TestIcon /></n-icon>
                 测试
               </n-button>

@@ -4,6 +4,7 @@ from sqlalchemy import select, update, insert, func
 import json
 
 from app.core.db.database import engine, metadata
+from app.modules.notify.handler.manager import notification_manager
 from app.modules.notify.models import notification_services_table, notification_settings_table
 from app.modules.notify.service import send_test_notification
 
@@ -159,3 +160,38 @@ def init_default_services():
         conn.execute(notification_settings_table.insert().values(id=1))
 
         return {"message": "默认服务初始化成功"}
+
+
+@router.get("/cs")
+async def cs():
+    print("=== 通知系统示例 ===")
+    # 3. 发送测试通知
+    print("\n发送测试通知:")
+
+    # 获取所有渠道
+    services = notification_manager.get_all_services(enabled_only=True)
+    if services:
+        print(f"  找到 {len(services)} 个渠道")
+
+        for service in services:
+            print(f"\n  尝试通过 {service['service_name']} 发送:")
+            try:
+                # 使用异步方式发送
+                result = await notification_manager.send_notification(
+                    title='测试通知',
+                    content='这是一个测试通知，用于验证系统功能。',
+                    service_id=service['id']
+                )
+                print(f"    结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
+            except Exception as e:
+                print(f"    失败: {e}")
+    else:
+        print("  没有找到可用渠道")
+
+    # 4. 查看历史记录
+    print("\n4. 服务统计:")
+    stats = notification_manager.get_service_statistics()
+    print(f"  总数: {stats['total']}")
+    print(f"  已启用: {stats['enabled']}")
+    print(f"  按类型统计: {stats['by_type']}")
+

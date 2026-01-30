@@ -31,8 +31,9 @@ async def send_wecom_message(config: Dict[str, Any], title: str, content: str) -
 
 async def send_bark_message(config: Dict[str, Any], title: str, content: str) -> bool:
     """Bark 通知"""
-    bark_url = config.get("bark_url")
-    if not bark_url:
+    bark_url = config.get("server_url")
+    device_key = config.get("device_key")
+    if not bark_url or not bark_url:
         return False
 
     try:
@@ -41,7 +42,7 @@ async def send_bark_message(config: Dict[str, Any], title: str, content: str) ->
             import urllib.parse
             encoded_title = urllib.parse.quote(title)
             encoded_content = urllib.parse.quote(content)
-            url = f"{bark_url.rstrip('/')}/{encoded_title}/{encoded_content}"
+            url = f"{bark_url.rstrip('/')}/{device_key}/{encoded_title}/{encoded_content}"
             resp = await client.get(url)
             return resp.status_code == 200
     except Exception as e:
