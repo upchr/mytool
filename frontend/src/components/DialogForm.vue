@@ -36,7 +36,75 @@
           :disabled="disabled"
           :require-mark-placement="requireMarkPlacement"
       >
+        <!-- 分组模式 -->
+        <template v-if="props.useFieldGroups">
+          <div
+              v-for="(group, groupIndex) in props.fieldGroups"
+              :key="groupIndex"
+              v-show="group.visible !== false"
+              class="field-group"
+          >
+            <!-- 组标题 -->
+            <NH3 v-if="group.title" style="margin: 0 0 16px 0; font-size: 16px">
+              {{ group.title }}
+            </NH3>
 
+            <!-- 组描述 -->
+            <p v-if="group.description" style="margin: 0 0 16px 0; color: #666; font-size: 13px">
+              {{ group.description }}
+            </p>
+
+            <!-- 组内字段 -->
+            <n-form-item
+                v-for="field in group.fields"
+                :key="field.name"
+                :label="field.label"
+                :path="field.name"
+                :show-label="field.showLabel"
+                :label-style="field.labelStyle"
+                :feedback="field.feedback"
+            >
+              <template v-if="field.type === 'radio'">
+                <n-radio-group
+                    v-model:value="localFormData[field.name]"
+                    :name="field.name"
+                    :disabled="field.disabled || props.disabled"
+                    @update:value="handleFieldChange(field.name, $event)"
+                >
+                  <n-space>
+                    <n-radio
+                        v-for="option in field.options"
+                        :key="option.value"
+                        :value="option.value"
+                        :label="option.label"
+                    />
+                  </n-space>
+                </n-radio-group>
+              </template>
+              <template v-else-if="field.type === 'upload'">
+                <n-upload
+                    v-bind="getFieldProps(field)"
+                    :file-list="localFormData[field.name] || []"
+                    @update:file-list="handleUploadChange(field.name, $event)"
+                />
+              </template>
+              <component
+                  v-else
+                  :is="getComponent(field.type)"
+                  v-bind="getFieldProps(field)"
+                  v-model:value="localFormData[field.name]"
+                  @update:value="handleFieldChange(field.name, $event)"
+              />
+
+              <template v-if="field.description" #feedback>
+                <div class="field-description">{{ field.description }}</div>
+              </template>
+            </n-form-item>
+          </div>
+        </template>
+
+        <!-- 平铺模式（默认） -->
+        <template v-else>
           <n-form-item
               v-for="field in fields"
               :key="field.name"
@@ -75,7 +143,7 @@
                 v-else
                 :is="getComponent(field.type)"
                 v-bind="getFieldProps(field)"
-                v-model:value="formData[field.name]"
+                v-model:value="localFormData[field.name]"
                 @update:value="handleFieldChange(field.name, $event)"
             />
 
@@ -86,7 +154,7 @@
               </div>
             </template>
           </n-form-item>
-
+        </template>
         <!-- 自定义表单内容 -->
         <slot name="default" :formData="localFormData" />
       </n-form>

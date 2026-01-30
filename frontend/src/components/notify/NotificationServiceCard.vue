@@ -56,10 +56,6 @@
         <template #footer>
           请根据对应格式填写。
         </template>
-        <template #css>
-          css11。
-        </template>
-
       </DialogForm>
     </n-flex>
   </n-card>
@@ -67,7 +63,6 @@
 
 <script setup>
 import { ref } from 'vue'
-import { computed } from 'vue'
 import DialogForm from '@/components/DialogForm.vue'
 import {NIcon, useMessage} from 'naive-ui'
 import {ChatbubbleOutline} from "@vicons/ionicons5";
