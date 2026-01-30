@@ -6,6 +6,7 @@
         <n-grid-item v-for="service in services" style="margin: 10px;"
                      :key="service.id">
           <NotificationServiceCard
+              :ref="(el) => setChildMethod(service.service_type,el)"
               style="border-radius: 15px"
               :class="['disableNotify', themeClass(service)]"
               :title="typeConfig[service.service_type]?.name"
@@ -27,31 +28,23 @@
           <template #prefix>
             <n-icon :component="typeConfig[service.service_type]?.icon||LinkIcon" size="20" />
           </template>
-          <span>{{ service.service_name }}</span>
+          <span>
+            <n-tag type="warning">
+              {{ typeConfig[service.service_type].name}}
+            </n-tag>
+            {{service.service_name }}</span>
 
           <template #suffix>
             <n-space style="width: 10vw;" justify="space-around">
-              <n-button
-                  text
-                  size="small"
-                  @click="testService(service.service_type)"
-              >
-                <n-icon><SendOutline /></n-icon>
+              <n-button text size="small" @click="testService(service.service_type)">
+                <n-icon><TestIcon /></n-icon>
                 测试
               </n-button>
-              <n-button
-                  text
-                  size="small"
-                  @click="editService(service)"
-              >
-                <n-icon><SendOutline /></n-icon>
+              <n-button text size="small" @click="editService(service)">
+                <n-icon><EditIcon /></n-icon>
                 编辑
               </n-button>
-              <n-button
-                  text
-                  size="small"
-                  @click="disableService(service.id)"
-              >
+              <n-button text size="small" @click="disableService(service)">
                 <n-icon><CloseOutline /></n-icon>
                 禁用
               </n-button>
@@ -67,8 +60,12 @@
 import {ref, computed, onMounted, markRaw} from 'vue'
 import {
   LinkOutline as LinkIcon,
-  StarOutline,
-  SendOutline,
+  LogoWechat,Alert,
+  Book,
+  Mail,
+  Notifications,
+  Navigate as TestIcon,
+  Pencil as EditIcon,
   CloseOutline,
 } from '@vicons/ionicons5'
 import NotificationServiceCard from '@/components/notify/NotificationServiceCard.vue'
@@ -94,43 +91,41 @@ const typeConfig = ref({
   dingtalk: {
     name: '钉钉',
     subtitle: '1231',
-    icon: markRaw(StarOutline),
+    icon: markRaw(Alert),
     config: {"webhook_url": "https://oapi.dingtalk.com/robot/send?access_token=..."}
   },
   feishu: {
     name: '飞书',
     subtitle: '',
-    icon: markRaw(StarOutline),
+    icon: markRaw(Book),
     config: {"webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/..."}
   },
   bark: {
     name: 'Bark',
     subtitle: '',
-    icon: markRaw(StarOutline),
+    icon: markRaw(Notifications),
     config: {"device_key": "xxx", "server_url": "https://api.day.app"}
   },
   email: {
     name: 'QQ邮箱',
     subtitle: '',
-    icon: markRaw(StarOutline),
+    icon: markRaw(Mail),
     config: {"smtp_server": "...", "smtp_port": "587", "email_user": "...", "email_password": "...", "recipient_email": "..."}
   },
   wecom: {
     name: '企业微信',
     subtitle: '',
-    icon: markRaw(StarOutline),
+    icon: markRaw(LogoWechat),
     config: {"webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."}
   },
   webhook: {
     name: '自定义',
     subtitle: '',
-    icon: markRaw(StarOutline),
+    icon: markRaw(LinkIcon),
     config: {"webhook_url": "https://..."}
   },
 })
 
-// 获取服务对象
-const getService = (id) => services.value.find(s => s.id === id)
 //配置
 const getConfig = (type) => {
   return JSON.stringify(typeConfig.value[type].config || '{}')
@@ -138,14 +133,9 @@ const getConfig = (type) => {
 
 // 计算已启用的服务
 const enabledServices = computed(() => {
-  return services.value.filter(s => s.is_enabled)
+  return services.value.filter(s => s.is_enabled && s.is_configured)
 })
 
-// 操作方法
-const openConfigModal = (serviceId) => {
-  const service = getService(serviceId)
-  service.is_configured = true
-}
 
 
 const testService = async (serviceId) => {
@@ -169,16 +159,32 @@ const setAsDefault = async (serviceId) => {
   }
 }
 
-const disableService = async (serviceId) => {
-  const service = getService(serviceId)
-  service.is_enabled = false
-  service.is_configured = false
-  message.success(`${service.service_name} 已禁用`)
+
+// 调用子组件方法
+const childRefs = ref({})
+const setChildMethod = (type,el)=>{
+  childRefs.value[type]=el
+}
+const showEditDialog = (type) => {
+  if (childRefs.value[type]) {
+    childRefs.value[type].showEditDialog()
+  }
+}
+const updateServiceStatus = (type) => {
+  if (childRefs.value[type]) {
+    childRefs.value[type].updateServiceStatus()
+  }
 }
 
+
+
 const editService = (service) => {
-  openConfigModal(service.id)
+  showEditDialog(service.service_type)
 }
+const disableService = async (service) => {
+  updateServiceStatus(service.service_type)
+}
+
 const isConfigured = (config) => {
   return config && Object.keys(config).length > 0
 }

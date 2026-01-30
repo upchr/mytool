@@ -549,7 +549,7 @@ const resetForm = () => {
 // 暴露方法
 defineExpose({
   // 表单方法
-  validate: () => formRef.value?.validate(),
+  validate: () => formRef.value?.validate(),//card自定义action，验证表单
   restoreValidation: () => formRef.value?.restoreValidation(),
   scrollToField: (path, options) => formRef.value?.scrollToField(path, options),
 

@@ -338,7 +338,6 @@ const goUpdate = async () => {
   notice()
 }
 onMounted(async () => {
-  console.log(themeStore.theme)
 
   // themeStore.initTheme()
   await getVersion()

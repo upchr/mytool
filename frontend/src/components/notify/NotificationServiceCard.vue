@@ -27,11 +27,12 @@
         </n-flex>
       </template>
       <DialogForm
+          ref="dialogRef"
+          :dialogPreset="dialogPreset"
           v-model:visible="dialogVisible"
           v-model:formData="formData"
           type="warning"
           :title="dialogTitle(service.service_name)"
-          dialogPreset="card"
           :fields="formFields"
           :rules="formRules"
           :positive-text="dialogType === 'add' ? '添加' : '保存'"
@@ -47,10 +48,12 @@
         </template>
         <template #action="{ formData }">
           <!--modal预设为dialog不要用action，会覆盖默认positive-click，negative-click对应触发@submit="handleSubmit"，@cancel="handleCancel"-->
+          <!--覆盖后，提交需要自己验证表单handleSubmit(formData,true)-->
+          <!--未覆盖，子组件自行验证表单后emit-handleSubmit(formData)-->
           <!--获取子组件值formData：<slot name="action" :formData="localFormData"/>-->
           <n-space justify="end">
             <n-button size="small" type="default" @click="handleCancel">取消</n-button>
-            <n-button size="small" type="success" @click="handleSubmit(formData)">确定</n-button>
+            <n-button size="small" type="success" @click="handleSubmit(formData,true)">确定</n-button>
           </n-space>
         </template>
         <template #footer>
@@ -95,18 +98,20 @@ const props = defineProps({
 // 触发父，回调
 const emit = defineEmits(['success'])
 
-
 ////////// 对话框调出 //////////
+const dialogPreset = ref('dialog')
+const dialogRef = ref(null)//action按钮表单要调用dialogRef.validate子组件验证
+
 // 对话框状态
 const dialogVisible = ref(false)
 const dialogType = ref('add') // 'add' | 'edit'
 const editingId = ref(null)
 const item = ref(null)
-
 // 计算标题
 const dialogTitle = (name) => {
   // return dialogType.value === 'add' ? '添加渠道' : '编辑渠道'
-  return `编辑 ${name}`
+  // return `编辑 ${name}`
+  return `编辑 ${props.title}`
 }
 
 // 表单字段配置
@@ -133,29 +138,6 @@ const formFields = [
     type: 'switch',
     checkedValue: true,
     uncheckedValue: false
-  },
-  {
-    name: 'files',
-    label: '文件上传',
-    type: 'upload',
-    action: '/api/upload',  // 必须指定上传地址
-    multiple: true,
-    accept: '.jpg,.png,.pdf,.doc,.docx',
-    listType: 'image-card',  // text, image, image-card
-    max: 1,
-    showPreviewButton: true,
-    // 可以自定义上传请求头
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
-    },
-    // 上传前验证
-    beforeUpload: ({ file }) => {
-      if (file.file.size > 10 * 1024 * 1024) {
-        message.error('文件不能超过10MB')
-        return false
-      }
-      return true
-    }
   }
 ]
 
@@ -242,8 +224,21 @@ const handleCancel = () => {
 }
 
 // 提交表单
-const handleSubmit = async (data) => {
-  console.log('表单数据:', data)
+const handleSubmit = async (data,flag=false) => {
+  if(flag){//自定义按钮时，验证表单
+    if (dialogRef.value) {
+      try {
+        await dialogRef.value.validate()
+        console.log('✅ 表单验证通过')
+      } catch (error) {
+        console.log('❌ 表单验证失败:', error)
+        return
+      }
+    }
+  }
+
+
+
   formData.value={...data}
   try {
       await saveService(data)
@@ -268,6 +263,11 @@ const loadData = () => {
   emit('success')
 }
 
+//提供父组件调用方法
+defineExpose({
+  showEditDialog,
+  updateServiceStatus,
+})
 </script>
 
 <style scoped>
