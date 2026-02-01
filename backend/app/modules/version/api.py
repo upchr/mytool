@@ -7,6 +7,9 @@ import sys
 import httpx
 import asyncio
 from datetime import datetime, timedelta
+
+from app.core.pojo.response import BaseResponse
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/version", tags=["version"])
@@ -171,11 +174,8 @@ async def get_version_with_time():
 async def health_check():
     from pathlib import Path
     import os
-    return {
-        "code": 200,
-        "message": "服务运行正常",
-        "data": {
+    return BaseResponse.success(
+        "服务运行正123常",{
             "cwd": os.getcwd(),
             "file": Path(__file__),
-        }
-    }
+        })

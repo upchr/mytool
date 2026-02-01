@@ -4,7 +4,7 @@ from sqlalchemy import select
 from app.core.db.database import engine
 import logging
 
-from . import models
+from . import models, services
 from .models import cron_jobs_table
 
 # 关闭 APScheduler 日志（可选）

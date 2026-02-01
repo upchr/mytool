@@ -4,8 +4,10 @@
     <p>当前主题: {{ formData.theme }}</p>
     <p>通知方式: {{ formData.notifyMethods?.join(', ') || '无' }}</p>
 
+    <n-space>
     <n-button @click="showDialog = true" type="primary">打开设置</n-button>
-
+    <n-button @click="test" type="primary">测试</n-button>
+    </n-space>
     <!-- 使用通用表单对话框 -->
     <DialogForm
         v-model:visible="showDialog"
@@ -253,6 +255,19 @@ const formRules = {
 }
 
 const showDialog = ref(false)
+
+
+import request from '@/utils/request'
+const getUsers = async ()=> {
+  return request({
+    url: '/version/health',
+    method: 'get'
+  })
+}
+const test = async () => {
+  const res = await getUsers()
+  console.log(res)
+}
 
 // 处理提交
 const handleSubmit = (data) => {
