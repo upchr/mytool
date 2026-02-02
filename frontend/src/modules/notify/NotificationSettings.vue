@@ -179,12 +179,11 @@ const isConfigured = (config) => {
 }
 const refreshServices = async () => {
   try {
-    const res = window.$request.get('/notifications/services')
+    const data = await window.$request.get('/notifications/services')
 
     // 更新本地状态
-    services.value = res.data.services.map(s => ({
+    services.value = data.map(s => ({
       ...s,
-      is_default: s.id === res.data.default_service_id,
       is_configured: isConfigured(s.config)
     }))
   } catch (error) {

@@ -6,6 +6,7 @@ from sqlalchemy import select, update, insert, func
 import json
 
 from app.core.db.database import engine, metadata
+from app.core.pojo.response import BaseResponse
 from app.modules.notify.handler.manager import notification_manager
 from app.modules.notify.models import notification_services_table, notification_settings_table
 
@@ -30,17 +31,13 @@ def get_notification_services():
         # 获取默认服务ID
         settings_stmt = select(notification_settings_table).where(notification_settings_table.c.id == 1)
         settings = conn.execute(settings_stmt).mappings().first()
-
-        return {
-            "services": [
-                {
-                    **dict(service),
-                    "config": json.loads(service["config"]) if service["config"] else {}
-                }
-                for service in services
-            ],
-            "default_service_id": settings["default_service_id"] if settings else None
-        }
+        return BaseResponse.success(data=[
+            {
+                **dict(service),
+                "config": json.loads(service["config"]) if service["config"] else {}
+            }
+            for service in services
+        ])
 
 @router.put("/services/{service_id}")
 def update_notification_service(service_id: int, service_data: dict):
