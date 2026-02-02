@@ -21,13 +21,15 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
     (response) => {
-        const { code, message, data } = response.data
+        if (response.data) {
+            const { code, message, data } = response.data
 
-        if (code === 200) {
-            return data // 直接返回 data，调用方无需 .data.data
-        } else {
-            window.$message.error(message || '请求失败')
-            return Promise.reject(new Error(message))
+            if (code === 200) {
+                return data // 直接返回 data，调用方无需 .data.data
+            } else {
+                window.$message.error(message || '请求失败')
+                return Promise.reject(new Error(message))
+            }
         }
     },
     (error) => {
@@ -55,3 +57,11 @@ service.interceptors.response.use(
 )
 
 export default service
+// 使用示例
+// 1.别名
+// return window.$request.get('/version/health')
+// 2.全配
+// return window.$request({
+//     url: '/version/health',
+//     method: 'get'
+// })

@@ -4,14 +4,14 @@ from pydantic import BaseModel
 T = TypeVar("T")
 
 class BaseResponse(BaseModel, Generic[T]):
-    code: int = 200
-    message: str = "success"
+    code: int
+    message: str
     data: Optional[T] = None
 
     @classmethod
-    def success(cls, message: str = "success",data: T = None, ) -> "BaseResponse[T]":
+    def success(cls, data: T = None, message: str = "success") -> "BaseResponse[T]":
         return cls(code=200, message=message, data=data)
 
     @classmethod
-    def error(cls, code: int = 500, message: str = "error", data: Any = None) -> "BaseResponse[Any]":
-        return cls(code=code, message=message, data=data)
+    def error(cls, code: int, message: str, detail: Any = None) -> "BaseResponse[Any]":
+        return cls(code=code, message=message, data=detail)

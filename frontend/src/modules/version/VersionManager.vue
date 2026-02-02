@@ -351,7 +351,9 @@ const formatDate = (isoString) => {
 const getVersion = async (flag = false) => {
   try {
     goUpdateIng.value = true
-    const res = await axios.get(`/api/version/lastVersion`)
+    // const res = await axios.get(`/api/version/lastVersion`)
+    const res = await axios.get(`/api/version/`)
+
     versionInfo.value = res.data
     if(flag && versionInfo.value.updatable){
       window.$message?.warning(`有版本可更新！${versionInfo.value.latest}`)

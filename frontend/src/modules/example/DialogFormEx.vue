@@ -7,6 +7,8 @@
     <n-space>
     <n-button @click="showDialog = true" type="primary">打开设置</n-button>
     <n-button @click="test" type="primary">测试</n-button>
+    <n-button @click="test404" type="primary">404异常</n-button>
+    <n-button @click="testyw" type="primary">yw异常</n-button>
     </n-space>
     <!-- 使用通用表单对话框 -->
     <DialogForm
@@ -257,16 +259,25 @@ const formRules = {
 const showDialog = ref(false)
 
 
-import request from '@/utils/request'
 const getUsers = async ()=> {
-  return request({
-    url: '/version/health',
+  // return window.$request.get('/example/health')
+
+  return window.$request({
+    url: '/example/health',
     method: 'get'
   })
 }
 const test = async () => {
   const res = await getUsers()
   console.log(res)
+}
+const test404 = async () => {
+  return window.$request.get('/example/health2')
+}
+const testRef = ref(0)
+const testyw = async () => {
+  testRef.value += 1
+  return window.$request.get(`/example/health/${testRef.value}`)
 }
 
 // 处理提交

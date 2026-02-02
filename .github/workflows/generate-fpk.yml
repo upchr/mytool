@@ -63,10 +63,14 @@ jobs:
       - name: Update fnpack.json
         working-directory: fnpack-repo
         run: |
-          UPDATE_LOG="便签、定时任务管理（v${{ env.VERSION }}）"
-          jq --arg ver "${{ env.VERSION }}" \
+          CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          VERSION="${{ env.VERSION }}"
+          UPDATE_LOG="便签、定时任务管理（v${VERSION}）"
+          jq --arg ver "$VERSION" \
              --arg log "$UPDATE_LOG" \
-             '.toolsplus.version = $ver | 
+             --arg time "$CURRENT_TIME" \
+             '.toolsplus.version = $ver |
+              .toolsplus.lasttime = $time |
               .toolsplus.history += { ("v" + $ver): $log }' \
              fnpack.json > fnpack.json.tmp && mv fnpack.json.tmp fnpack.json
 

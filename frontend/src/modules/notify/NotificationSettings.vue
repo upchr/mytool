@@ -140,22 +140,11 @@ const enabledServices = computed(() => {
 
 const testService = async (serviceId) => {
   try {
-    await axios.post(`/api/notifications/test/${serviceId}`)
+    await window.$request.post(`/notifications/test/${serviceId}`)
     message.success('测试通知发送成功')
   } catch (error) {
     message.error('测试失败')
-  }
-}
-
-
-const setAsDefault = async (serviceId) => {
-  try {
-    await axios.put('/api/notifications/default-service', { default_service_id: serviceId })
-    // 更新本地状态
-    services.value.forEach(s => s.is_default = s.id === serviceId)
-    message.success('已设为默认通知服务')
-  } catch (error) {
-    message.error('设置失败')
+    throw error
   }
 }
 
@@ -190,7 +179,8 @@ const isConfigured = (config) => {
 }
 const refreshServices = async () => {
   try {
-    const res = await axios.get('/api/notifications/services')
+    const res = window.$request.get('/notifications/services')
+
     // 更新本地状态
     services.value = res.data.services.map(s => ({
       ...s,

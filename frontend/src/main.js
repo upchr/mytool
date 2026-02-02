@@ -30,3 +30,6 @@ app.mount('#app')
 import { useThemeStore } from '@/stores/theme'
 const themeStore = useThemeStore()
 window.$themeStore = themeStore
+
+import request from '@/utils/request'
+window.$request = request

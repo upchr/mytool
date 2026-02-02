@@ -1,11 +1,13 @@
 # notify/__init__.py
 import importlib
+import logging
 import os
 from typing import Dict, Type
 from .base import NotificationStrategy
 
+logger = logging.getLogger(__name__)
+
 class NotificationStrategyFactory:
-    """通知策略工厂（真正的懒加载版）"""
 
     _strategies: Dict[str, Type[NotificationStrategy]] = {}
     _initialized = False
@@ -13,7 +15,6 @@ class NotificationStrategyFactory:
 
     @classmethod
     def _lazy_init(cls):
-        """懒加载初始化（核心方法）"""
         if not cls._initialized:
             cls._init_strategies()
 
@@ -29,7 +30,7 @@ class NotificationStrategyFactory:
             cls._init_via_discovery()
 
         cls._initialized = True
-        print(f"策略初始化完成，找到 {len(cls._strategies)} 个策略: {list(cls._strategies.keys())}")
+        logger.info(f"策略初始化完成，找到 {len(cls._strategies)} 个策略: {list(cls._strategies.keys())}")
 
     @classmethod
     def _init_via_registry(cls):
@@ -37,7 +38,7 @@ class NotificationStrategyFactory:
         try:
             # 导入注册表模块，这会触发所有策略模块的导入
             from . import registry
-            print("✓ 使用注册表模式初始化策略")
+            logger.info("✓ 使用注册表模式初始化策略")
 
             # 从注册表模块中提取策略类
             import sys
@@ -52,10 +53,10 @@ class NotificationStrategyFactory:
                     name = attr.get_strategy_name()
                     if name:
                         cls._strategies[name] = attr
-                        print(f"✓ 注册策略: {name} (来自 registry)")
+                        logger.info(f"✓ 注册策略: {name} (来自 registry)")
 
         except ImportError as e:
-            print(f"✗ 注册表导入失败: {e}")
+            logger.debug(f"✗ 注册表导入失败: {e}")
             # 回退到动态发现
             cls._init_via_discovery()
 
@@ -91,13 +92,13 @@ class NotificationStrategyFactory:
                         name = attr.get_strategy_name()
                         if name and name not in cls._strategies:
                             cls._strategies[name] = attr
-                            print(f"✓ 注册策略: {name} (来自 {module_name})")
+                            logger.info(f"✓ 注册策略: {name} (来自 {module_name})")
 
                 except Exception:
                     pass
 
         except Exception as e:
-            print(f"✗ 加载模块 {module_name} 失败: {e}")
+            logger.debug(f"✗ 加载模块 {module_name} 失败: {e}")
 
     @classmethod
     def get_strategy(cls, strategy_type: str, config: Dict) -> NotificationStrategy:
@@ -135,14 +136,14 @@ class NotificationStrategyFactory:
         """清空策略（用于测试）"""
         cls._strategies.clear()
         cls._initialized = False
-        print("已清空策略缓存")
+        logger.info("已清空策略缓存")
 
     @classmethod
     def use_registry_mode(cls, enable: bool = True):
         """设置是否使用注册表模式"""
         cls._use_registry = enable
         cls._initialized = False  # 重置状态，下次调用会重新初始化
-        print(f"已设置注册表模式: {enable}")
+        logger.info(f"已设置注册表模式: {enable}")
 
     @classmethod
     def preload(cls):

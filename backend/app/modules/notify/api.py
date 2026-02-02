@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.params import Body
 from sqlalchemy import select, update, insert, func
@@ -6,9 +8,9 @@ import json
 from app.core.db.database import engine, metadata
 from app.modules.notify.handler.manager import notification_manager
 from app.modules.notify.models import notification_services_table, notification_settings_table
-from app.modules.notify.service import send_test_notification
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+logger = logging.getLogger(__name__)
 
 @router.get("/services/{service_id}")
 def get_service(service_id: int):
@@ -42,13 +44,6 @@ def get_notification_services():
 
 @router.put("/services/{service_id}")
 def update_notification_service(service_id: int, service_data: dict):
-    """更新通知服务配置"""
-    # 验证 service_type
-    # valid_types = ["wecom", "bark", "dingtalk", "email"]
-    # if service_data.get("service_type") not in valid_types:
-    #     raise HTTPException(status_code=400, detail="无效的服务类型")
-
-    # 验证配置
     config = service_data.get("config", {})
     with engine.begin() as conn:
         # 检查服务是否存在
@@ -126,44 +121,21 @@ async def test_notification_service(service_id: int):
         print(f"    失败: {e}")
 
 
-    """测试通知服务"""
-    # with engine.connect() as conn:
-    #     stmt = select(notification_services_table).where(
-    #         notification_services_table.c.id == service_id
-    #     )
-    #     service = conn.execute(stmt).mappings().first()
-    #
-    #     if not service:
-    #         raise HTTPException(status_code=404, detail="服务不存在")
-    #
-    #     if not service["is_enabled"]:
-    #         raise HTTPException(status_code=400, detail="服务未启用")
-    #
-    #     config = json.loads(service["config"]) if service["config"] else {}
-    #     try:
-    #         success = await send_test_notification(service["service_type"], config)
-    #         if success:
-    #             return {"message": "测试通知发送成功"}
-    #         else:
-    #             raise HTTPException(status_code=500, detail="测试通知发送失败")
-    #     except Exception as e:
-    #         raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
 
-
-@router.get("/cs")
-async def cs():
-    print("=== 通知系统示例 ===")
+@router.get("/all")
+async def all():
+    logger.info("=== 通知系统示例 ===")
     # 3. 发送测试通知
-    print("\n发送测试通知:")
+    logger.info("\n发送测试通知:")
 
     # 获取所有渠道
     services = notification_manager.get_all_services(enabled_only=True)
     if services:
-        print(f"  找到 {len(services)} 个渠道")
+        logger.info(f"  找到 {len(services)} 个渠道")
 
         for service in services:
-            print(f"\n  尝试通过 {service['service_name']} 发送:")
+            logger.info(f"\n  尝试通过 {service['service_name']} 发送:")
             try:
                 # 使用异步方式发送
                 result = await notification_manager.send_notification(
@@ -171,16 +143,16 @@ async def cs():
                     content='这是一个测试通知，用于验证系统功能。',
                     service_id=service['id']
                 )
-                print(f"    结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
+                logger.info(f"    结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
             except Exception as e:
-                print(f"    失败: {e}")
+                logger.error(f"    失败: {e}")
     else:
-        print("  没有找到可用渠道")
+        logger.error("  没有找到可用渠道")
 
     # 4. 查看历史记录
-    print("\n4. 服务统计:")
+    logger.info("\n4. 服务统计:")
     stats = notification_manager.get_service_statistics()
-    print(f"  总数: {stats['total']}")
-    print(f"  已启用: {stats['enabled']}")
-    print(f"  按类型统计: {stats['by_type']}")
+    logger.info(f"  总数: {stats['total']}")
+    logger.info(f"  已启用: {stats['enabled']}")
+    logger.info(f"  按类型统计: {stats['by_type']}")
 

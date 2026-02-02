@@ -14,6 +14,7 @@ from app.modules.database.api import router as database_router
 from app.modules.version.api import router as version_router
 from app.modules.notify.api import router as notify_router
 from app.modules.node.api import router as node_router
+from app.modules.example import router as example_router
 
 
 """日志调用"""
@@ -70,6 +71,7 @@ app.include_router(node_router)
 app.include_router(database_router)
 app.include_router(version_router)
 app.include_router(notify_router)
+app.include_router(example_router)
 
 
 """启动main，项目目录为app上级"""
