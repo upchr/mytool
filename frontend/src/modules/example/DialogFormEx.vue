@@ -6,9 +6,9 @@
 
     <n-space>
     <n-button @click="showDialog = true" type="primary">打开设置</n-button>
-    <n-button @click="test" type="primary">测试</n-button>
+    <n-button @click="test" type="primary">当前路径</n-button>
     <n-button @click="test404" type="primary">404异常</n-button>
-    <n-button @click="testyw" type="primary">yw异常</n-button>
+    <n-button @click="testyw" type="primary">业务异常{{testRef}}</n-button>
     </n-space>
     <!-- 使用通用表单对话框 -->
     <DialogForm
@@ -270,6 +270,7 @@ const getUsers = async ()=> {
 const test = async () => {
   const res = await getUsers()
   console.log(res)
+  window.$message.info(JSON.stringify(res))
 }
 const test404 = async () => {
   return window.$request.get('/example/health2')
@@ -283,6 +284,7 @@ const testyw = async () => {
 // 处理提交
 const handleSubmit = (data) => {
   console.log('表单提交:', data)
+
   // 这里可以调用 API 保存数据
 }
 

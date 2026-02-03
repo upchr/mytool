@@ -27,7 +27,7 @@ service.interceptors.response.use(
             if (code === 200) {
                 return data // 直接返回 data，调用方无需 .data.data
             } else {
-                window.$message.error(message || '请求失败')
+                window.$message.error(`${message || '请求失败'} `+`${':'+data || ''}`)
                 return Promise.reject(new Error(message))
             }
         }
