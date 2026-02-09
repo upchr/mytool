@@ -1,183 +1,340 @@
 <template>
-  <n-card title="💾 数据管理" class="mb-6">
-    <n-space justify="end" style="margin-bottom: 10px">
-<!--      <n-popconfirm :negative-text="null"
-                    positive-text="清空数据"
-                    :positive-button-props="{ type: 'error', size: 'small'}"
-                    @positive-click="clearDatabase"
-      >
-        <template #icon>
-          <n-icon color="red">
-            <DeleteIcon />
-          </n-icon>
+  <n-card title="数据库管理" :bordered="false">
+    <n-space vertical :size="24">
+      <!-- 导出功能 -->
+      <n-card :bordered="false">
+        <template #header>
+          <n-space align="center">
+            <n-icon><CloudDownloadOutline /></n-icon>
+            <span>导出数据</span>
+          </n-space>
         </template>
-        <template #trigger>
-          <n-button type="error">清空数据</n-button>
+
+        <n-space vertical>
+          <p class="text-gray-600">选择要导出的模块，或导出全部数据</p>
+
+          <n-checkbox-group v-model:value="selectedExportModules">
+            <n-space>
+              <n-checkbox v-for="module in modules" :key="module.value" :value="module.value">
+                {{ module.label }}
+              </n-checkbox>
+            </n-space>
+          </n-checkbox-group>
+
+          <n-space justify="end" class="mt-4">
+            <n-button @click="exportAll">导出全部</n-button>
+            <n-button type="primary" @click="exportSelected" :disabled="selectedExportModules.length === 0">
+              导出选中
+            </n-button>
+          </n-space>
+        </n-space>
+      </n-card>
+
+      <!-- 清除功能 -->
+      <n-card :bordered="false">
+        <template #header>
+          <n-space align="center">
+            <n-icon><TrashOutline /></n-icon>
+            <span>清除数据</span>
+          </n-space>
         </template>
-        一切都将一去杳然，任何人都无法将其捕获。
-      </n-popconfirm>-->
-      <n-button type="error"
-          @click="clearData">
-        清空数据
-      </n-button>
-      <n-button
-          type="primary"
-          @click="exportDatabase"
-          :loading="exporting"
-      >
-        导出数据库
-      </n-button>
-    </n-space>
 
-    <n-space vertical>
+        <n-space vertical>
+          <p class="text-gray-600">选择要清除的模块数据</p>
 
-      <n-upload
-          multiple
-          directory-dnd
-          @change="handleFileChange"
-          accept=".json"
-          :max="1"
-      >
-        <n-upload-dragger>
-          <div style="margin-bottom: 12px">
-            <n-icon size="48" :depth="3">
-              <ArchiveIcon />
-            </n-icon>
-          </div>
-          <n-text style="font-size: 16px">
-            点击或者拖动文件到该区域来上传
-          </n-text>
-        </n-upload-dragger>
-      </n-upload>
+          <n-checkbox-group v-model:value="selectedClearModules">
+            <n-space>
+              <n-checkbox v-for="module in modules" :key="module.value" :value="module.value">
+                {{ module.label }}
+              </n-checkbox>
+            </n-space>
+          </n-checkbox-group>
 
+          <n-space justify="end" class="mt-4">
+            <n-popconfirm
+                @positive-click="clearSelected"
+                negative-text="取消"
+                positive-text="确认清除"
+                :show-icon="false"
+            >
+              <template #trigger>
+                <n-button type="error" :disabled="selectedClearModules.length === 0">
+                  清除选中模块
+                </n-button>
+              </template>
+              确定要清除选中模块的数据吗？此操作不可逆！
+            </n-popconfirm>
+          </n-space>
+        </n-space>
+      </n-card>
 
-      <!-- 操作提示 -->
-      <n-alert type="warning" class="mt-4">
-        <template #icon>
-          <n-icon><WarningOutline /></n-icon>
+      <!-- 清空所有功能 -->
+      <n-card :bordered="false">
+        <template #header>
+          <n-space align="center">
+            <n-icon><CloseCircleOutline /></n-icon>
+            <span>清空所有数据</span>
+          </n-space>
         </template>
-        清除数据库，重新开始。清除前，系统会自动创建备份文件（应用data目录下）。
-      </n-alert>
-      <n-alert type="warning" class="mt-4">
-        <template #icon>
-          <n-icon><WarningOutline /></n-icon>
+
+        <n-space vertical>
+          <p class="text-gray-600">
+            清空数据库中所有业务数据。
+          </p>
+
+          <n-form-item label="保留系统表" label-placement="left" label-width="120">
+            <n-switch v-model:value="keepWhitelist" />
+<!--            <span class="text-sm text-gray-500 ml-2">
+              保留迁移版本、序列等系统表
+            </span>-->
+          </n-form-item>
+
+          <n-space justify="end">
+            <n-popconfirm
+                @positive-click="clearAll"
+                negative-text="取消"
+                positive-text="确认清空"
+                :show-icon="false"
+            >
+              <template #trigger>
+                <n-button type="error">清空所有数据</n-button>
+              </template>
+              确定要清空所有数据吗？此操作不可逆！
+            </n-popconfirm>
+          </n-space>
+        </n-space>
+      </n-card>
+
+      <!-- 导入功能 -->
+      <n-card :bordered="false">
+        <template #header>
+          <n-space align="center">
+            <n-icon><CloudUploadOutline /></n-icon>
+            <span>导入数据</span>
+          </n-space>
         </template>
-        导入操作会<strong>覆盖当前数据库</strong>，系统会自动创建备份文件（应用data目录下）。
-      </n-alert>
+
+        <n-space vertical>
+          <p class="text-gray-600">
+            上传之前导出的 JSON 文件进行数据还原。
+            <br/>
+            <span class="text-red-500 font-medium">注意：只会覆盖文件中包含的表数据</span>
+          </p>
+
+          <n-upload
+              ref="uploadRef"
+              :default-upload="false"
+              @before-upload="handleBeforeUpload"
+              :file-list="fileList"
+              list-type="text"
+              accept=".json"
+          >
+            <n-button type="primary">选择文件</n-button>
+          </n-upload>
+
+          <n-space justify="end" class="mt-4">
+            <n-button type="success" @click="importData" :disabled="!selectedFile">
+              导入数据
+            </n-button>
+          </n-space>
+        </n-space>
+      </n-card>
     </n-space>
   </n-card>
 </template>
 
 <script setup>
-import {h, ref} from 'vue'
-import {useMessage, useDialog,useNotification , NIcon} from 'naive-ui'
-import { WarningOutline } from '@vicons/ionicons5'
-import axios from 'axios'
+import {ref, onMounted} from 'vue'
 import {
-  ArchiveOutline as ArchiveIcon,
-  FitnessOutline as DeleteIcon
+  CloudDownloadOutline,
+  TrashOutline,
+  CloseCircleOutline,
+  CloudUploadOutline
 } from '@vicons/ionicons5'
+import axios from 'axios'
 
-const message = useMessage()
-const exporting = ref(false)
-const importing = ref(false)
+// 模块配置（与后端 MODULE_TABLES 保持一致）
+const modules = ref([
+ /* { value: 'nodes', label: '节点管理' },
+  { value: 'jobs', label: '任务管理' },
+  { value: 'credentials', label: '凭据模板' },
+  { value: 'notifications', label: '通知配置' }*/
+])
+
+const selectedExportModules = ref([])
+const selectedClearModules = ref([])
+const keepWhitelist = ref(true)
+const uploadRef = ref(null)
+const fileList = ref([])
 const selectedFile = ref(null)
 
-// 导出数据库
-const exportDatabase = async () => {
+
+//models
+const getModels = async () => {
+  modules.value = await window.$request.get(`/database/models`)
+}
+
+// 导出全部
+const exportAll = async () => {
   try {
-    exporting.value = true
     const response = await axios.get('/api/database/export', {
       responseType: 'blob'
     })
 
-    // 创建下载链接
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', `database_export_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`)
+    link.setAttribute('download', `database_export_all_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
 
-    message.success('数据库导出成功')
+    window.$message.success('导出成功')
   } catch (error) {
-    message.error(`导出失败: ${error.response?.data?.detail || error.message}`)
-  } finally {
-    exporting.value = false
+    window.$message.error(`导出失败: ${error.response?.data?.detail || error.message}`)
   }
 }
-const notification = useNotification()
 
-const dialog = useDialog()
+// 导出选中模块
+const exportSelected = async () => {
+  if (selectedExportModules.value.length === 0) {
+    window.$message.warning('请选择要导出的模块')
+    return
+  }
 
-function clearData() {
-  dialog.error({
-    title: '清空数据',
-    content: '一切都将一去杳然，任何人都无法将其捕获。',
-    positiveText: '清空',
-    icon:renderIcon(DeleteIcon),
-    onPositiveClick: () => {
-      clearDatabase()
-    }
-  })
-}
-function renderIcon(icon) {
-  return () => h(icon,  { color: 'red' });
-}
-
-// 清除数据库
-const clearDatabase = async () => {
   try {
-    const response = await axios.delete('/api/database/clear')
-    notification.success({
-      title: '清除成功！',
-      content: `原库备份文件: ${response.data.backup_file}`,
-      duration: 5000,
-      keepAliveOnHover: true
+    const params = new URLSearchParams()
+    selectedExportModules.value.forEach(module => {
+      params.append('modules', module)
     })
+
+    const response = await axios.get(`/api/database/export?${params.toString()}`, {
+      responseType: 'blob'
+    })
+
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
+    const moduleName = selectedExportModules.value.join('_')
+    link.setAttribute('download', `database_export_${moduleName}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    window.$message.success('导出成功')
   } catch (error) {
-    message.error(`清除失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`导出失败: ${error.response?.data?.detail || error.message}`)
   }
 }
 
-// 处理文件选择
-const handleFileChange = (data) => {
-  if (data.fileList.length > 0) {
-    selectedFile.value = data.fileList[0].file
-  } else {
-    selectedFile.value = null
+// 清除选中模块
+const clearSelected = async () => {
+  if (selectedClearModules.value.length === 0) {
+    window.$message.warning('请选择要清除的模块')
+    return
   }
-  importDatabase()
-}
-
-// 导入数据库
-const importDatabase = async () => {
-  if (!selectedFile.value) return
 
   try {
-    importing.value = true
+    const params = new URLSearchParams()
+    selectedClearModules.value.forEach(module => {
+      params.append('modules', module)
+    })
 
+    await window.$request.delete(`/database/clear?${params.toString()}`)
+    window.$message.success('清除成功')
+    selectedClearModules.value = []
+  } catch (error) {
+    window.$message.error(`清除失败: ${error.response?.data?.detail || error.message}`)
+  }
+}
+
+// 清空所有数据
+const clearAll = async () => {
+  try {
+    const params = new URLSearchParams()
+    params.append('keep_whitelist', keepWhitelist.value.toString())
+
+    await window.$request.delete(`/database/clear?${params.toString()}`)
+    window.$message.success('清空成功')
+  } catch (error) {
+    window.$message.error(`清空失败: ${error.response?.data?.detail || error.message}`)
+  }
+}
+
+// 文件上传处理
+const handleBeforeUpload = ({ file }) => {
+  if (!file.name.endsWith('.json')) {
+    window.$message.error('只支持 JSON 文件')
+    return false
+  }
+
+  if (file.file.size > 50 * 1024 * 1024) {
+    window.$message.error('文件大小不能超过 50MB')
+    return false
+  }
+
+  selectedFile.value = file.file
+  fileList.value = [file]
+  return false // 阻止自动上传
+}
+
+// 导入数据
+const importData = async () => {
+  if (!selectedFile.value) {
+    window.$message.warning('请选择要导入的文件')
+    return
+  }
+
+  try {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
 
-    const response = await axios.post('/api/database/import', formData, {
+    const response = await window.$request.post('/database/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
     })
-    notification.success({
-      title: '导入成功！',
-      content: `原库备份文件: ${response.data.backup_file}`,
-      duration: 5000,
-      keepAliveOnHover: true
-    })
+
+    window.$message.success('导入成功')
+    fileList.value = []
     selectedFile.value = null
+
+    // 可选：显示备份文件信息
+    if (response.backup_file) {
+      window.$dialog.info({
+        title: '导入完成',
+        content: `数据已成功导入\n备份文件: ${response.backup_file}`,
+        positiveText: '确定'
+      })
+    }
   } catch (error) {
-    message.error(`导入失败: ${error.response?.data?.detail || error.message}`)
-  } finally {
-    importing.value = false
+    window.$message.error(`导入失败`)
   }
 }
+
+
+onMounted(async () => {
+  await getModels()
+})
 </script>
+
+<style scoped>
+.text-gray-600 {
+  color: var(--text-color-2);
+  font-size: 14px;
+}
+
+.ml-1 {
+  margin-left: 4px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+</style>

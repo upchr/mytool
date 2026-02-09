@@ -28,6 +28,12 @@ def get_notification_services():
         stmt = select(notification_services_table)
         services = conn.execute(stmt).mappings().all()
 
+        if not services:
+            from app.modules.notify.models import init_default_notification_services
+            init_default_notification_services()
+            services = conn.execute(stmt).mappings().all()
+
+
         # 获取默认服务ID
         settings_stmt = select(notification_settings_table).where(notification_settings_table.c.id == 1)
         settings = conn.execute(settings_stmt).mappings().first()

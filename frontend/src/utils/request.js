@@ -23,7 +23,6 @@ service.interceptors.response.use(
     (response) => {
         if (response.data) {
             const { code, message, data } = response.data
-
             if (code === 200) {
                 return data // 直接返回 data，调用方无需 .data.data
             } else {
