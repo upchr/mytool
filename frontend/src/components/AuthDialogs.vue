@@ -1,6 +1,6 @@
 <template>
   <!-- 系统初始化弹框 -->
-  <n-modal v-model:show="loginStore.showInitDialog" preset="dialog" title="系统初始化">
+  <n-modal v-model:show="loginStore.showInitDialog" preset="dialog" title="系统初始化" @after-leave="closeLogModal">
     <template #header>
       <div class="dialog-header">
         <n-icon size="24"><LockClosedOutline /></n-icon>
@@ -14,7 +14,7 @@
             v-model:value="initForm.password"
             type="password"
             placeholder="请输入至少6位密码"
-            show-password-on="mousedown"
+            show-password-on="click"
         />
       </n-form-item>
 
@@ -23,7 +23,7 @@
             v-model:value="initForm.confirmPassword"
             type="password"
             placeholder="请再次输入密码"
-            show-password-on="mousedown"
+            show-password-on="click"
         />
       </n-form-item>
     </n-form>
@@ -54,7 +54,7 @@
             v-model:value="loginForm.password"
             type="password"
             placeholder="请输入管理员密码"
-            show-password-on="mousedown"
+            show-password-on="click"
             @keyup.enter="handleLoginSubmit"
         />
       </n-form-item>
@@ -123,11 +123,15 @@ const handleInitSubmit = async () => {
 
     const success = await initializeSystem(initForm.value.password)
     if (success) {
-      showInitDialog.value = false
+      // showInitDialog.value = false
+      loginStore.closeInitDialog()
+
       initForm.value = { password: '', confirmPassword: '' }
       // 初始化后自动显示登录弹框
       setTimeout(() => {
-        showLoginDialog.value = true
+        // showLoginDialog.value = true
+        loginStore.closeLoginDialog()
+
       }, 500)
     }
   } catch (error) {
@@ -145,7 +149,8 @@ const handleLoginSubmit = async () => {
 
     const success = await loginSystem(loginForm.value.password)
     if (success) {
-      showLoginDialog.value = false
+      // showLoginDialog.value = false
+      loginStore.closeLoginDialog()
       loginForm.value = { password: '' }
       // 刷新页面或重新加载数据
       window.location.reload()
