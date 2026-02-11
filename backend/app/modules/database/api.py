@@ -16,6 +16,7 @@ router = APIRouter(prefix="/database", tags=["database"])
 
 # 模块表映射配置
 MODULE_TABLES = {
+    "systemconfig": {"label":"系统用户","tables":["system_config"]},
     "notes": {"label":"便签管理","tables":["notes"]},
     "nodes": {"label":"节点管理","tables":["nodes"]},
     "jobs": {"label":"任务管理","tables":["cron_jobs", "job_executions"]},
@@ -26,7 +27,7 @@ MODULE_TABLES = {
 
 # 白名单表（清空时保留）
 WHITELIST_TABLES = [
-
+    "system_config"
 ]
 
 def get_tables_by_modules(modules: List[str]) -> List[str]:

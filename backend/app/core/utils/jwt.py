@@ -6,7 +6,7 @@ import os
 # JWT 配置
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "toolsplus-default-secret-key-please-change-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24小时
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 2  # 2小时
 
 def create_jwt_token(data:dict) -> str:
     """创建 JWT token"""

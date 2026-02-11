@@ -82,11 +82,21 @@
             清空数据库中所有业务数据。
           </p>
 
-          <n-form-item label="保留系统表" label-placement="left" label-width="120">
-            <n-switch v-model:value="keepWhitelist" />
-<!--            <span class="text-sm text-gray-500 ml-2">
-              保留迁移版本、序列等系统表
-            </span>-->
+          <n-form-item label-placement="left" label-width="120">
+            <span style="margin-right: 10px">
+              不保留系统表
+            </span>
+            <n-switch v-model:value="keepWhitelist">
+              <template #checked-icon>
+                <n-icon :component="ArrowForwardOutline" />
+              </template>
+              <template #unchecked-icon>
+                <n-icon :component="ArrowBackOutline" />
+              </template>
+            </n-switch>
+            <span style="margin-left: 10px">
+              保留系统用户表等
+            </span>
           </n-form-item>
 
           <n-space justify="end">
@@ -149,7 +159,7 @@ import {
   CloudDownloadOutline,
   TrashOutline,
   CloseCircleOutline,
-  CloudUploadOutline
+  CloudUploadOutline, ArrowForwardOutline, ArrowBackOutline
 } from '@vicons/ionicons5'
 import {formatDate} from '@/utils/date.js'
 // 模块配置（与后端 MODULE_TABLES 保持一致）
