@@ -65,8 +65,8 @@ app.add_middleware(
 """全局异常处理"""
 setup_exception_handlers(app)
 
-app.middleware("http")(check_initialization_middleware)
 app.middleware("http")(jwt_auth_middleware)
+app.middleware("http")(check_initialization_middleware)
 
 """路由配置"""
 app.include_router(note_router)

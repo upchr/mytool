@@ -15,6 +15,10 @@ class UnauthorizedException(BusinessException):
     def __init__(self, message: str = "未授权访问", detail: Any = None):
         super().__init__(401, message, detail)
 
+class UnInitedException(BusinessException):
+    def __init__(self, message: str = "未授权访问", detail: Any = None):
+        super().__init__(403, message, detail)
+
 class ValidationException(BusinessException):
     def __init__(self, message: str = "参数验证失败", detail: Any = None):
         super().__init__(422, message, detail)

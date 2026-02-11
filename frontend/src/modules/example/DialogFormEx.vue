@@ -260,12 +260,12 @@ const showDialog = ref(false)
 
 
 const getUsers = async ()=> {
-  // return window.$request.get('/example/health')
+  return window.$request.get('/example/health')
 
-  return window.$request({
+  /*return window.$request({
     url: '/example/health',
     method: 'get'
-  })
+  })*/
 }
 const test = async () => {
   const res = await getUsers()

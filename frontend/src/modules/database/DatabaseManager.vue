@@ -151,8 +151,7 @@ import {
   CloseCircleOutline,
   CloudUploadOutline
 } from '@vicons/ionicons5'
-import axios from 'axios'
-
+import {formatDate} from '@/utils/date.js'
 // 模块配置（与后端 MODULE_TABLES 保持一致）
 const modules = ref([
  /* { value: 'nodes', label: '节点管理' },
@@ -177,22 +176,9 @@ const getModels = async () => {
 // 导出全部
 const exportAll = async () => {
   try {
-    const response = await window.$request.get('/database/export', {
-      responseType: 'blob'
-    })
-
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `database_export_all_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-
-    window.$message.success('导出成功')
+    await window.$request.exportFile('/database/export', {}, `database_export_all_${formatDate()}.json`)
   } catch (error) {
-    window.$message.error(`导出失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`导出失败`)
   }
 }
 
@@ -209,7 +195,7 @@ const exportSelected = async () => {
       params.append('modules', module)
     })
     const moduleName = selectedExportModules.value.join('_')
-    await window.$request.exportFile('database/export', params, `database_export_${moduleName}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`);
+    await window.$request.exportFile('/database/export', params, `database_export_${moduleName}_${formatDate()}.json`);
   } catch (error) {
     window.$message.error(`导出失败`)
   }
@@ -276,7 +262,6 @@ const importData = async () => {
   try {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
-
     const response = await window.$request.post('/database/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'

@@ -2,7 +2,7 @@
 from fastapi import Request, HTTPException
 from sqlalchemy import select
 from app.core.db.database import engine
-from app.core.exception.exceptions import UnauthorizedException, ServerException
+from app.core.exception.exceptions import UnauthorizedException, ServerException, UnInitedException
 from app.core.utils.jwt import verify_jwt_token
 from app.modules.sys import system_config_table
 import asyncio
@@ -25,20 +25,18 @@ def check_initialization_sync():
         return result
 
 async def check_initialization_middleware(request: Request, call_next):
-    allowed_paths = [
+    public_paths = [
         "/sys/init/check",
         "/sys/init/setup",
-        "/sys/login",
-        "/sys/health"
+        "/version",
     ]
-
-    if any(request.url.path == path for path in allowed_paths):
+    if any(request.url.path.startswith(path) for path in public_paths):
         return await call_next(request)
 
     is_initialized = await check_initialization_sync()
 
     if not is_initialized:
-        raise UnauthorizedException(detail=f"系统未初始化")
+        raise UnInitedException(detail=f"系统密码未初始化！")
 
     return await call_next(request)
 
@@ -48,7 +46,8 @@ async def jwt_auth_middleware(request: Request, call_next):
         "/sys/init/check",
         "/sys/init/setup",
         "/sys/login",
-        "/sys/health"
+        "/version",
+        "/example",
     ]
 
     if any(request.url.path.startswith(path) for path in public_paths):

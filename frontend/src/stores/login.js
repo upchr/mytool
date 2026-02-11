@@ -10,7 +10,9 @@ export const useLoginStore = defineStore('login', {
             this.showInitDialog = true
         },
         openLoginDialog() {
-            this.showLoginDialog = true
+            if(!this.showInitDialog){
+                this.showLoginDialog = true
+            }
         },
         closeInitDialog() {
             this.showInitDialog = false

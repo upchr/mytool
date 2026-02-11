@@ -8,6 +8,7 @@ import logging
 
 from .models import system_config_table
 from .schemas import SysBase
+from ...core.exception.exceptions import UnauthorizedException, ServerException, ValidationException
 from ...core.pojo.response import BaseResponse
 from ...core.utils.jwt import create_jwt_token
 from ...core.utils.security import security_manager
@@ -26,7 +27,7 @@ def check_initialization():
 @router.post("/init/setup")
 def setup_initialization(req: SysBase):
     if len(req.password) < 6:
-        raise HTTPException(status_code=400, detail="密码至少6位")
+        raise ValidationException(detail="密码至少6位")
 
     # 哈希密码
     password_hash = security_manager.hash_password(req.password)
@@ -35,7 +36,7 @@ def setup_initialization(req: SysBase):
         # 检查是否已初始化
         check_stmt = select(system_config_table.c.is_initialized)
         if conn.execute(check_stmt).scalar():
-            raise HTTPException(status_code=400, detail="系统已初始化")
+            raise ServerException(detail="系统已初始化")
 
         # 插入初始化数据
         conn.execute(
@@ -46,7 +47,7 @@ def setup_initialization(req: SysBase):
             )
         )
 
-    return {"message": "初始化成功"}
+    return BaseResponse.success({"message": "初始化成功"})
 
 @router.post("/login")
 def login(req: SysBase):
@@ -55,7 +56,7 @@ def login(req: SysBase):
         password_hash = conn.execute(stmt).scalar()
 
         if not password_hash:
-            raise HTTPException(status_code=400, detail="系统未初始化")
+            raise UnauthorizedException(detail="系统未初始化")
 
         if security_manager.verify_password(req.password, password_hash):
             # 生成 JWT token
@@ -63,4 +64,4 @@ def login(req: SysBase):
             return BaseResponse.success({"token": token})
 
         else:
-            raise HTTPException(status_code=401, detail="密码错误")
+            raise UnauthorizedException(detail="密码错误！")

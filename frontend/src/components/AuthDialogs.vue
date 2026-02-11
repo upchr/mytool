@@ -1,6 +1,6 @@
 <template>
   <!-- 系统初始化弹框 -->
-  <n-modal v-model:show="loginStore.showInitDialog" preset="dialog" title="系统初始化" @after-leave="closeLogModal">
+  <n-modal v-model:show="loginStore.showInitDialog" preset="dialog" title="系统初始化" @after-leave="closeLoginModal">
     <template #header>
       <div class="dialog-header">
         <n-icon size="24"><LockClosedOutline /></n-icon>
@@ -40,7 +40,7 @@
   </n-modal>
 
   <!-- 登录弹框 -->
-  <n-modal v-model:show="loginStore.showLoginDialog" preset="dialog" title="系统登录">
+  <n-modal v-model:show="loginStore.showLoginDialog" preset="dialog" title="系统登录"  @after-leave="closeLoginModal">
     <template #header>
       <div class="dialog-header">
         <n-icon size="24"><LogInOutline /></n-icon>
@@ -114,13 +114,15 @@ const loginRules = {
   password: [{ required: true, message: '请输入密码', trigger: ['blur'] }]
 }
 
+const closeLoginModal = async () => {
+  initForm.value={ password: '', confirmPassword: '' }
+  loginForm.value={ password: '' }
+}
 // 处理初始化提交
 const handleInitSubmit = async () => {
   try {
-    debugger
     await initFormRef.value?.validate()
     initLoading.value = true
-
     const success = await initializeSystem(initForm.value.password)
     if (success) {
       // showInitDialog.value = false
@@ -130,7 +132,7 @@ const handleInitSubmit = async () => {
       // 初始化后自动显示登录弹框
       setTimeout(() => {
         // showLoginDialog.value = true
-        loginStore.closeLoginDialog()
+        loginStore.openLoginDialog()
 
       }, 500)
     }
@@ -178,7 +180,6 @@ onMounted(() => {
 
   // 页面加载时检查初始化状态
   const checkAuth = async () => {
-    debugger
     const isInitialized = await checkSystemInitialized()
     const hasToken = !!getAuthToken()
 

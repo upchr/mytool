@@ -3,7 +3,7 @@ import axios from 'axios'
 import {clearAuthToken, getAuthToken} from './auth'
 import { useLoginStore } from '@/stores/login.js'
 
-let isHandling401 = false
+let isHandling = false
 
 
 const service = axios.create({
@@ -41,36 +41,56 @@ service.interceptors.response.use(
     },
     (error) => {
         if (error.response) {
-            const { status, data } = error.response
-            let msg = `${data.message}:${data.data}`
-            const loginStore = useLoginStore()
-            if (status === 403 && data?.detail === "系统未初始化") {
-                // 触发初始化弹框
-                loginStore.openInitDialog()
-                // window.dispatchEvent(new CustomEvent('showInitDialog'))
-            } else if (status === 401) {
-                console.log(isHandling401)
-                if (!isHandling401) {
-                    isHandling401 = true
-                    clearAuthToken()
-                    setTimeout(() => {
-                        loginStore.openLoginDialog()
-                        // window.dispatchEvent(new CustomEvent('showLoginDialog'))
-                        isHandling401=false
-                    }, 450)
-                    window.$message.error(msg)
-                }
-                return Promise.reject(error)
-            } else if (status === 403) {
-                // msg = '权限不足'
+            const { status } = error.response
+            let data = error.response.data
+
+            if (data instanceof Blob) {
+                return data.text().then(text => {
+                    try {
+                        const json = JSON.parse(text)
+                        return handleAuthError(status, json, error)
+                    } catch (e) {
+                        // 不是 JSON，说明真的是文件流或异常二进制
+                        window.$message.error('文件下载失败')
+                        return Promise.reject(error)
+                    }
+                })
             }
-            window.$message.error(msg)
-        } else {
-            window.$message.error('网络异常，请检查连接')
+
+            // 正常 JSON
+            return handleAuthError(status, data, error)
+        }
+        window.$message.error('网络异常，请检查连接')
+        return Promise.reject(error)
+    }
+
+)
+function handleAuthError(status, data, error) {
+    const loginStore = useLoginStore()
+    const msg = `${data?.message || ''}${data?.data ? ':' + data.data : ''}`
+
+    if (status === 401 || status === 403) {
+        if (!isHandling) {
+            isHandling = true
+            clearAuthToken()
+
+            setTimeout(() => {
+                if (status === 403) {
+                    loginStore.openInitDialog()
+                } else {
+                    loginStore.openLoginDialog()
+                }
+                isHandling = false
+            }, 450)
+
+            window.$message.error(msg || '未授权')
         }
         return Promise.reject(error)
     }
-)
+
+    window.$message.error(msg || '请求失败')
+    return Promise.reject(error)
+}
 
 // 导出文件功能
 const exportFile = async (url, params = {}, fileName = 'export.json') => {
@@ -80,8 +100,6 @@ const exportFile = async (url, params = {}, fileName = 'export.json') => {
             params: params,      // 如果需要传递查询参数，使用 params
             responseType: 'blob' // 设置响应类型为 Blob
         });
-        debugger
-
         // 创建一个临时的下载链接
         const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
