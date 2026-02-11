@@ -11,7 +11,8 @@ import {
     AlarmOutline as ClockIcon, ChatbubbleEllipsesOutline as NotifyIcon,
     ReaderOutline as NoteIcon,
     ServerOutline as DatabaseIcon,
-    TvOutline as PCIcon
+    TvOutline as PCIcon,
+    ApertureOutline as ExampleIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -31,7 +32,7 @@ const routeLabels = [
     { path: '/database', label: '数据管理', icon: DatabaseIcon, key: 'database' },
     { path: '/notify', label: '消息通知', icon: NotifyIcon, key: 'notify' },
     { path: '/versions', label: '关于', icon: AboutIcon, key: 'versions' },
-    { path: '/example', label: 'example', icon: AboutIcon, key: 'example' },
+    { path: '/example', label: 'example', icon: ExampleIcon, key: 'example' },
 ];
 
 export default createRouter({

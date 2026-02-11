@@ -162,7 +162,7 @@
         <n-grid cols="1 s:2" responsive="screen">
           <n-grid-item>
             <n-form-item path="name" label="凭证名称">
-              <n-input v-model:value="credentialForm.name" placeholder="root / admin" />
+              <n-input v-model:value="credentialForm.name" placeholder="凭证名称" />
             </n-form-item>
           </n-grid-item>
           <n-grid-item cols="1 600:2">
@@ -630,11 +630,7 @@ const deletePj = async (pj) => {
     await loadCredentialTemplates() // 刷新列表
 
   } catch (error) {
-    if (error.response?.data?.detail) {
-      window.$message.error(error.response.data.detail)
-    } else {
-      window.$message.error('保存失败，请重试')
-    }
+      window.$message.error('删除失败，请重试')
   }
 }
 const saveAsTemplate = async () => {
@@ -657,11 +653,7 @@ const saveAsTemplate = async () => {
     window.$message.success('凭据模板保存成功')
     await loadCredentialTemplates() // 刷新列表
   } catch (error) {
-    if (error.response?.data?.detail) {
-      window.$message.error(error.response.data.detail)
-    } else {
-      window.$message.error('保存失败，请重试')
-    }
+      window.$message.error('凭据模板保存失败')
   }
 }
 const manageTicket = () => {

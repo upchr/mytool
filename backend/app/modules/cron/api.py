@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException,WebSocket
+from fastapi import APIRouter, HTTPException, WebSocket, Query
 from fastapi.params import Body
 from app.core.ws.ws_manager import ws_manager
 from app.core.db.database import engine, metadata
@@ -7,11 +7,31 @@ from app.modules.node.schemas import NodeRequest
 from ...core.exception.exceptions import NotFoundException, ServerException
 from ...core.pojo.response import BaseResponse
 import jwt
+
+from ...core.utils.jwt import verify_jwt_token
+
 router = APIRouter(prefix="/cron", tags=["cron"])
 
 
 @router.websocket("/executions/{execution_id}/logs")
-async def execution_logs_websocket(websocket: WebSocket, execution_id: int):
+async def execution_logs_websocket(websocket: WebSocket, execution_id: int, token: str = Query(...)):
+    # 验证 token
+    # 1. 从查询参数获取 token
+    if not token:
+        await websocket.close(code=4001, reason="不存在token。请登录")
+        return
+    # 2. 验证 token
+    try:
+        payload = verify_jwt_token(token)
+        # 可选：验证用户是否有权访问该 execution_id
+    except HTTPException as e:
+        await websocket.close(code=401, reason=e.detail)
+        return
+    except Exception as e:
+        await websocket.close(code=401, reason="token无效。请登录")
+        return
+
+
     await ws_manager.connect(websocket, execution_id)
     try:
         while True:

@@ -7,9 +7,9 @@ class BusinessException(Exception):
         self.message = message
         self.detail = detail
 
-class NotFoundException(BusinessException):
-    def __init__(self, message: str = "资源不存在", detail: Any = None):
-        super().__init__(404, message, detail)
+class ExistedException(BusinessException):
+    def __init__(self, message: str = "资源重复", detail: Any = None):
+        super().__init__(400, message, detail)
 
 class UnauthorizedException(BusinessException):
     def __init__(self, message: str = "未授权访问", detail: Any = None):
@@ -18,6 +18,11 @@ class UnauthorizedException(BusinessException):
 class UnInitedException(BusinessException):
     def __init__(self, message: str = "未授权访问", detail: Any = None):
         super().__init__(403, message, detail)
+
+class NotFoundException(BusinessException):
+    def __init__(self, message: str = "资源不存在", detail: Any = None):
+        super().__init__(404, message, detail)
+
 
 class ValidationException(BusinessException):
     def __init__(self, message: str = "参数验证失败", detail: Any = None):

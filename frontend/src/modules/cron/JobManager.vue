@@ -377,7 +377,9 @@ import { CalendarOutline } from '@vicons/ionicons5'
 import { useThemeStore } from '@/stores/theme'
 import MonacoEditor from "@/components/MonacoEditor.vue";
 const themeStore = useThemeStore()
-
+import {
+  getAuthToken
+} from '@/utils/auth'
 const nodes = ref([])
 const jobs = ref([])
 const executions = ref({})
@@ -773,7 +775,7 @@ const showLog = async (execution) => {
 }
 
 const connectWebSocket = (executionId) => {
-  const wsUrl = `/api/cron/executions/${executionId}/logs`
+  const wsUrl = `/api/cron/executions/${executionId}/logs?token=${encodeURIComponent(getAuthToken())}`
   selectedExecution.value.output = ''
   selectedExecution.value.error = ''
 

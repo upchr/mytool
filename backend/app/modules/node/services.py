@@ -1,4 +1,3 @@
-from fastapi import HTTPException
 from sqlalchemy import select, insert, update, delete, desc
 from sqlalchemy.engine import Engine
 
@@ -10,6 +9,7 @@ from .schemas import NodeCreate, CredentialTemplateCreate
 
 from ..cron.models import cron_jobs_table
 from ..cron.scheduler import scheduler
+from ...core.exception.exceptions import ExistedException, ValidationException
 
 
 def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
@@ -144,21 +144,12 @@ def create_credential_template(engine, template_data):
             conn.rollback()  # 回滚事务
             # 检查是否是名称重复
             if "UNIQUE constraint failed: credential_templates.name" in str(e) or "Duplicate entry" in str(e):
-                raise HTTPException(
-                    status_code=400,
-                    detail="凭据模板名称已存在，请使用其他名称"
-                )
+                raise ExistedException(detail="凭据模板名称已存在，请使用其他名称")
             else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="数据校验失败"
-                )
+                raise ValidationException(detail="数据校验失败")
         except Exception as e:
             conn.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail="服务器内部错误"
-)
+            raise e
 
 def get_credential_templates(engine):
     """
@@ -208,19 +199,9 @@ def update_pj(engine: Engine, template_id: int, pj: CredentialTemplateCreate) ->
             conn.rollback()  # 回滚事务
             # 检查是否是名称重复
             if "UNIQUE constraint failed: credential_templates.name" in str(e) or "Duplicate entry" in str(e):
-                raise HTTPException(
-                    status_code=400,
-                    detail="凭据模板名称已存在，请使用其他名称"
-                )
+                raise ExistedException(detail="凭据模板名称已存在，请使用其他名称")
             else:
-                raise HTTPException(
-                    status_code=400,
-                    detail="数据校验失败"
-                )
+                raise ValidationException(detail="数据校验失败")
         except Exception as e:
             conn.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail="服务器内部错误"
-            )
-
+            raise e
