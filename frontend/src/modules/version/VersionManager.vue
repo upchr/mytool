@@ -253,6 +253,7 @@ if docker ps -a --format '{{.Names}}' | grep -q "^\\\${CONTAINER_NAME}\\$"; then
         docker rm "\\$CONTAINER_NAME" 2>/dev/null || true
     else
         echo "容器中没有 /toolsplus/data 目录，创建空数据目录..."
+        docker rm "\\$CONTAINER_NAME" 2>/dev/null || true
         mkdir -p "\\$DATA_DIR"
     fi
 else
@@ -352,9 +353,9 @@ const getVersion = async (flag = false) => {
   try {
     goUpdateIng.value = true
     // const res = await axios.get(`/api/version/lastVersion`)
-    const res = await axios.get(`/api/version/`)
+    const res = await window.$request.get(`/version/`)
 
-    versionInfo.value = res.data
+    versionInfo.value = res
     if(flag && versionInfo.value.updatable){
       window.$message?.warning(`有版本可更新！${versionInfo.value.latest}`)
     }

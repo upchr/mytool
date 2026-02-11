@@ -95,9 +95,6 @@
 
 <script setup>
 import {ref, computed, onMounted, watch} from 'vue'
-import axios from "axios";
-import {useMessage} from 'naive-ui'
-const message = useMessage()
 import { SwapHorizontal as SwapHorizontalIcon } from '@vicons/ionicons5'
 
 const minute = ref('*/5')
@@ -185,10 +182,10 @@ const cronExpression = computed(() => {
 // 更新 Cron 表达式
 const updateCron = async () => {
   try {
-    const res = await axios.post('/api/cron/jobs/crons',{cron: cronExpression.value})
-    previewTimes.value = res.data
+    const res = await window.$request.post('/cron/jobs/crons',{cron: cronExpression.value})
+    previewTimes.value = res
   } catch (error) {
-    message.error('执行时间预览api调用错误')
+    window.$message.error('执行时间预览api调用错误')
   }
   // 触发更新
 }
@@ -223,7 +220,7 @@ watch(() => props.cron, (newCron) => {
       weekday.value = parts[4]
     }
   }catch (e) {
-    message.error('加载cron表达式失败')
+    window.$message.error('加载cron表达式失败')
   }
 }, { immediate: true })
 // 初始化

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, List, Literal
+# from app.core.safe import security_manager
 # 节点相关
 class NodeBase(BaseModel):
     name: str
@@ -11,8 +12,40 @@ class NodeBase(BaseModel):
     private_key: Optional[str] = None
     is_active: bool = True
 
+
+    # def decrypt_sensitive_fields(self):
+    #     """解密敏感字段（用于返回给前端）"""
+    #     decrypted = self.model_copy()
+    #     if decrypted.password:
+    #         decrypted.password = security_manager.decrypt_field(decrypted.password)
+    #     if decrypted.private_key:
+    #         decrypted.private_key = security_manager.decrypt_field(decrypted.private_key)
+    #     return decrypted
+
+
+
 class NodeCreate(NodeBase):
     pass
+    # @field_validator('password', mode='before')
+    # @classmethod
+    # def encrypt_password(cls, v):
+    #     """输入时自动加密密码"""
+    #     if v is not None and isinstance(v, str):
+    #         # 如果已经是加密格式（包含 base64 编码特征），则不重复加密
+    #         if v.startswith('@868@') or len(v) > 50:
+    #             return v  # 假设已经是加密的
+    #         return security_manager.encrypt_field(v)
+    #     return v
+    #
+    # @field_validator('private_key', mode='before')
+    # @classmethod
+    # def encrypt_private_key(cls, v):
+    #     """输入时自动加密私钥"""
+    #     if v is not None and isinstance(v, str):
+    #         if v.startswith('@868@') or len(v) > 50:
+    #             return v  # 假设已经是加密的
+    #         return security_manager.encrypt_field(v)
+    #     return v
 
 class NodeRead(NodeBase):
     id: int

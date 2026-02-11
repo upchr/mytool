@@ -1,5 +1,3 @@
-from msilib.schema import tables
-
 from fastapi import APIRouter, HTTPException, UploadFile, Query
 from fastapi.responses import FileResponse
 import json

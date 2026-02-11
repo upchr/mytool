@@ -6,6 +6,7 @@ from sqlalchemy import select, update, insert, func
 import json
 
 from app.core.db.database import engine, metadata
+from app.core.exception.exceptions import NotFoundException
 from app.core.pojo.response import BaseResponse
 from app.modules.notify.handler.manager import notification_manager
 from app.modules.notify.models import notification_services_table, notification_settings_table
@@ -19,8 +20,9 @@ def get_service(service_id: int):
     with engine.connect() as conn:
         result = conn.execute(stmt).mappings().first()
         if not result:
-            raise HTTPException(status_code=400, detail="渠道不存在")
-        return dict(result) if result else None
+            raise NotFoundException(detail=f"渠道不存在")
+
+        return BaseResponse.success(dict(result) if result else None)
 @router.get("/services")
 def get_notification_services():
     """获取所有通知服务配置"""
@@ -52,7 +54,7 @@ def update_notification_service(service_id: int, service_data: dict):
         # 检查服务是否存在
         check_stmt = select(notification_services_table).where(notification_services_table.c.id == service_id)
         if not conn.execute(check_stmt).first():
-            raise HTTPException(status_code=404, detail="服务不存在")
+            raise NotFoundException(detail=f"服务不存在")
 
         # 更新服务
         config_json = json.dumps(config) if config else None
@@ -66,7 +68,7 @@ def update_notification_service(service_id: int, service_data: dict):
             )
         )
         result = conn.execute(stmt)
-        return {"message": "配置更新成功"}
+        return BaseResponse.success({"message": "配置更新成功"})
 
 @router.put("/services/status/{service_id}")
 def update_notification_service(service_id: int,is_enabled: bool = Body(..., embed=True)):
@@ -74,7 +76,7 @@ def update_notification_service(service_id: int,is_enabled: bool = Body(..., emb
         # 检查服务是否存在
         check_stmt = select(notification_services_table).where(notification_services_table.c.id == service_id)
         if not conn.execute(check_stmt).first():
-            raise HTTPException(status_code=404, detail="服务不存在")
+            raise NotFoundException(detail=f"服务不存在")
 
         stmt = (
             update(notification_services_table)
@@ -84,30 +86,9 @@ def update_notification_service(service_id: int,is_enabled: bool = Body(..., emb
             )
         )
         result = conn.execute(stmt)
-        return {"message": "配置状态成功"}
+        return BaseResponse.success({"message": "配置状态成功"})
 
-@router.put("/default-service")
-def set_default_service(default_service_id: int):
-    """设置默认通知服务"""
-    with engine.begin() as conn:
-        # 检查服务是否存在且已启用
-        service_stmt = select(notification_services_table).where(
-            notification_services_table.c.id == default_service_id,
-            notification_services_table.c.is_enabled == True
-        )
-        service = conn.execute(service_stmt).mappings().first()
 
-        if not service:
-            raise HTTPException(status_code=400, detail="请选择一个已启用的服务作为默认")
-
-        # 更新默认设置
-        stmt = (
-            update(notification_settings_table)
-            .where(notification_settings_table.c.id == 1)
-            .values(default_service_id=default_service_id)
-        )
-        conn.execute(stmt)
-        return {"message": "默认服务设置成功"}
 
 @router.post("/test/{service_id}")
 async def test_notification_service(service_id: int):
@@ -119,9 +100,9 @@ async def test_notification_service(service_id: int):
             content='这是一个测试通知，用于验证系统功能。',
             service_id=service['id']
         )
-        print(f"    结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
+        logger.info(f"    结果: {json.dumps(result, indent=2, ensure_ascii=False)}")
     except Exception as e:
-        print(f"    失败: {e}")
+        logger.error(f"    失败: {e}")
 
 
 

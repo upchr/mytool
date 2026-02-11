@@ -7,6 +7,7 @@ import httpx
 import asyncio
 from datetime import datetime, timedelta
 
+from app.core.pojo.response import BaseResponse
 
 logger = logging.getLogger(__name__)
 
@@ -80,9 +81,9 @@ async def get_version():
             # 注意：不清除 updated_at 缓存
 
     updatable = latest is not None and latest != "unknown" and latest != current
-    return {
+    return BaseResponse.success({
         "current": current,
         "latest": latest,
         "updatable": updatable,
         "updated_at": lasttime  # 明确不返回
-    }
+    })

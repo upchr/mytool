@@ -11,9 +11,11 @@ nodes_table = Table(
     Column("port", Integer, default=22),
     Column("username", String(50), nullable=False),
     Column("auth_type", String(10), default="password"),  # password/ssh_key
-    Column("password", String(255)),
+    Column("password", Text),
     Column("private_key", Text),
     Column("is_active", Boolean, default=True),
+    sqlite_autoincrement=True,
+
 )
 credential_templates_table = Table(
     "credential_templates",
@@ -24,7 +26,8 @@ credential_templates_table = Table(
     Column("auth_type", String(10), nullable=False),  # 'password' or 'ssh_key'
     Column("password", String(255)),   # 可加密存储（建议）
     Column("private_key", Text),       # PEM 格式
-    Column("is_active", Boolean, default=True)
+    Column("is_active", Boolean, default=True),
+    sqlite_autoincrement=True,
 )
 
 __all__ = ["nodes_table","credential_templates_table"]

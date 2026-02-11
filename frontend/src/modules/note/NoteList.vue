@@ -111,10 +111,7 @@
 
 <script setup>
 import {ref, onMounted, computed} from 'vue'
-import axios from 'axios'
-import { useMessage } from 'naive-ui'
 
-const message = useMessage()
 const notes = ref([])
 const currentNote = ref({ id: null, title: '', content: '' })
 const isEditing = ref(false)
@@ -123,10 +120,10 @@ const title = ref('我的便签')
 
 const loadNotes = async () => {
   try {
-    const res = await axios.get('/api/notes')
-    notes.value = res.data
+    const res = await window.$request.get('/notes')
+    notes.value = res
   } catch (error) {
-    message.error('加载便签失败')
+    window.$message.error('加载便签失败')
   }
 }
 const resetForm = (afterFlag=false) => {
@@ -149,30 +146,31 @@ const resetForm = (afterFlag=false) => {
 
 const saveNote = async () => {
   if (!currentNote.value.title.trim() || !currentNote.value.content.trim()) {
-    message.warning('标题和内容不能为空')
+    window.$message.warning('标题和内容不能为空')
     return
   }
 
   try {
+    debugger
     if (isEditing.value) {
       // 更新便签
-      await axios.put(`/api/notes/${currentNote.value.id}`, {
+      await window.$request.put(`/notes/${currentNote.value.id}`, {
         title: currentNote.value.title,
         content: currentNote.value.content
       })
-      message.success('便签更新成功')
+      window.$message.success('便签更新成功')
     } else {
       // 新增便签
-      await axios.post('/api/notes', {
+      await window.$request.post('/notes', {
         title: currentNote.value.title,
         content: currentNote.value.content
       })
-      message.success('便签添加成功')
+      window.$message.success('便签添加成功')
     }
     resetForm(true)
     loadNotes()
   } catch (error) {
-    message.error(isEditing.value ? '更新便签失败' : '添加便签失败')
+    window.$message.error(isEditing.value ? '更新便签失败' : '添加便签失败')
   }
 }
 
@@ -185,11 +183,11 @@ const editNote = (note) => {
 
 const deleteNote = async (id) => {
   try {
-    await axios.delete(`/api/notes/${id}`)
-    message.success('便签删除成功')
+    await window.$request.delete(`/notes/${id}`)
+    window.$message.success('便签删除成功')
     loadNotes()
   } catch (error) {
-    message.error('删除便签失败')
+    window.$message.error('删除便签失败')
   }
 }
 
@@ -220,12 +218,12 @@ const batchDeleteNotes = async () => {
   if (selectedNoteIds.value.length === 0) return
 
   try {
-    await axios.post('/api/notes/deleteBatch', { note_ids: selectedNoteIds.value })
-    message.success(`成功删除 ${selectedNoteIds.value.length} 个节点`)
+    await window.$request.post('/notes/deleteBatch', { note_ids: selectedNoteIds.value })
+    window.$message.success(`成功删除 ${selectedNoteIds.value.length} 个节点`)
     cancelBatch()
     await loadNotes()
   } catch (error) {
-    message.error('批量删除失败')
+    window.$message.error('批量删除失败')
   }
 }
 // 处理卡片点击（仅在批量模式下生效）

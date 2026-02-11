@@ -67,10 +67,8 @@
 <script setup>
 import { ref } from 'vue'
 import DialogForm from '@/components/DialogForm.vue'
-import {NIcon, useMessage} from 'naive-ui'
+import {NIcon} from 'naive-ui'
 import {ChatbubbleOutline} from "@vicons/ionicons5";
-import axios from "axios";
-const message = useMessage()
 
 // 父传来props
 const props = defineProps({
@@ -171,10 +169,11 @@ const formRules = {
 // get获取渠道配置
 const getService = async (serviceId) => {
   try {
-    const res = await axios.get(`/api/notifications/services/${serviceId}`)
-    formData.value = {...res.data}
+    const res = await window.$request.get(`/notifications/services/${serviceId}`)
+    debugger
+    formData.value = {...res}
   } catch (error) {
-    message.error('获取通知配置失败')
+    window.$message.error('获取通知配置失败')
   }
 }
 
@@ -194,21 +193,21 @@ const saveService = async (data) => {
     try {
       data.config = JSON.parse(data.config)
     } catch {
-      message.error(`config配置有误`)
+      window.$message.error(`config配置有误`)
       throw new Error('config配置有误')
     }
-    await axios.put(`/api/notifications/services/${data.id}`, data)
+    await window.$request.put(`/notifications/services/${data.id}`, data)
 
-    message.success('配置成功')
+    window.$message.success('配置成功')
   } catch (error) {
-    message.error(`设置失败,${error.response?.data.detail}`)
+    window.$message.error(`设置失败,${error.response?.data.detail}`)
   }
 }
 
 //变更状态
 const updateServiceStatus = async () => {
   formData.value.is_enabled=!formData.value.is_enabled
-  await axios.put(`/api/notifications/services/status/${formData.value.id}`, {is_enabled:formData.value.is_enabled})
+  await window.$request.put(`/notifications/services/status/${formData.value.id}`, {is_enabled:formData.value.is_enabled})
   loadData()
 }
 
@@ -246,7 +245,7 @@ const handleSubmit = async (data,flag=false) => {
       // 刷新列表
       loadData()
   } catch (error) {
-    message.error(error.message || '操作失败')
+    window.$message.error(error.message || '操作失败')
   }
 }
 

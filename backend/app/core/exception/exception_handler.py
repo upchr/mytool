@@ -18,7 +18,8 @@ def setup_exception_handlers(app: FastAPI):
             message=exc.message,
             detail=exc.detail
         )
-        return JSONResponse(status_code=200, content=response.dict())
+        logger.error(f"业务异常: {exc.code} - {exc.message} - {exc.detail}")
+        return JSONResponse(status_code=exc.code, content=response.dict())
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -28,25 +29,33 @@ def setup_exception_handlers(app: FastAPI):
             message="参数验证失败",
             detail=errors
         )
-        return JSONResponse(status_code=200, content=response.dict())
+        return JSONResponse(status_code=422, content=response.dict())
 
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc: Exception):
-        logger.debug(f"路径 {request.url.path} 未找到")
+        logger.error(f"路径 {request.url.path} 未找到")
         response = BaseResponse.error(
             code=404,
             message="接口不存在",
             detail=f"路径 {request.url.path} 未找到"
         )
-        return JSONResponse(status_code=200, content=response.dict())
+        return JSONResponse(status_code=404, content=response.dict())
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        logger.error(f"全局异常: {str(exc)}\n{traceback.format_exc()}")
-
+        out_flag=True
         if isinstance(exc, SQLAlchemyError):
             response = BaseResponse.error(500, "数据库操作失败")
+        elif isinstance(exc, BusinessException):
+            response = BaseResponse.error(
+                code=exc.code,
+                message=exc.message,
+                detail=exc.detail
+            )
+            out_flag=False
         else:
             response = BaseResponse.error(500, "服务器内部错误")
 
-        return JSONResponse(status_code=200, content=response.dict())
+        if out_flag:
+            logger.error(f"全局异常: {str(exc)}\n{traceback.format_exc()}")
+        return JSONResponse(status_code=exc.code, content=response.dict())

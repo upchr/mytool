@@ -27,7 +27,7 @@
           </n-grid-item>
           <n-grid-item>
             <n-form-item path="port" label="SSH端口">
-              <n-input-number v-model:value="currentNode.port" :min="1" :max="65535" />
+              <n-input-number v-model:value="currentNode.port" placeholder="端口：22" :min="1" :max="65535" />
             </n-form-item>
           </n-grid-item>
           <n-grid-item cols="1 600:2">
@@ -309,11 +309,9 @@
 
 <script setup>
 import {ref, onMounted, computed} from 'vue'
-import axios from 'axios'
-import {NInput, useMessage} from 'naive-ui'
+import {NInput} from 'naive-ui'
 import { Glasses, GlassesOutline } from '@vicons/ionicons5'
 
-const message = useMessage()
 const nodes = ref([])
 const defaultNode = ref({
   name: '',
@@ -363,10 +361,10 @@ const formRef = ref(null)
 
 const loadNodes = async () => {
   try {
-    const res = await axios.get('/api/nodes/only_active/false')
-    nodes.value = res.data
+    const res = await window.$request.get('/nodes/only_active/false')
+    nodes.value = res
   } catch (error) {
-    message.error('加载节点失败')
+    window.$message.error('加载节点失败')
   }
 }
 
@@ -375,33 +373,29 @@ const addNode = async () => {
   try {
     if (isEditing.value) {
       // 更新节点
-      const res = await axios.put(`/api/nodes/${currentNode.value.id}`, currentNode.value)
-      message.success('节点更新成功')
+      const res = await window.$request.put(`/nodes/${currentNode.value.id}`, currentNode.value)
+      window.$message.success('节点更新成功')
     } else {
       // 新增节点
-      const res = await axios.post('/api/nodes', currentNode.value)
-      message.success('节点添加成功')
+      const res = await window.$request.post('/nodes', currentNode.value)
+      window.$message.success('节点添加成功')
     }
     resetForm(true)
     loadNodes()
   } catch (error) {
     console.log(error)
-    message.error(isEditing.value ? '更新节点失败' : '添加节点失败')
+    window.$message.error(isEditing.value ? '更新节点失败' : '添加节点失败')
   }
 }
 
 const testConnection = async (node) => {
   try {
-    message.info(`正在测试 ${node.name} 的连接...`)
+    window.$message.info(`正在测试 ${node.name} 的连接...`)
     // 👇 调用后端真实 SSH 测试接口（需后端实现）
-    const res = await axios.post(`/api/nodes/${node.id}/test`)
-    if (res.data.success) {
-      message.success(`✅ ${node.name} 连接成功！`)
-    } else {
-      message.error(`❌ ${node.name} 连接失败: ${res.data.message}`)
-    }
+    await window.$request.post(`/nodes/${node.id}/test`)
+    window.$message.success(`${node.name} 连接成功！`)
   } catch (error) {
-    message.error(`连接失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`${node.name} 连接失败`)
   }
 }
 
@@ -409,10 +403,10 @@ const toggleNode = async (node) => {
   try {
     node.is_active = !node.is_active
     // 👇 调用后端更新接口（需后端实现）
-    await axios.patch(`/api/nodes/${node.id}/toggle`, { is_active: node.is_active })
-    message.success(`节点 ${node.name} 已${node.is_active ? '启用' : '停用'}`)
+    await window.$request.patch(`/nodes/${node.id}/toggle`, { is_active: node.is_active })
+    window.$message.success(`节点 ${node.name} 已${node.is_active ? '启用' : '停用'}`)
   } catch (error) {
-    message.error('操作失败')
+    window.$message.error('操作失败')
   }
 }
 const isEditing = ref(false)
@@ -440,6 +434,7 @@ const resetForm = (afterFlag=false) => {
     showForm.value=false
     isEditing.value = false
     title.value = '节点管理'
+    selectedCredentialId.value=null
   }
 
   currentNode.value = {...defaultNode.value}
@@ -451,11 +446,11 @@ const resetForm = (afterFlag=false) => {
 
 const deleteNode = async (node) => {
   try {
-    await axios.delete(`/api/nodes/${node.id}`)
-    message.success('节点删除成功')
+    await window.$request.delete(`/nodes/${node.id}`)
+    window.$message.success('节点删除成功')
     loadNodes()
   } catch (error) {
-    message.error('删除节点失败')
+    window.$message.error('删除节点失败')
   }
 }
 
@@ -485,12 +480,12 @@ const batchDeleteNodes = async () => {
   if (selectedNodeIds.value.length === 0) return
 
   try {
-    await axios.post('/api/nodes/deleteBatch', { node_ids: selectedNodeIds.value })
-    message.success(`成功删除 ${selectedNodeIds.value.length} 个节点`)
+    await window.$request.post('/nodes/deleteBatch', { node_ids: selectedNodeIds.value })
+    window.$message.success(`成功删除 ${selectedNodeIds.value.length} 个节点`)
     cancelBatch()
     loadNodes()
   } catch (error) {
-    message.error('批量删除失败')
+    window.$message.error('批量删除失败')
   }
 }
 // 处理卡片点击（仅在批量模式下生效）
@@ -550,8 +545,8 @@ const credentialTemplates = ref([])
 const selectedCredentialId = ref(null) // 当前选中的模板ID
 const loadCredentialTemplates = async () => {
   try {
-    const res = await axios.get('/api/nodes/credentials/')
-    credentialTemplates.value = res.data
+    const res = await window.$request.get('/nodes/credentials/')
+    credentialTemplates.value = res
   } catch (error) {
     console.warn('加载凭据模板失败:', error)
   }
@@ -614,31 +609,31 @@ const savePj = async () => {
   try {
     await credentialFormRef.value?.validate() // 验证失败会抛出错误
     if(pjNewFlag.value){
-      await axios.post('/api/nodes/credentials/', credentialForm.value)
-      message.success('凭据模板保存成功')
+      await window.$request.post('/nodes/credentials/', credentialForm.value)
+      window.$message.success('凭据模板保存成功')
     }else{
       // 更新节点
-      const res = await axios.put(`/api/nodes/credentials/${credentialForm.value.id}`, credentialForm.value)
-      message.success('凭据模板更新成功')
+      const res = await window.$request.put(`/nodes/credentials/${credentialForm.value.id}`, credentialForm.value)
+      window.$message.success('凭据模板更新成功')
     }
     await loadCredentialTemplates() // 刷新列表
     pjEditForm.value=false
     resetFormPj(true)
   } catch (error) {
-    message.error('凭据模板保存失败')
+    window.$message.error('凭据模板保存失败')
   }
 }
 const deletePj = async (pj) => {
   try {
-    await axios.delete(`/api/nodes/credentials/${pj.id}`)
-    message.success('凭据删除成功')
+    await window.$request.delete(`/nodes/credentials/${pj.id}`)
+    window.$message.success('凭据删除成功')
     await loadCredentialTemplates() // 刷新列表
 
   } catch (error) {
     if (error.response?.data?.detail) {
-      message.error(error.response.data.detail)
+      window.$message.error(error.response.data.detail)
     } else {
-      message.error('保存失败，请重试')
+      window.$message.error('保存失败，请重试')
     }
   }
 }
@@ -658,20 +653,20 @@ const saveAsTemplate = async () => {
       password: currentNode.value.auth_type === 'password' ? currentNode.value.password : undefined,
       private_key: currentNode.value.auth_type === 'ssh_key' ? currentNode.value.private_key : undefined
     }
-    await axios.post('/api/nodes/credentials/', payload)
-    message.success('凭据模板保存成功')
+    await window.$request.post('/nodes/credentials/', payload)
+    window.$message.success('凭据模板保存成功')
     await loadCredentialTemplates() // 刷新列表
   } catch (error) {
     if (error.response?.data?.detail) {
-      message.error(error.response.data.detail)
+      window.$message.error(error.response.data.detail)
     } else {
-      message.error('保存失败，请重试')
+      window.$message.error('保存失败，请重试')
     }
   }
 }
 const manageTicket = () => {
   pjForm.value=true
-  // message.error('凭据模板管理功能未开发')
+  // window.$message.error('凭据模板管理功能未开发')
 }
 onMounted(async () => {
   await loadNodes()

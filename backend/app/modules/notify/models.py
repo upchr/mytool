@@ -17,7 +17,8 @@ notification_services_table = Table(
     Column("is_enabled", Boolean, default=False, nullable=False),
     Column("config", Text),                                  # JSON 配置
     Column("created_at", DateTime, server_default=func.now()),
-    Column("updated_at", DateTime, server_default=func.now(), onupdate=func.now())
+    Column("updated_at", DateTime, server_default=func.now(), onupdate=func.now()),
+    sqlite_autoincrement=True,
 )
 
 # 全局通知设置表
@@ -26,7 +27,8 @@ notification_settings_table = Table(
     metadata,
     Column("id", Integer, primary_key=True, default=1),
     Column("default_service_id", Integer, ForeignKey("notification_services.id"), nullable=True),
-    Column("updated_at", DateTime, server_default=func.now(), onupdate=func.now())
+    Column("updated_at", DateTime, server_default=func.now(), onupdate=func.now()),
+    sqlite_autoincrement=True,
 )
 
 def init_default_notification_services():

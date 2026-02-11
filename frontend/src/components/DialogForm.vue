@@ -225,10 +225,8 @@ import {
   NRate,
   NSlider,
   NH3,
-  useMessage
 } from 'naive-ui'
 
-const message = useMessage()
 const formRef = ref(null)
 
 // 组件映射
@@ -512,13 +510,13 @@ const handleSubmit = async () => {
 
       emit('submit', localFormData.value)
       if (props.showSuccessMessage) {
-        message.success(props.successMessage)
+        window.$message.success(props.successMessage)
       }
 
       visible.value = false
     } catch (errors) {
       if (!errors) return
-      message.error('请检查表单填写是否正确')
+      window.$message.error('请检查表单填写是否正确')
     }
   } else {
     emit('submit', localFormData.value)

@@ -8,5 +8,6 @@ notes_table = Table(
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("title", String(100), nullable=False),
     Column("content", Text),
+    sqlite_autoincrement=True,
 )
 __all__ = ["notes_table"]

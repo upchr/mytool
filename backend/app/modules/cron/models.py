@@ -12,6 +12,7 @@ cron_jobs_table = Table(
     Column("command", Text, nullable=False),
     Column("description", Text),
     Column("is_active", Boolean, default=True),
+    sqlite_autoincrement=True,
 )
 
 # 任务执行日志表
@@ -26,6 +27,7 @@ job_executions_table = Table(
     Column("output", Text),
     Column("error", Text),
     Column("triggered_by", String(20)), # manual/system
+    sqlite_autoincrement=True,
 )
 
 __all__ = ["cron_jobs_table","job_executions_table"]

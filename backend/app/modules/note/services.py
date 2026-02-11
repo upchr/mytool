@@ -39,8 +39,7 @@ def update_note(engine: Engine, note_id: int, note: NoteCreate) -> dict:
         row = conn.execute(select_stmt).mappings().first()
         return dict(row)
 
-def batch_delete_notes(engine: Engine, note_ids: list[int]) -> int:
+def batch_delete_notes(engine: Engine, note_ids: list[int]):
     with engine.begin() as conn:
         stmt = delete(notes_table).where(notes_table.c.id.in_(note_ids))
-        result = conn.execute(stmt)
-        return result
+        conn.execute(stmt)

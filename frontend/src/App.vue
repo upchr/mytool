@@ -1,5 +1,5 @@
 <template>
-  <n-config-provider :hljs="hljs" :theme="themeStore.theme">
+  <n-config-provider :hljs="hljs" :theme="themeStore.theme" :locale="zhCN" :date-locale="dateZhCN">
     <n-message-provider>
     <n-notification-provider>
     <n-dialog-provider>
@@ -95,13 +95,16 @@
           </div>
           <!-- 右侧内容区域 -->
           <n-layout class="content-layout" :style="collapsed?'margin-left: 60px;':'margin-left: 200px;'">
+            <AuthDialogs />
             <router-view />
           </n-layout>
         </n-layout>
         <!-- 固定底部footer -->
         <n-layout-footer bordered class="myfooter">
           <n-flex justify="space-between" size="large">
-            <span></span>
+            <span>
+                <n-avatar style="position: fixed;left:30px;bottom: 5px" @click="logoutSystem"><n-icon :component="LogInOutline" /></n-avatar>
+            </span>
             <span style="width:20%;">ToolsPlus.ChrPlus</span>
             <span  style="padding-right: 10px">
 
@@ -128,12 +131,15 @@ import {
   SunnyOutline as SunIcon,
   MoonOutline as MoonIcon,
   CloudDownloadOutline as UpdateIcon,
+  LogInOutline,
 } from "@vicons/ionicons5";
-import {NIcon,NButton } from "naive-ui";
+import {NIcon,NButton , zhCN, dateZhCN} from "naive-ui";
 import {computed, h, onMounted, ref, watch} from "vue";
 import {RouterLink, RouterView, useRouter} from "vue-router";
 import {useWindowSize} from "@vueuse/core";
 import hljs from './plugins/hljs' // 引入 hljs 配置
+import AuthDialogs from '@/components/AuthDialogs.vue'
+import {logoutSystem} from "@/utils/auth.js";
 
 import axios from "axios";
 /*import { darkTheme, useOsTheme } from "naive-ui";
@@ -213,8 +219,8 @@ const formatDate = (isoString) => {
 }
 const getVersion = async () => {
   try {
-    const res = await axios.get(`/api/version/`)
-    versionInfo.value = res.data
+    const res = await window.$request.get(`/version/`)
+    versionInfo.value = res
   } catch (error) {
     window.$message?.error('获取当前版本失败')
   }
@@ -333,8 +339,9 @@ const goUpdate = async () => {
       }
     });
   }
-  const res = await axios.get(`/api/version/lastVersion`)
-  versionInfo.value = res.data
+
+  // const res = await window.$request.get(`/version/`)
+  // versionInfo.value = res
   notice()
 }
 onMounted(async () => {

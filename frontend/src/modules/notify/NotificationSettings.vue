@@ -69,22 +69,9 @@ import {
   CloseOutline,
 } from '@vicons/ionicons5'
 import NotificationServiceCard from '@/components/notify/NotificationServiceCard.vue'
-import axios from 'axios'
-import { useMessage } from 'naive-ui'
-
-const message = useMessage()
 
 // 服务
 const services = ref([
-  {
-    "id": 1,
-    "service_type": "wecom",
-    "service_name": "企业微信",
-    "is_enabled": false,
-    "config": {},
-    "created_at": "2026-01-28T03:08:10",
-    "updated_at": "2026-01-28T03:08:10"
-  }
 ])
 // config提示配置
 const typeConfig = ref({
@@ -141,9 +128,9 @@ const enabledServices = computed(() => {
 const testService = async (serviceId) => {
   try {
     await window.$request.post(`/notifications/test/${serviceId}`)
-    message.success('测试通知发送成功')
+    window.$message.success('测试通知发送成功')
   } catch (error) {
-    message.error('测试失败')
+    window.$message.error('测试失败')
     throw error
   }
 }
@@ -187,7 +174,7 @@ const refreshServices = async () => {
       is_configured: isConfigured(s.config)
     }))
   } catch (error) {
-    message.error('刷新失败')
+    window.$message.error('刷新失败')
   }
 }
 const themeClass = (service) =>{

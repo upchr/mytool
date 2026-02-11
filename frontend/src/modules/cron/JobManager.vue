@@ -372,15 +372,12 @@
 
 <script setup>
 import {ref, onMounted, onUnmounted, computed, nextTick} from 'vue'
-import axios from 'axios'
-import {useMessage} from 'naive-ui'
 import CronGenerator from "@/components/CronGenerator.vue";
 import { CalendarOutline } from '@vicons/ionicons5'
 import { useThemeStore } from '@/stores/theme'
 import MonacoEditor from "@/components/MonacoEditor.vue";
 const themeStore = useThemeStore()
 
-const message = useMessage()
 const nodes = ref([])
 const jobs = ref([])
 const executions = ref({})
@@ -454,10 +451,10 @@ const nodeOptions = computed(() => [
 
 const loadNodes = async () => {
   try {
-    const res = await axios.get('/api/nodes/only_active/true')
-    nodes.value = res.data
+    const res = await window.$request.get('/nodes/only_active/true')
+    nodes.value = res
   } catch (error) {
-    message.error('加载节点失败')
+    window.$message.error('加载节点失败')
   }
 }
 // 添加响应式变量
@@ -488,10 +485,10 @@ const loadRecentExecutions = async (jobId,loadForce=false) => {
     // 标记为正在加载（可选）
     executions.value[jobId] = []
 
-    const res = await axios.get(`/api/cron/jobs/${jobId}/executions`, {
+    const res = await window.$request.get(`/cron/jobs/${jobId}/executions`, {
       params: { limit: 25 } // 增加限制数量
     })
-    executions.value[jobId] = res.data
+    executions.value[jobId] = res
   } catch (error) {
     console.error(`加载任务 ${jobId} 的执行记录失败:`, error)
     executions.value[jobId] = [] // 确保有默认值
@@ -501,12 +498,12 @@ const loadRecentExecutions = async (jobId,loadForce=false) => {
 
 const loadJobs = async () => {
   try {
-    const res = await axios.post('/api/cron/jobsList', { node_ids: selectedNodes.value })
-    jobs.value = res.data
+    const res = await window.$request.post('/cron/jobsList', { node_ids: selectedNodes.value })
+    jobs.value = res
     newJob.value.node_ids = selectedNodes.value
 
   } catch (error) {
-    message.error('加载任务失败')
+    window.$message.error('加载任务失败')
   }
 }
 
@@ -591,12 +588,12 @@ const openEditModal = (job) => {
 const updateJob = async () => {
   try {
     await editJobFormRef.value?.validate()
-    await axios.put(`/api/cron/jobs/${editingJob.value.id}`, editingJob.value)
-    message.success('任务更新成功')
+    await window.$request.put(`/cron/jobs/${editingJob.value.id}`, editingJob.value)
+    window.$message.success('任务更新成功')
     editJobModal.value = false
     loadJobs() // 刷新列表
   } catch (error) {
-    message.error(`更新任务失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`更新任务失败`)
   }
 }
 
@@ -604,21 +601,21 @@ const updateJob = async () => {
 const executeJob = async (job) => {
   try {
     // 1. 触发执行
-    const res = await axios.post('/api/cron/jobs/execute', {
+    const res = await window.$request.post('/cron/jobs/execute', {
       job_ids: [job.id]
     })
-    message.success(`任务 "${job.name}" 已触发执行`)
+    window.$message.success(`任务 "${job.name}" 已触发执行`)
     await loadRecentExecutions(job.id,true)
 
     // 2. 获取执行ID（假设返回格式为 [{id: 123, ...}]）
-    const executionId = res.data?.[0]?.id
+    const executionId = res?.[0]?.id
     if (!executionId) return
 
     // 3. 开始轮询状态
     await pollExecutionStatus(executionId, job.id,job.name)
 
   } catch (error) {
-    message.error(`执行任务失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`执行任务失败`)
   }
 }
 
@@ -635,20 +632,20 @@ const pollExecutionStatus = async (executionId, jobId,jobName) => {
 
     try {
       // 获取最新执行记录
-      const res = await axios.get(`/api/cron/executions/${executionId}`)
-      const status = res.data.status
+      const res = await window.$request.get(`/cron/executions/${executionId}`)
+      const status = res.status
 
       // 如果任务已完成
       if (['success', 'failed', 'cancelled'].includes(status)) {
         if(logModal.value){
           logModal.value = false
           setTimeout(async () => {
-            await showLog(res.data)
+            await showLog(res)
           },500)
         }
 
         console.log('任务已完成，刷新历史')
-        message.success(`任务 "${jobId}-${jobName}" 已完成。`)
+        window.$message.success(`任务 "${jobId}-${jobName}" 已完成。`)
         await loadRecentExecutions(jobId, true) // 强制刷新
         return
       }
@@ -673,10 +670,10 @@ const pollExecutionStatus = async (executionId, jobId,jobName) => {
 const toggleJob = async (job) => {
   try {
     job.is_active = !job.is_active
-    await axios.patch(`/api/cron/jobs/${job.id}/toggle`, {is_active: job.is_active})
-    message.success(`任务 "${job.name}" 已${job.is_active ? '启用' : '停用'}`)
+    await window.$request.patch(`/cron/jobs/${job.id}/toggle`, {is_active: job.is_active})
+    window.$message.success(`任务 "${job.name}" 已${job.is_active ? '启用' : '停用'}`)
   } catch (error) {
-    message.error('更新任务状态失败')
+    window.$message.error('更新任务状态失败')
   }
 }
 
@@ -706,8 +703,8 @@ const getJobTitle = (job) => {
 const addJob = async () => {
   try {
     await jobFormRef.value.validate()
-    const res = await axios.post('/api/cron/jobs', newJob.value)
-    message.success('任务添加成功')
+    const res = await window.$request.post('/cron/jobs', newJob.value)
+    window.$message.success('任务添加成功')
     addJobModal.value = false
     newJob.value = {
       node_ids: [],
@@ -719,17 +716,17 @@ const addJob = async () => {
     }
     loadJobs()
   } catch (error) {
-    message.error(`添加任务失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`添加任务失败`)
   }
 }
 
 const deleteJob = async (job) => {
   try {
-    await axios.delete(`/api/cron/jobs/${job.id}`)
-    message.success('任务删除成功')
+    await window.$request.delete(`/cron/jobs/${job.id}`)
+    window.$message.success('任务删除成功')
     loadJobs()
   } catch (error) {
-    message.error('任务节点失败')
+    window.$message.error('任务节点失败')
   }
 }
 
@@ -740,13 +737,13 @@ const stopExecution = async () => {
     ws = null
   }
   try {
-    await axios.post(`/api/cron/executions/${selectedExecution.value.id}/stop`)
-    message.info('中断请求已发送，等待日志加载完成')
+    await window.$request.post(`/cron/executions/${selectedExecution.value.id}/stop`)
+    window.$message.info('中断请求已发送，等待日志加载完成')
 
     await loadRecentExecutions(selectedExecution.value.job_id,true)
     showLog(selectedExecution.value)
   } catch (error) {
-    message.error('中断失败')
+    window.$message.error('中断失败')
   }
 }
 
@@ -762,9 +759,9 @@ const showLog = async (execution) => {
 
   try {
     // 获取最新执行记录
-    const res = await axios.get(`/api/cron/executions/${execution.id}`)
-    const status = res.data.status
-    selectedExecution.value = {...res.data}
+    const res = await window.$request.get(`/cron/executions/${execution.id}`)
+    const status = res.status
+    selectedExecution.value = {...res}
 
     if('running' === status){
       // 建立 WebSocket 连接

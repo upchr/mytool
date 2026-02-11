@@ -177,7 +177,7 @@ const getModels = async () => {
 // 导出全部
 const exportAll = async () => {
   try {
-    const response = await axios.get('/api/database/export', {
+    const response = await window.$request.get('/database/export', {
       responseType: 'blob'
     })
 
@@ -208,24 +208,10 @@ const exportSelected = async () => {
     selectedExportModules.value.forEach(module => {
       params.append('modules', module)
     })
-
-    const response = await axios.get(`/api/database/export?${params.toString()}`, {
-      responseType: 'blob'
-    })
-
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
     const moduleName = selectedExportModules.value.join('_')
-    link.setAttribute('download', `database_export_${moduleName}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-
-    window.$message.success('导出成功')
+    await window.$request.exportFile('database/export', params, `database_export_${moduleName}_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`);
   } catch (error) {
-    window.$message.error(`导出失败: ${error.response?.data?.detail || error.message}`)
+    window.$message.error(`导出失败`)
   }
 }
 

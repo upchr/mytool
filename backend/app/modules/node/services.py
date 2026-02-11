@@ -19,6 +19,10 @@ def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
         result = conn.execute(stmt)
         node_id = result.inserted_primary_key[0]
         return {"id": node_id, **data}  # ✅ 返回完整对象
+        # """创建 NodeRead 对象并解密返回"""
+        # node_data = {"id": node_id, **data}
+        # node_read = schemas.NodeRead(**node_data)
+        # return node_read.decrypt_sensitive_fields().model_dump()
 
 def get_nodes(engine: Engine, active_only: bool) -> list[dict]:
     stmt = select(models.nodes_table).order_by(models.nodes_table.c.name )
@@ -33,6 +37,12 @@ def get_node(engine: Engine, node_id: int) -> dict:
     with engine.connect() as conn:
         result = conn.execute(stmt).mappings().first()
         return dict(result) if result else None
+        # """ NodeRead 对象并解密返回"""
+        # if not result:
+        #     return None
+        #
+        # node_read = schemas.NodeRead(**dict(result))
+        # return node_read.decrypt_sensitive_fields().model_dump()
 
 def delete_node(engine: Engine, node_id: int) -> bool:
     stmt = delete(models.nodes_table).where(models.nodes_table.c.id == node_id)
