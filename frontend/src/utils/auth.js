@@ -45,11 +45,8 @@ export async function resetPassword(oldPassword,newPassword) {
         clearAuthToken()
         window.$message.success('修改成功，请重新登录！')
         useLoginStore().openLoginDialog()
-        return true
     } catch (error) {
-        const msg = error.response?.data?.detail || '登录失败'
-        window.$message.error(msg)
-        return false
+        throw error
     }
 }
 

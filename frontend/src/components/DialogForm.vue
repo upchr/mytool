@@ -414,6 +414,7 @@ const getFieldProps = (field) => {
         type: field.inputType || 'text',
         maxlength: field.maxlength,
         showCount: field.showCount,
+        showPasswordOn: field.showPasswordOn,
         round: field.round
       }
     case 'number':

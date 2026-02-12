@@ -25,7 +25,7 @@ class NotFoundException(BusinessException):
 
 
 class ValidationException(BusinessException):
-    def __init__(self, message: str = "参数验证失败", detail: Any = None):
+    def __init__(self, message: str = "校验失败", detail: Any = None):
         super().__init__(422, message, detail)
 
 class ServerException(BusinessException):

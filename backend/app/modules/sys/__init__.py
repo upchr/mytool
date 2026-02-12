@@ -77,7 +77,7 @@ def reset_password(req: ResetSysBase):
             raise UnauthorizedException(detail="系统未初始化")
 
         if not security_manager.verify_password(req.old_password, password_hash):
-            raise UnauthorizedException(detail="密码错误！")
+            raise ValidationException(detail="密码错误！")
 
         # 哈希密码
         password_hash = security_manager.hash_password(req.password)
