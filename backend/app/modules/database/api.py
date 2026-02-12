@@ -100,23 +100,15 @@ async def export_database(
                     "data": rows
                 }
 
-        temp_file = tempfile.NamedTemporaryFile(
-            mode='w',
-            suffix='.json',
-            delete=False,
-            encoding='utf-8'
-        )
-        json.dump(db_data, temp_file, ensure_ascii=False, indent=2)
-        temp_file.close()
+        json_str = json.dumps(db_data, ensure_ascii=False, indent=2)
+        import base64
+        json_base64 = base64.b64encode(json_str.encode('utf-8')).decode('ascii')
+        # filename = f"export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-        filename_suffix = f"_{'_'.join(modules)}" if modules else ""
-        filename = f"database_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}{filename_suffix}.json"
-
-        return FileResponse(
-            temp_file.name,
-            filename=filename,
-            media_type="application/json"
-        )
+        return BaseResponse.success({
+            "content": json_base64,
+            "encoding": "base64"
+        })
 
     except Exception as e:
         raise ServerException(detail=f"导出失败: {str(e)}")

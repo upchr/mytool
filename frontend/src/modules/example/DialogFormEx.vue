@@ -7,6 +7,17 @@
       <n-button @click="test" type="primary">当前路径</n-button>
       <n-button @click="test404" type="primary">404异常</n-button>
       <n-button @click="testyw" type="primary">业务异常{{testRef}}</n-button>
+
+      <n-button
+          type="primary"
+          @click="downloadFile"
+          :loading="downloading"
+      >
+        <template #icon>
+          <n-icon :component="DownloadOutline" />
+        </template>
+        下载文件
+      </n-button>
     </n-space>
     <!-- 使用通用表单对话框 -->
     <DialogForm
@@ -309,5 +320,33 @@ const saveAndClose = (data) => {
   console.log('自定义保存:', data)
   handleSubmit(data)
   showDialog.value = false
+}
+
+
+
+const downloading = ref(false)
+
+// 方式1: 直接下载（最简单，兼容性好）
+const downloadFile = () => {
+  downloading.value = true
+
+  // 文件URL（可以是网络文件或API）
+  const fileUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+
+  // 创建隐藏链接
+  const link = document.createElement('a')
+  link.href = fileUrl
+  link.download = 'sample.pdf' // 指定下载文件名
+  link.target = '_blank'
+  link.style.display = 'none'
+
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+
+  setTimeout(() => {
+    downloading.value = false
+    window.$message.success('下载已开始')
+  }, 500)
 }
 </script>

@@ -26,9 +26,6 @@ service.interceptors.request.use((config) => {
 
 service.interceptors.response.use(
     (response) => {
-        if (response.config.responseType === 'blob') {
-            return response;
-        }
         if (response.data) {
             const { code, message, data } = response.data
             if (code === 200) {
@@ -93,24 +90,27 @@ function handleAuthError(status, data, error) {
 }
 
 // 导出文件功能
-const exportFile = async (url, params = {}, fileName = 'export.json') => {
+const exportFile = async (url, params = {}, fileNameD = 'export.json') => {
     try {
         // 发送请求，获取 Blob 格式的数据
         const response = await service.get(url, {
             params: params,      // 如果需要传递查询参数，使用 params
-            responseType: 'blob' // 设置响应类型为 Blob
         });
-        // 创建一个临时的下载链接
-        const urlBlob = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = urlBlob;
-        link.setAttribute('download', fileName); // 设置文件名
-        document.body.appendChild(link);
-        link.click();  // 模拟点击下载
-        document.body.removeChild(link); // 下载完成后移除链接
+        // 2. 解析 Base64
+        const { filename, content } = response
 
-        window.URL.revokeObjectURL(urlBlob);  // 释放 Blob 对象
-        window.$message.success('导出成功');
+        // 3. 创建 Data URL（这是关键！WebKit不会拦截）
+        const dataUrl = `data:application/octet-stream;base64,${content}`
+
+        // 4. 下载
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.setAttribute('download', (filename===''||filename===undefined)?fileNameD:filename);
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        window.$message.success('导出成功')
     } catch (error) {
         const errorMessage = error.response?.data?.detail || error.message || '导出失败';
         window.$message.error(`导出失败: ${errorMessage}`);
