@@ -249,14 +249,6 @@ const handleSubmit = async (data,flag=false) => {
   }
 }
 
-
-const apiUpdateUser = async (data) => {
-  // 模拟 API 调用
-  return new Promise(resolve => {
-    setTimeout(() => resolve({ code: 200, data }), 500)
-  })
-}
-
 const loadData = () => {
   // 加载数据
   emit('success')

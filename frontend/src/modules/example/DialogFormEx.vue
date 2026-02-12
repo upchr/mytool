@@ -1,14 +1,12 @@
 <template>
   <div style="padding: 20px">
-    <h2>用户设置</h2>
-    <p>当前主题: {{ formData.theme }}</p>
-    <p>通知方式: {{ formData.notifyMethods?.join(', ') || '无' }}</p>
-
+    <h2>示例</h2>
+    <p>当前主题: {{ themeStore.isDark? 'dark':'sun'}}</p>
     <n-space>
-    <n-button @click="showDialog = true" type="primary">打开设置</n-button>
-    <n-button @click="test" type="primary">当前路径</n-button>
-    <n-button @click="test404" type="primary">404异常</n-button>
-    <n-button @click="testyw" type="primary">业务异常{{testRef}}</n-button>
+      <n-button @click="showDialog = true" type="primary">打开对话框</n-button>
+      <n-button @click="test" type="primary">当前路径</n-button>
+      <n-button @click="test404" type="primary">404异常</n-button>
+      <n-button @click="testyw" type="primary">业务异常{{testRef}}</n-button>
     </n-space>
     <!-- 使用通用表单对话框 -->
     <DialogForm
@@ -44,7 +42,8 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import DialogForm from '@/components/DialogForm.vue'
-
+import { useThemeStore } from '@/stores/theme'
+const themeStore = useThemeStore()
 // 表单数据
 const formData = reactive({
   name: '张三',
@@ -231,26 +230,9 @@ const formRules = {
   ],
   age: [
     {
+      type: 'number',
       required: true,
       message: '请输入年龄',
-      trigger: ['blur', 'change']  // 添加 change 触发
-    },
-    {
-      type: 'number',
-      required: true, // 明确声明需要数字
-      message: '年龄必须是数字',
-      trigger: ['blur', 'change']
-    },
-    {
-      validator: (rule, value) => {
-        // 自定义验证器，处理各种情况
-        if (value === '' || value === null || value === undefined) {
-          return false
-        }
-        const num = Number(value)
-        return !isNaN(num) && num >= 1 && num <= 120
-      },
-      message: '年龄必须在1-120之间',
       trigger: ['blur', 'change']
     }
   ]

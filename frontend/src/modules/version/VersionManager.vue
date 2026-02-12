@@ -1,5 +1,5 @@
 <template>
-  <n-card title="👤 关于" class="mb-6">
+  <n-card title="系统版本" class="mb-6">
     <n-space justify="end" style="margin-bottom: 10px">
       <n-badge processing type="warning">
         <n-button type="error"
@@ -28,14 +28,14 @@
       </n-card>
 
       <n-card title="升级脚本" style="margin-bottom: 16px">
-        <n-tabs type="line" animated>
-          <n-tab-pane name="飞牛" tab="飞牛">
+        <n-tabs type="line" animated v-model:value="currentCopy">
+          <n-tab-pane name="Fn" tab="飞牛">
             <n-card title="飞牛升级脚本" hoverable style="height:60vh;overflow-y: auto;overflow-x: auto">
-              <template #header-extra>
+<!--              <template #header-extra>
                 <n-button type="info" size="small" @click="copy(fpk_code)">
                   复制
                 </n-button>
-              </template>
+              </template>-->
               <n-code :code="fpk_code" language="shell" show-line-numbers/>
             </n-card>
             <!-- 操作提示 -->
@@ -48,11 +48,11 @@
           </n-tab-pane>
           <n-tab-pane name="Docker" tab="Docker">
             <n-card title="Docker脚本" hoverable style="height:60vh;overflow-y: auto;overflow-x: auto">
-              <template #header-extra>
+<!--              <template #header-extra>
                 <n-button type="info" size="small" @click="copy(docker_code)">
                   复制
                 </n-button>
-              </template>
+              </template>-->
               <n-code :code="docker_code" language="shell" show-line-numbers/>
             </n-card>
             <!-- 操作提示 -->
@@ -65,6 +65,11 @@
               或者复制上述脚本执行。
             </n-alert>
           </n-tab-pane>
+          <template #suffix>
+            <n-button type="info" size="small" @click="copyHandle">
+              {{copyYet?'已复制':'复制'}}
+            </n-button>
+          </template>
         </n-tabs>
       </n-card>
     </n-space>
@@ -72,7 +77,7 @@
 </template>
 
 <script setup>
-import {h, onMounted, ref} from 'vue'
+import {h, onMounted, ref, watch} from 'vue'
 import { NIcon, NButton} from 'naive-ui'
 import {CloudDownloadOutline as UpdateIcon, WarningOutline} from '@vicons/ionicons5'
 import axios from 'axios'
@@ -332,8 +337,23 @@ main() {
 main
 `)
 
+// 复制操作控制
+const currentCopy = ref('Fn')
+watch(currentCopy, () => {
+  copyYet.value=false
+})
+
+const copyYet = ref(false)
 const copy =  (text) => {
   window.$copyCode(text)
+}
+const copyHandle =  () => {
+  if(currentCopy.value==='Docker'){
+    copy(docker_code.value)
+  }else if(currentCopy.value==='Fn'){
+    copy(fpk_code.value)
+  }
+  copyYet.value=true
 }
 
 

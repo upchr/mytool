@@ -28,7 +28,7 @@
       <n-form
           ref="formRef"
           :model="localFormData"
-          :rules="rules"
+          :rules="computedRules"
           :label-placement="labelPlacement"
           :label-width="labelWidth"
           :label-align="labelAlign"
@@ -291,7 +291,7 @@ const props = defineProps({
 
   // 验证规则
   rules: {
-    type: Object,
+    type:  [Object, Function],
     default: () => ({})
   },
 
@@ -494,6 +494,15 @@ const handleUploadChange = (fieldName, fileList) => {
     formData: localFormData.value
   })
 }
+
+// 表单校验，支持从localFormData复杂验证。或基础验证
+const computedRules = computed(() => {
+  if (typeof props.rules === 'function') {
+    return props.rules(localFormData.value)
+  }
+  return props.rules
+})
+
 
 // 提交表单
 const handleSubmit = async () => {
