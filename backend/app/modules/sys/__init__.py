@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select,update
 
 from app.core.db.database import engine, metadata
 from . import  models
@@ -7,7 +6,7 @@ from fastapi import APIRouter
 import logging
 
 from .models import system_config_table
-from .schemas import SysBase
+from .schemas import SysBase, ResetSysBase
 from ...core.exception.exceptions import UnauthorizedException, ServerException, ValidationException
 from ...core.pojo.response import BaseResponse
 from ...core.utils.jwt import create_jwt_token
@@ -65,3 +64,29 @@ def login(req: SysBase):
 
         else:
             raise UnauthorizedException(detail="密码错误！")
+
+@router.post("/resetPassword")
+def reset_password(req: ResetSysBase):
+    if len(req.password) < 6:
+        raise ValidationException(detail="密码至少6位")
+
+    with engine.begin() as conn:
+        stmt = select(system_config_table.c.admin_password_hash)
+        password_hash = conn.execute(stmt).scalar()
+        if not password_hash:
+            raise UnauthorizedException(detail="系统未初始化")
+
+        if not security_manager.verify_password(req.old_password, password_hash):
+            raise UnauthorizedException(detail="密码错误！")
+
+        # 哈希密码
+        password_hash = security_manager.hash_password(req.password)
+        stmt = (
+            update(system_config_table)
+            .where(system_config_table.c.id == 1)
+            .values(admin_password_hash=password_hash)
+        )
+        conn.execute(stmt)
+        return BaseResponse.success(message="密码修改成功")
+
+

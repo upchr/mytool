@@ -4,3 +4,5 @@ from pydantic import BaseModel
 
 class SysBase(BaseModel):
     password: str
+class ResetSysBase(SysBase):
+    old_password: str

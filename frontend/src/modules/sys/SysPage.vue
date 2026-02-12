@@ -2,7 +2,7 @@
   <div style="padding: 20px">
     <h2>用户设置</h2>
     <n-space vertical style="margin-top: 10px ">
-      <n-button @click="showDialog = true" type="primary">修改密码</n-button>
+      <n-button @click="showDialog = true" type="error">修改密码</n-button>
       <n-button @click="logoutSystem" type="warning">退出登录</n-button>
     </n-space>
     <!-- 使用通用表单对话框 -->
@@ -27,7 +27,7 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import DialogForm from '@/components/DialogForm.vue'
-import {logoutSystem} from "@/utils/auth.js";
+import {logoutSystem, resetPassword} from "@/utils/auth.js";
 
 // 表单数据
 const formData = ref({
@@ -40,7 +40,7 @@ const formData = ref({
 const fieldGroups = [
   {
     title: '旧设置',
-    description: '用于个人资料展示',
+    // description: '用于个人资料展示',
     fields: [
       {
         name: 'oldPassword',
@@ -75,10 +75,10 @@ const formRules = (model) => ({
     { required: true, message: '请输入旧密码', trigger: ['blur'] }
   ],
   newPassword: [
-    { required: true, message: '请输入密码', trigger: ['blur'] }
+    { required: true, message: '请输入新密码', trigger: ['blur'] }
   ],
   reNewPassword: [
-    { required: true, message: '请确认密码', trigger: ['blur'] },
+    { required: true, message: '请再次输入新密码', trigger: ['blur'] },
     {
       validator: (rule, value) => {
         if (value !== model.newPassword) {
@@ -97,9 +97,9 @@ const showDialog = ref(false)
 
 
 // 处理提交
-const handleSubmit = (data) => {
+const handleSubmit = async (data) => {
   console.log('表单提交:', data)
-
+  await resetPassword(data.oldPassword,data.newPassword)
   // 这里可以调用 API 保存数据
 }
 
