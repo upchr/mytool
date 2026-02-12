@@ -9,7 +9,7 @@ from app.core.db.database import engine, metadata, DATABASE_URL, logger
 import shutil
 from typing import List, Optional
 
-from app.core.exception.exceptions import ServerException
+from app.core.exception.exceptions import ServerException, NotFoundException
 from app.core.pojo.response import BaseResponse
 
 router = APIRouter(prefix="/database", tags=["database"])
@@ -37,7 +37,7 @@ def get_tables_by_modules(modules: List[str]) -> List[str]:
         if module in MODULE_TABLES:
             tables.extend(MODULE_TABLES[module]["tables"])
         else:
-            raise HTTPException(status_code=400, detail=f"未知模块: {module}")
+            raise NotFoundException(detail=f"未知模块: {module}")
     return list(set(tables))  # 去重
 
 def filter_whitelist_tables(tables: List[Table]) -> List[Table]:

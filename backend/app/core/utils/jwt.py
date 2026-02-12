@@ -22,9 +22,9 @@ def verify_jwt_token(token: str) -> dict:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token 已过期")
+        raise HTTPException(status_code=401, detail="Token 已过期。请重新登录！")
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="无效的 Token")
+        raise HTTPException(status_code=401, detail="无效的 Token。请重新登录！")
 
 def create_access_token(user_id: int = 1) -> str:
     """创建管理员访问 token"""

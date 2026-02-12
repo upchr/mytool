@@ -6,7 +6,7 @@ from . import services, schemas, models
 from app.modules.node.schemas import NodeRequest
 from ...core.exception.exceptions import NotFoundException, ServerException
 from ...core.pojo.response import BaseResponse
-import jwt
+
 
 from ...core.utils.jwt import verify_jwt_token
 

@@ -63,7 +63,7 @@ async def jwt_auth_middleware(request: Request, call_next):
         payload = verify_jwt_token(token)
         request.state.user = payload
     except HTTPException as e:
-        raise ServerException(detail=f"${e.detail}")
+        raise UnauthorizedException(detail=f"{e.detail}")
     except Exception:
         raise UnauthorizedException(detail=f"无效的 token。请重新登录！")
 

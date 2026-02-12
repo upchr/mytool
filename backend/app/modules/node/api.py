@@ -19,7 +19,7 @@ def create_node(node: schemas.NodeCreate):
 def test_node_connection(node_id: int):
     node = services.get_node(engine, node_id)
     if not node:
-        raise HTTPException(status_code=404, detail="节点不存在")
+        raise NotFoundException(detail="节点不存在")
     try:
         ssh_client = SSHClient(schemas.NodeRead(**node))
         ssh_client.connect()
