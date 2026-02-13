@@ -31,6 +31,7 @@
         @touchstart="emit('update:collapsed', true)"
     ></div>
     <n-layout-sider
+        ref="siderRef"
         bordered
         collapse-mode="width"
         :collapsed-width="60"
@@ -89,7 +90,7 @@ function renderIcon(icon) {
   top: 50px;
   left: 0;
   bottom: 60px;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 50px - 60px);
   z-index: 1000;
 }
 
@@ -114,9 +115,10 @@ function renderIcon(icon) {
 
   .mobile-sider {
     position: fixed;
-    top: 0;
+    top: 50px;
+    bottom: 60px;
     left: 0;
-    height: 100vh;
+    height: calc(100vh - 50px - 40px);
     z-index: 1000;
   }
 }

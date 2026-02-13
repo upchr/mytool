@@ -333,7 +333,7 @@ const props = defineProps({
   },
   closable: {
     type: Boolean,
-    default: false
+    default: true
   },
   contentClass: String,
 
