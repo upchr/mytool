@@ -89,8 +89,9 @@ function renderIcon(icon) {
   position: fixed;
   top: 50px;
   left: 0;
-  bottom: 60px;
-  height: calc(100vh - 50px - 60px);
+  bottom: 44px;
+  height: calc(100vh);
+  padding-bottom: 100px;
   z-index: 1000;
 }
 
@@ -116,9 +117,10 @@ function renderIcon(icon) {
   .mobile-sider {
     position: fixed;
     top: 50px;
-    bottom: 60px;
+    bottom: 44px;
     left: 0;
-    height: calc(100vh - 50px - 40px);
+    height: calc(100vh);
+    padding-bottom: 100px;
     z-index: 1000;
   }
 }
