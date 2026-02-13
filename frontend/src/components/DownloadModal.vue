@@ -10,6 +10,9 @@
       :closable="false"
       style="width: 10vw;height: 22vh"
   >
+    <n-space vertical align="center">
+      <n-text>请点击下方按钮下载文件</n-text>
+    </n-space>
     <template #action="{ formData }">
       <n-space justify="center">
         <n-button @click="close" >
