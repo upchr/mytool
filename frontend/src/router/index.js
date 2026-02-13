@@ -1,6 +1,6 @@
 import { useRouter ,createRouter, createWebHistory } from 'vue-router'
 import NoteList from '../modules/note/NoteList.vue'
-import NodeManager from '../modules/cron/NodeManager.vue'
+import NodeManager from '../modules/node/NodeManager.vue'
 import JobManager from '../modules/cron/JobManager.vue'
 import DatabaseManager from '../modules/database/DatabaseManager.vue'
 import VersionManager from '../modules/version/VersionManager.vue'
