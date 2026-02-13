@@ -166,7 +166,7 @@ const jobRules = {
   schedule: [
     { required: true, message: '请输入Cron表达式', trigger: ['blur'] },
     {
-      validator: (rule, value) => CRON_REGEX.test(value.trim()),
+      validator: (rule, value) => value && CRON_REGEX.test(value.trim()),
       message: 'Cron表达式格式错误（分 时 日 月 周）',
       trigger: ['blur']
     }

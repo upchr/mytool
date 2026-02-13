@@ -199,8 +199,15 @@ const fillCron = () => {
 // 定义事件
 // const emit = defineEmits()
 const emit = defineEmits(['update:cron', 'close'])
-//传值
-const show = defineModel({ type: Boolean, default: false })
+// todo 3.4+,省略emits声明和调用。
+const show = defineModel('show', { type: Boolean, default: false })
+watch(() => show.value, (newVal) => {
+  console.log('show 变了:', newVal)
+  if (newVal === true) {
+    updateCron()
+  }
+})
+
 const props = defineProps({
   cron: {
     type: String,
@@ -225,7 +232,7 @@ watch(() => props.cron, (newCron) => {
 }, { immediate: true })
 // 初始化
 onMounted(() => {
-  updateCron()
+  // updateCron()
 })
 </script>
 
