@@ -1,5 +1,5 @@
 <template>
-  <n-card title="通知渠道" :bordered="false">
+  <n-card title="📢  通知渠道" :bordered="false">
     <div class="mb-6">
       <h3 class="text-lg font-medium mb-3">选择通知方式</h3>
       <n-grid cols="1 s:2 m:3 l:4" responsive="screen">

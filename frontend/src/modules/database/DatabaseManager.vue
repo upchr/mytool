@@ -1,5 +1,5 @@
 <template>
-  <n-card title="数据库管理" :bordered="false">
+  <n-card title="🛢️ 数据库管理" :bordered="false">
     <n-space vertical :size="24">
       <!-- 导出功能 -->
       <n-card :bordered="false">

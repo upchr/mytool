@@ -1,6 +1,6 @@
 <template>
   <div style="padding: 20px">
-    <h2>用户设置</h2>
+    <h2>👤 用户设置</h2>
     <n-space vertical style="margin-top: 10px ">
       <n-button @click="showDialog = true" type="error">修改密码</n-button>
       <n-button @click="logoutSystem" type="warning">退出登录</n-button>

@@ -1,5 +1,5 @@
 <template>
-  <n-card title="📝 节点管理" class="mb-6">
+  <n-card title="🖥️ 节点管理" class="mb-6">
     <!--    按钮操作-->
     <n-space justify="end" style="margin-bottom: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
@@ -9,7 +9,7 @@
 
     <!-- 添加节点表单 -->
     <n-modal v-model:show="showForm" preset="card"
-             :title="'📝 '+title"
+             :title="'🖥️ '+title"
              class=" mediaModal"
              draggable
              :on-after-leave="()=>resetForm(true)">

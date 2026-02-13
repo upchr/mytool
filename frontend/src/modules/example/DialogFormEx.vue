@@ -1,8 +1,8 @@
 <template>
   <div style="padding: 20px">
-    <h2>示例</h2>
+    <h2>💡 示例</h2>
     <p>当前主题: {{ themeStore.isDark? 'dark':'sun'}}</p>
-    <n-space>
+    <n-space style="margin-top: 10px">
       <n-button @click="showDialog = true" type="primary">打开对话框</n-button>
       <n-button @click="test" type="primary">当前路径</n-button>
       <n-button @click="test404" type="primary">404异常</n-button>

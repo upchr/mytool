@@ -1,5 +1,5 @@
 <template>
-  <n-card title="系统版本" class="mb-6">
+  <n-card title="🏷️ 系统版本" class="mb-6">
     <n-space justify="end" style="margin-bottom: 10px">
       <n-badge processing type="warning">
         <n-button type="error"
@@ -377,7 +377,12 @@ const getVersion = async (flag = false) => {
 
     versionInfo.value = res
     if(flag && versionInfo.value.updatable){
-      window.$message?.warning(`有版本可更新！${versionInfo.value.latest}`)
+      window.$message?.warning(`有版本可更新！${versionInfo.value.latest}`,
+          {
+            duration: 8000,
+            keepAliveOnHover: true
+          }
+      )
     }
   } catch (error) {
     window.$message?.error('获取当前版本失败')
