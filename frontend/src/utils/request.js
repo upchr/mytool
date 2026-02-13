@@ -92,30 +92,28 @@ function handleAuthError(status, data, error) {
 // 导出文件功能
 const exportFile = async (url, params = {}, fileNameD = 'export.json') => {
     try {
-        // 发送请求，获取 Blob 格式的数据
-        const response = await service.get(url, {
-            params: params,      // 如果需要传递查询参数，使用 params
-        });
-        // 2. 解析 Base64
+        const response = await service.get(url, { params })
         const { filename, content } = response
 
-        // 3. 创建 Data URL（这是关键！WebKit不会拦截）
-        const dataUrl = `data:application/octet-stream;base64,${content}`
+        // 创建 Data URL（注意格式！）
+        const dataUrl = `application/json;charset=utf-8;base64,${content}`
 
-        // 4. 下载
-        const link = document.createElement('a')
-        link.href = dataUrl
-        link.setAttribute('download', (filename===''||filename===undefined)?fileNameD:filename);
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+        // 调用 App.vue 中的方法显示下载按钮
+        if (typeof window.showDownloadModal === 'function') {
+            window.showDownloadModal(dataUrl, filename || fileNameD)
+        } else {
+            const link = document.createElement('a')
+            link.href = dataUrl
+            link.setAttribute('download', (filename===''||filename===undefined)?fileNameD:filename);
+            document.body.appendChild(link)
+            window.$message.success('导出成功')
+        }
 
-        window.$message.success('导出成功')
     } catch (error) {
-        const errorMessage = error.response?.data?.detail || error.message || '导出失败';
-        window.$message.error(`导出失败: ${errorMessage}`);
+        const errorMessage = error.response?.data?.detail || error.message || '导出失败'
+        window.$message.error(`导出失败: ${errorMessage}`)
     }
-};
+}
 
 export default {
     ...service,

@@ -117,6 +117,11 @@
             </span>
           </n-flex>
         </n-layout-footer>
+        <DownloadModal
+            v-model:visible="downloadModal.visible"
+            :data-url="downloadModal.dataUrl"
+            :filename="downloadModal.filename"
+        />
       </n-space>
     </n-dialog-provider>
     </n-notification-provider>
@@ -141,16 +146,6 @@ import hljs from './plugins/hljs' // 引入 hljs 配置
 import AuthDialogs from '@/components/AuthDialogs.vue'
 import {logoutSystem} from "@/utils/auth.js";
 
-import axios from "axios";
-/*import { darkTheme, useOsTheme } from "naive-ui";
-const osTheme = useOsTheme();
-const theme = ref(null);
-const initTheme =()=>{
- theme.value = osTheme.value === "dark" ? darkTheme : null;
-}
-const toggleTheme = () => {
-  theme.value = theme.value?.name === 'dark' ? null :darkTheme;
-};*/
 import { useThemeStore } from '@/stores/theme'
 const themeStore = useThemeStore()
 
@@ -177,19 +172,6 @@ const menuOptions = routes.map(route => ({
 const activeKey = ref(null);
 const collapsed = ref(true);
 const siderRef = ref(null)
-
-// onClickOutside(
-//     siderRef,
-//     () => {
-//       collapsed.value = true
-//     },
-//     {
-//       ignore: ['.n-button', '.menu-trigger'],
-//       detectIframe: false,
-//       event: 'click',
-//       capture: true
-//     }
-// )
 
 const toggleMenu = () => {
   collapsed.value = !collapsed.value;
@@ -340,14 +322,32 @@ const goUpdate = async () => {
     });
   }
 
-  // const res = await window.$request.get(`/version/`)
-  // versionInfo.value = res
   notice()
 }
-onMounted(async () => {
 
+
+// 主动下载模态框
+import DownloadModal from '@/components/DownloadModal.vue'
+const downloadModal = ref({
+  visible: false,
+  dataUrl: '',
+  filename: 'export.json'
+})
+const downloadModalInit = ()=>{
+  window.showDownloadModal = (dataUrl, filename = 'export.json') => {
+    downloadModal.value = {
+      visible: true,
+      dataUrl,
+      filename
+    }
+  }
+}
+
+onMounted(async () => {
   // themeStore.initTheme()
   await getVersion()
+
+  downloadModalInit()
 })
 </script>
 
