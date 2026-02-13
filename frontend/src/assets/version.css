@@ -64,6 +64,13 @@
   font-size: 12px;
 }
 
-.upgrade-notification .copy-btn:hover {
-  background: #f5f5f5;
+/*.upgrade-notification .copy-btn:hover {*/
+/*  background: #f5f5f5;*/
+/*}*/
+
+.theme-dark-font {
+  color: white !important;
+}
+.theme-dark-back {
+  background: #1a1a1a !important;
 }

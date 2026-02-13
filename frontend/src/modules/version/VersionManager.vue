@@ -80,7 +80,7 @@
 import {h, onMounted, ref, watch} from 'vue'
 import { NIcon, NButton} from 'naive-ui'
 import {CloudDownloadOutline as UpdateIcon, WarningOutline} from '@vicons/ionicons5'
-import axios from 'axios'
+import {notice} from "@/utils/version/notice.js";
 
 const goUpdateIng = ref(false)
 const fpk_code = ref(`#!/bin/bash
@@ -391,9 +391,9 @@ const goUpdate = async () => {
     return
   }
 
-  function notice() {
+  /*function notice() {
     let markAsRead = false;
-    /*const n = window.$notification.info({
+    /!*const n = window.$notification.info({
       title: "升级提醒",
       content: () => h('div', [
         h('p', '有版本可升级：'),
@@ -450,7 +450,7 @@ const goUpdate = async () => {
           return false;
         }
       }
-    });*/
+    });*!/
     const n = window.$notification.info({
       title: "升级提醒",
       content: () => {
@@ -507,7 +507,7 @@ const goUpdate = async () => {
               }, '复制')
             ])
           ]),
-/*
+/!*
           // 提示信息
           h('div', { class: 'hint-section' }, [
             h('p', { class: 'section-title' }, '应用升级'),
@@ -516,7 +516,7 @@ const goUpdate = async () => {
                 h('span', { class: 'label' }, '飞牛可去"关于"菜单，查看详细说明。'),
               ])
             ])
-          ])*/
+          ])*!/
         ])
       },
       meta: formatDate(versionInfo.value.updated_at),
@@ -541,8 +541,8 @@ const goUpdate = async () => {
         }
       }
     });
-  }
-  notice()
+  }*/
+  notice(versionInfo)
 }
 
 onMounted(async () => {
