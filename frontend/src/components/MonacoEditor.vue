@@ -54,7 +54,7 @@ const initEditor = async () => {
   editor = monico.editor.create(editorContainer.value, {
     value: normalizeLineEndings(props.modelValue), // 初始化时也标准化
     language: props.language,
-    theme: 'vs-light',
+    theme: window.$themeStore.isDark?'vs-dark':'vs-light',
     automaticLayout: true,
     minimap: {enabled: false},
     fontSize: 14,
