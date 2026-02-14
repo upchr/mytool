@@ -170,7 +170,7 @@ const formRules = {
 const getService = async (serviceId) => {
   try {
     const res = await window.$request.get(`/notifications/services/${serviceId}`)
-    debugger
+
     formData.value = {...res}
   } catch (error) {
     window.$message.error('获取通知配置失败')

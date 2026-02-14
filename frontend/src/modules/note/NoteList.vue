@@ -151,7 +151,7 @@ const saveNote = async () => {
   }
 
   try {
-    debugger
+
     if (isEditing.value) {
       // 更新便签
       await window.$request.put(`/notes/${currentNote.value.id}`, {

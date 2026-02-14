@@ -81,8 +81,10 @@ function handleAuthError(status, data, error) {
             }, 450)
 
             window.$message.error(msg || '未授权')
+            return new Promise(() => {})
+        }else{
+            return Promise.reject(error)
         }
-        return Promise.reject(error)
     }
 
     window.$message.error(msg || '请求失败')

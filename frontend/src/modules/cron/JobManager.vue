@@ -281,7 +281,7 @@ const loadJobs = async () => {
 
 // 任务操作
 const openEditModal = (job) => {
-  debugger
+
   editingJob.value = {
     id: job.id,
     node_ids: Array.isArray(job.node_ids) ? job.node_ids : [job.node_id],

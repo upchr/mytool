@@ -63,7 +63,7 @@ def login(req: SysBase):
             return BaseResponse.success({"token": token})
 
         else:
-            raise UnauthorizedException(detail="密码错误！")
+            raise ValidationException(detail="密码错误！")
 
 @router.post("/resetPassword")
 def reset_password(req: ResetSysBase):

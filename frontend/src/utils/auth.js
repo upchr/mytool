@@ -34,7 +34,8 @@ export async function loginSystem(password) {
         return true
     } catch (error) {
         const msg = error.response?.data?.detail || '登录失败'
-        window.$message.error(msg)
+        // window.$message.error(msg)
+        console.error('登录失败:', error)
         return false
     }
 }
