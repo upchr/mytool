@@ -13,6 +13,10 @@ class CronJobBase(BaseModel):
     is_active: bool = True
     is_notice: bool = False
     error_times: int
+    consecutive_failures: Optional[int] = None
+
+class CronJobUpdateNotice(CronJobBase):
+    id: int
 
 class CronJobCreate(BaseModel):
     node_ids: list[int]  # 👈 改为列表
@@ -22,7 +26,7 @@ class CronJobCreate(BaseModel):
     description: str = ""
     is_active: bool = False
     is_notice: bool = False
-    error_times: int
+    error_times: int = 3
     @field_validator('schedule')
     def validate_cron(cls, v):
         try:

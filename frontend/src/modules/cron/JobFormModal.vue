@@ -83,7 +83,7 @@
             <template #checked>禁用</template>
             <template #unchecked>通知</template>
           </n-switch>
-          <n-input-number v-if="formData.is_notice" style="margin-left: 10px"
+          <n-input-number v-if="formData.is_notice" style="margin-left: 10px;width:150px"
               v-model:value="formData.error_times" :min="1"
               placeholder="连续错误达到次数时，消息提醒"
           />

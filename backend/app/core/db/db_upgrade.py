@@ -28,7 +28,7 @@ class VersionedAutoMigrator:
                             table_name VARCHAR(100) NOT NULL,
                             field_name VARCHAR(100) NOT NULL,
                             field_type VARCHAR(50),
-                            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            applied_at TIMESTAMP DEFAULT (datetime('now', 'localtime')),
                             checksum VARCHAR(64),
                             UNIQUE(table_name, field_name)
                         )

@@ -174,11 +174,11 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
             exit_code = stdout.channel.recv_exit_status()
             status = "success" if exit_code == 0 else "failed"
 
-            # 更新最终状态
-            _update_execution_final_status(engine, execution_id, status)
-
             final_output = "".join(output_buffer)  # 此时 buffer 已清空，但我们需要最终内容用于 WebSocket
             final_error = "".join(error_buffer)
+
+            # 更新最终状态
+            _update_execution_final_status(engine, execution_id, status,job,final_error)
 
             final_log = {
                 "status": status,
@@ -197,7 +197,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
             if error_msg:
                 _save_and_clear_buffer(engine, execution_id, [], [error_msg], "cancelled")
 
-            _update_execution_final_status(engine, execution_id, "cancelled")
+            _update_execution_final_status(engine, execution_id, "cancelled",job,error_msg)
 
             final_output = "".join(output_buffer) if 'output_buffer' in locals() else ""
             final_error = error_msg
@@ -214,7 +214,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
             error_msg = str(e)
             # 保存错误信息
             _save_and_clear_buffer(engine, execution_id, [], [error_msg], "failed")
-            _update_execution_final_status(engine, execution_id, "failed")
+            _update_execution_final_status(engine, execution_id, "failed",job,error_msg)
 
             final_log = {
                 "status": "failed",
@@ -272,7 +272,7 @@ def _save_and_clear_buffer(engine: Engine, execution_id: int, output_buffer: lis
     # 👇 关键：清空缓冲区
     output_buffer.clear()
     error_buffer.clear()
-def _update_execution_final_status(engine: Engine, execution_id: int, status: str):
+def _update_execution_final_status(engine: Engine, execution_id: int, status: str,job: dict,error:str=''):
     """更新最终状态和结束时间"""
     stmt = (
         update(models.job_executions_table)
@@ -282,8 +282,46 @@ def _update_execution_final_status(engine: Engine, execution_id: int, status: st
             end_time=datetime.now()
         )
     )
+
     with engine.begin() as conn:
         conn.execute(stmt)
+
+        from app.modules.cron.schemas import CronJobUpdateNotice
+        job = CronJobUpdateNotice(**job)
+        if status=='success':
+            stmt1 = (
+                update(models.cron_jobs_table)
+                .where(models.cron_jobs_table.c.id == job.id)
+                .values(
+                    consecutive_failures=0,
+                )
+            )
+        elif status == 'failed':
+            new_failures = (0 if not job.consecutive_failures else job.consecutive_failures ) + 1
+
+            if new_failures >= job.error_times:
+                from app.modules.notify.handler.manager import notification_manager
+                import asyncio
+                asyncio.run(notification_manager.send_broadcast(
+                    content=f"任务【{job.name}】连续失败 {new_failures} 次。\n"
+                            f"次数清零！\n"
+                            f"{ '' if error=='详情：无！' else  f'详情：{error}'}"
+                ))
+                stmt1 = (
+                    update(models.cron_jobs_table)
+                    .where(models.cron_jobs_table.c.id == job.id)
+                    .values(consecutive_failures=0)
+                )
+            else:
+                stmt1 = (
+                    update(models.cron_jobs_table)
+                    .where(models.cron_jobs_table.c.id == job.id)
+                    .values(consecutive_failures=new_failures)
+                )
+        conn.execute(stmt1)
+
+
+
 
 def update_cron_job(engine, job_id: int, update_data: dict) -> bool:
     with engine.connect() as conn:

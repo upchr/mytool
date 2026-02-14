@@ -12,7 +12,8 @@ cron_jobs_table = Table(
     Column("command", Text, nullable=False),
     Column("description", Text),
     Column("is_notice", Boolean, default=False),
-    Column("error_times", Integer, default=0),
+    Column("error_times", Integer, default=3),#通知预知
+    Column("consecutive_failures", Integer, default=0), # 当前连续失败次数
     Column("is_active", Boolean, default=True),
     sqlite_autoincrement=True,
 )

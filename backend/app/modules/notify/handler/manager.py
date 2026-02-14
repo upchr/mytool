@@ -34,8 +34,8 @@ class NotificationManager:
         return self.strategy_cache[cache_key]
 
     async def send_notification(self,
-                                title: str,
-                                content: str,
+                                title: str = "ToolsPlus",
+                                content: str = '',
                                 service_id: Optional[int] = None,
                                 service_name: Optional[str] = None,
                                 **kwargs) -> List[Dict[str, Any]]:
@@ -60,8 +60,8 @@ class NotificationManager:
         return [await self._send_via_service(service, title, content, **kwargs)]
 
     async def send_broadcast(self,
-                             title: str,
-                             content: str,
+                             title: str = "ToolsPlus",
+                             content: str = '',
                              service_types: Optional[List[str]] = None,
                              **kwargs) -> List[Dict[str, Any]]:
         """

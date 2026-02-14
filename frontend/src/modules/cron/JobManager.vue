@@ -193,7 +193,7 @@ const editingJob = ref({
   command: '',
   description: '',
   is_notice: false,
-  error_times: 1,
+  error_times: 3,
   is_active: false,
 })
 
@@ -287,7 +287,7 @@ const openEditModal = (job) => {
     description: job.description || '',
     is_active: job.is_active || false,
     is_notice: job.is_notice || false,
-    error_times: job.error_times || 1
+    error_times: job.error_times || 3
   }
   showEditModal.value = true
 }

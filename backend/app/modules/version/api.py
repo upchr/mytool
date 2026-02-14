@@ -22,12 +22,17 @@ _cache = {
 }
 _cache_lock = asyncio.Lock()
 
+_cache_notice = {
+    "notice_at": None,
+}
+Notice_TTL = 24 * 60 * 60
+_cache_notice_lock = asyncio.Lock()
+
 # ===== 配置 =====
 REPO_USER = "upchr"
 REPO_NAME = "FnDepot"
 BRANCH = "main"
 VERSION_URL=f"https://gitee.com/{REPO_USER}/{REPO_NAME}/raw/{BRANCH}/fnpack.json"
-
 def get_current_version():
     try:
         if sys.platform.startswith("win"):
@@ -81,6 +86,18 @@ async def get_version():
             # 注意：不清除 updated_at 缓存
 
     updatable = latest is not None and latest != "unknown" and latest != current
+
+    async with _cache_notice_lock:
+        if updatable and (not _cache_notice["notice_at"] or (now - _cache_notice["notice_at"]) > timedelta(seconds=Notice_TTL)):
+            from app.modules.notify.handler.manager import notification_manager
+            await notification_manager.send_broadcast(
+                content=f"有新版本可升级。\n"
+                        f"当前版本：{current}\n"
+                        f"最新版本：{latest}\n"
+                        f"更新时间：{lasttime}"
+            )
+            _cache_notice["notice_at"] = now
+
     return BaseResponse.success({
         "current": current,
         "latest": latest,
