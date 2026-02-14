@@ -95,10 +95,11 @@ function handleAuthError(status, data, error) {
 const exportFile = async (url, params = {}, fileNameD = 'export.json') => {
     try {
         const response = await service.get(url, { params })
+        debugger
         const { filename, content } = response
 
         // 创建 Data URL（注意格式！）
-        const dataUrl = `application/json;charset=utf-8;base64,${content}`
+        const dataUrl = `data:application/json;charset=utf-8;base64,${content}`
 
         // 调用 App.vue 中的方法显示下载按钮
         if (typeof window.showDownloadModal === 'function') {

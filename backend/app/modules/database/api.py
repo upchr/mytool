@@ -1,8 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, Query
-from fastapi.responses import FileResponse
 import json
 import os
-import tempfile
 from datetime import datetime
 from sqlalchemy import MetaData, Table, select, delete
 from app.core.db.database import engine, metadata, DATABASE_URL, logger
@@ -29,6 +27,11 @@ MODULE_TABLES = {
 WHITELIST_TABLES = [
     "system_config"
 ]
+
+# 新增：排除表的判断函数
+def should_exclude_table(table_name: str) -> bool:
+    """判断是否应该排除该表（以 _ 开头或 sqlite_ 开头的表）"""
+    return table_name.startswith('_') or table_name.startswith('sqlite_')
 
 def get_tables_by_modules(modules: List[str]) -> List[str]:
     """根据模块名获取对应的表名列表"""
@@ -58,8 +61,8 @@ async def export_database(
 ):
     """
     导出数据库为 JSON
-    - 不指定 modules: 导出所有表
-    - 指定 modules: 只导出指定模块的表
+    - 不指定 modules: 导出所有表（排除系统表）
+    - 指定 modules: 只导出指定模块的表（排除系统表）
     """
     try:
         reflected_metadata = MetaData()
@@ -70,12 +73,12 @@ async def export_database(
             target_table_names = get_tables_by_modules(modules)
             target_tables = {
                 name: table for name, table in reflected_metadata.tables.items()
-                if name in target_table_names
+                if name in target_table_names and not should_exclude_table(name)
             }
         else:
             target_tables = {
                 name: table for name, table in reflected_metadata.tables.items()
-                if not name.startswith('sqlite_')
+                if not should_exclude_table(name)
             }
 
         db_data = {}
@@ -117,7 +120,7 @@ async def export_database(
 async def import_database(file: UploadFile):
     """
     导入数据库
-    - 只处理上传文件中包含的表
+    - 只处理上传文件中包含的表（排除系统表）
     - 自动备份并清空这些表的数据
     - 不影响其他表
     """
@@ -144,10 +147,10 @@ async def import_database(file: UploadFile):
         target_metadata.reflect(bind=new_engine)
 
         with new_engine.begin() as conn:
-            # 只处理上传文件中包含的表
+            # 只处理上传文件中包含的表（排除系统表）
             tables_to_process = []
             for table_name in db_data.keys():
-                if table_name in target_metadata.tables and not table_name.startswith('sqlite_'):
+                if table_name in target_metadata.tables and not should_exclude_table(table_name):
                     tables_to_process.append(target_metadata.tables[table_name])
 
             # 清空这些表的数据（按依赖顺序）
@@ -155,16 +158,13 @@ async def import_database(file: UploadFile):
                 if table in tables_to_process:
                     conn.execute(delete(table))
 
-            # 插入数据
+            # 插入数据（排除系统表）
             for table_name, table_info in db_data.items():
-                if table_name not in target_metadata.tables:
+                if table_name not in target_metadata.tables or should_exclude_table(table_name):
                     continue
 
                 table = target_metadata.tables[table_name]
                 data = table_info["data"]
-
-                if table_name.startswith('sqlite_'):
-                    continue
 
                 # 准备插入数据（转换日期时间）
                 insert_data = []
@@ -202,8 +202,8 @@ async def clear_database_sqlalchemy(
 ):
     """
     清空数据库
-    - 不指定 modules: 清空所有表（可选保留白名单）
-    - 指定 modules: 只清空指定模块的表
+    - 不指定 modules: 清空所有表（排除系统表，可选保留白名单）
+    - 指定 modules: 只清空指定模块的表（排除系统表）
     """
     try:
         backup_path = create_backup()
@@ -213,17 +213,17 @@ async def clear_database_sqlalchemy(
 
         with engine.begin() as conn:
             if modules:
-                # 只清空指定模块的表
+                # 只清空指定模块的表（排除系统表）
                 target_table_names = get_tables_by_modules(modules)
                 tables_to_clear = [
                     table for table in target_metadata.sorted_tables
-                    if table.name in target_table_names and not table.name.startswith('sqlite_')
+                    if table.name in target_table_names and not should_exclude_table(table.name)
                 ]
             else:
-                # 清空所有表
+                # 清空所有表（排除系统表）
                 tables_to_clear = [
                     table for table in reversed(target_metadata.sorted_tables)
-                    if not table.name.startswith('sqlite_')
+                    if not should_exclude_table(table.name)
                 ]
                 # 应用白名单过滤
                 if keep_whitelist:

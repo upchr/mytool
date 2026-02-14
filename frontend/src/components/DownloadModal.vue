@@ -23,7 +23,7 @@
             :download="filename"
             style="text-decoration: none; width: 100%; text-align: center;"
         >
-          <n-button type="info">
+          <n-button type="info" @click="close">
             下载
           </n-button>
         </a>
