@@ -1,7 +1,6 @@
 # app/core/db/init_db.py
 import logging
 from app.core.db.database import metadata,engine
-from app.core.db.registry import *  # 触发所有表注册
 logger = logging.getLogger(__name__)
 
 def create_all_tables():
