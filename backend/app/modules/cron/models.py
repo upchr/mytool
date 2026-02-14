@@ -11,6 +11,8 @@ cron_jobs_table = Table(
     Column("schedule", String(50), nullable=False),  # crontab format
     Column("command", Text, nullable=False),
     Column("description", Text),
+    Column("is_notice", Boolean, default=False),
+    Column("error_times", Integer, default=0),
     Column("is_active", Boolean, default=True),
     sqlite_autoincrement=True,
 )

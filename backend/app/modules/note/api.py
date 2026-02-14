@@ -1,4 +1,4 @@
-# backend/app/modules/note/api.py
+# app/modules/note/api.py
 from fastapi import APIRouter, Depends, HTTPException
 from app.core.db.database import engine, metadata
 from . import services, schemas, models

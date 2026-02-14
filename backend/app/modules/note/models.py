@@ -1,4 +1,4 @@
-# backend/app/modules/note/models.py
+# app/modules/note/models.py
 from sqlalchemy import Table, Column, Integer, String, Text, MetaData
 from app.core.db.database import metadata, engine
 

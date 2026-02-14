@@ -69,7 +69,7 @@
         />
       </n-form-item>
 
-      <n-form-item path="description" label="描述">
+      <n-form-item path="description" label="任务描述">
         <n-input
             v-model:value="formData.description"
             type="textarea"
@@ -78,13 +78,23 @@
         />
       </n-form-item>
 
-      <n-form-item label="启用">
+      <n-form-item label="消息通知">
+          <n-switch v-model:value="formData.is_notice">
+            <template #checked>禁用</template>
+            <template #unchecked>通知</template>
+          </n-switch>
+          <n-input-number v-if="formData.is_notice" style="margin-left: 10px"
+              v-model:value="formData.error_times" :min="1"
+              placeholder="连续错误达到次数时，消息提醒"
+          />
+      </n-form-item>
+
+      <n-form-item label="任务启用">
         <n-switch v-model:value="formData.is_active">
           <template #checked>停用</template>
           <template #unchecked>启用</template>
         </n-switch>
       </n-form-item>
-
       <n-space justify="end" class="mt-4">
         <n-button @click="handleCancel">取消</n-button>
         <n-button type="primary" @click="handleSubmit">

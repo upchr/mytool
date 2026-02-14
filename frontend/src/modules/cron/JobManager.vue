@@ -172,12 +172,9 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed, nextTick, watch } from 'vue'
-import { useThemeStore } from '@/stores/theme'
-import { getAuthToken } from '@/utils/auth'
 import JobFormModal from '@/modules/cron/JobFormModal.vue'
 import JobLogModal from '@/modules/cron/JobLogModal.vue'
 
-const themeStore = useThemeStore()
 
 // 状态管理
 const nodes = ref([])
@@ -195,11 +192,10 @@ const editingJob = ref({
   schedule: '',
   command: '',
   description: '',
-  is_active: false
+  is_notice: false,
+  error_times: 1,
+  is_active: false,
 })
-
-// Cron 表达式正则
-const CRON_REGEX = /^(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(\d{1,2})(-\d{1,2})?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([01]?\d|2[0-3])(-([01]?\d|2[0-3]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|([1-9]|[12]\d|3[01])(-([1-9]|[12]\d|3[01]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|(1[0-2]|[1-9])(-(1[0-2]|[1-9]))?(\/\d{1,2})?))*\s+(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?)(,(\*|(\*\/\d{1,2})|[0-6](-[0-6])?(\/\d{1,2})?))*$/;
 
 // 节点选项
 const nodeOptions = computed(() => [
@@ -289,7 +285,9 @@ const openEditModal = (job) => {
     schedule: job.schedule,
     command: job.command,
     description: job.description || '',
-    is_active: job.is_active || false
+    is_active: job.is_active || false,
+    is_notice: job.is_notice || false,
+    error_times: job.error_times || 1
   }
   showEditModal.value = true
 }
