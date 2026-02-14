@@ -1,5 +1,10 @@
 <template>
   <n-card title="📝 我的便签" class="max-w-3xl mx-auto">
+    <n-space justify="start" style="margin-bottom: 10px">
+      <n-input v-model:value="searchTitle" class="titleSearch" placeholder="输入标题搜索" />
+      <n-button type="primary" @click="searchTitleOp">搜索</n-button>
+      <n-button type="default" @click="searchTitle='';searchTitleOp()">重置</n-button>
+    </n-space>
     <!--    按钮操作-->
     <n-space justify="end" style="margin-bottom: 10px">
       <n-button v-if="!isBatchMode" @click="enterBatchMode">批量操作</n-button>
@@ -117,6 +122,7 @@ const currentNote = ref({ id: null, title: '', content: '' })
 const isEditing = ref(false)
 const showForm = ref(false)
 const title = ref('我的便签')
+const searchTitle = ref('')
 
 const loadNotes = async () => {
   try {
@@ -126,6 +132,20 @@ const loadNotes = async () => {
     window.$message.error('加载便签失败')
   }
 }
+
+const searchTitleOp = async () => {
+  try {
+    if (searchTitle.value){
+      const res = await window.$request.get(`/notes/${searchTitle.value}`)
+      notes.value = res
+    }else{
+      await loadNotes()
+    }
+  } catch (error) {
+    window.$message.error('加载便签失败')
+  }
+}
+
 const resetForm = (afterFlag=false) => {
   if(afterFlag){
     showForm.value=false
@@ -257,7 +277,15 @@ const toggleAllNotesAdd = () => {
 
 onMounted(loadNotes)
 </script>
-<style>
 
 
+<style scoped>
+.titleSearch{
+  width: 253px
+}
+@media (max-width: 1000px) {
+  .titleSearch {
+    width: 130px
+  }
+}
 </style>

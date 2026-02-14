@@ -46,3 +46,8 @@ def batch_delete_notes(req:schemas.NoteRequest):
     services.batch_delete_notes(engine, req.note_ids)
     # return {"success": True, "deleted_count": success_count}
     return BaseResponse.success()
+
+
+@router.get("/{title}")
+def get_by_title(title: str):
+    return BaseResponse.success(services.get_by_title(title))

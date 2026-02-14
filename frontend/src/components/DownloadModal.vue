@@ -8,7 +8,7 @@
       title="导出完成"
       :mask-closable="false"
       :closable="false"
-      style="width: 10vw;height: 22vh"
+      style="width: 10vw;height: 22vh;min-height: 180px"
   >
     <n-space vertical align="center">
       <n-text>请点击下方按钮下载文件</n-text>
