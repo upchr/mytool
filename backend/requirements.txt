@@ -31,3 +31,5 @@ josepy>=1.12.0
 # tencentcloud-sdk-python>=3.0.0
 
 pyOpenSSL~=25.3.0
+
+python-dotenv>=1.0.1

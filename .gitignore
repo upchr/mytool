@@ -12,6 +12,9 @@ frontend/node_modules
 docker/data
 
 #密码
+.env
+.env.*
+!.env.example
 *account*
 *.crt
 *.key

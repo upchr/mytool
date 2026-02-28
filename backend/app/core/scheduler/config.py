@@ -14,12 +14,11 @@ PROVIDER_CONFIGS = [
         'provider_name': 'cron_job_provider',
         'enabled': True
     }
-    # ,
-    # {
-    #     'module_path': 'app.modules.backup.job_provider',
-    #     'provider_name': 'backup_job_provider',
-    #     'enabled': True
-    # },
+    ,{
+        'module_path': 'app.modules.acme.job_provider',
+        'provider_name': 'ssl_job_provider',
+        'enabled': True
+    },
     # {
     #     'module_path': 'app.modules.cleanup.job_provider',
     #     'provider_name': 'cleanup_job_provider',

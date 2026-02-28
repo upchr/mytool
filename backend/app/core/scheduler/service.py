@@ -99,7 +99,7 @@ class SchedulerService:
             if job_info.module in self.providers:
                 self.providers[job_info.module].on_job_added(job_info)
 
-            logger.info(f"📅 已添加定时任务: {job_info.name} ({job_info.schedule})")
+            logger.info(f"📅 已添加[{job_info.module}]定时任务: {job_info.name} ({job_info.schedule})")
             return True
 
         except Exception as e:
