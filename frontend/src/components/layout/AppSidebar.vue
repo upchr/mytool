@@ -72,16 +72,34 @@ const { width } = useWindowSize()
 
 const isMobile = computed(() => width.value < 1000)
 
-// 构建菜单项
-const menuOptions = routeLabels.map(route => ({
-  label: () => h(RouterLink, { to: route.path }, { default: () => route.label }),
-  key: route.key,
-  icon: renderIcon(route.icon)
-}))
-
+// 递归渲染菜单项的函数
 function renderIcon(icon) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
+
+function renderMenuItem(route) {
+  // 如果有 children，说明是父菜单
+  if (route.children && route.children.length > 0) {
+    return {
+      label: route.label,
+      key: route.key,
+      icon: route.icon ? renderIcon(route.icon) : undefined,
+      children: route.children.map(child => renderMenuItem(child))
+    }
+  }
+
+  // 没有 children，说明是叶子菜单（可点击的页面）
+  return {
+    label: () => h(RouterLink, { to: route.path }, { default: () => route.label }),
+    key: route.key,
+    icon: route.icon ? renderIcon(route.icon) : undefined
+  }
+}
+
+// 构建菜单项（递归处理所有路由）
+const menuOptions = routeLabels.map(route => renderMenuItem(route))
+
+
 </script>
 
 <style scoped>

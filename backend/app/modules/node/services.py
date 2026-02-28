@@ -1,3 +1,5 @@
+from typing import Dict
+
 from sqlalchemy import select, insert, update, delete, desc
 from sqlalchemy.engine import Engine
 
@@ -8,8 +10,8 @@ from .models import nodes_table, credential_templates_table
 from .schemas import NodeCreate, CredentialTemplateCreate
 
 from ..cron.models import cron_jobs_table
-from ..cron.scheduler import scheduler
 from ...core.exception.exceptions import ExistedException, ValidationException
+from ...core.scheduler import scheduler_service
 
 
 def create_node(engine: Engine, node: schemas.NodeCreate) -> dict:
@@ -69,15 +71,39 @@ def toggle_node_status(engine: Engine, node_id: int, is_active: bool) -> bool:
 
     # 3️⃣ 同步调度器（事务外）
     for job in jobs:
+        full_job_id = f"cron_jobs:{job['id']}"
+
         if is_active:
             # 节点恢复：只恢复原本启用的任务
             if job["is_active"]:
-                scheduler.add_job(job)
+                # 检查任务是否已在调度器中
+                if full_job_id not in scheduler_service.job_ids:
+                    _add_job_to_scheduler(job)
         else:
             # 节点停用：全部从调度器移除
-            scheduler.remove_job(job["id"], job["name"])
+            if full_job_id in scheduler_service.job_ids:
+                scheduler_service.remove_job(full_job_id)
 
     return True
+def _add_job_to_scheduler(job:Dict) -> bool:
+    """将任务添加到调度器（内部辅助函数）"""
+    from app.core.scheduler.base import JobInfo
+
+    job_id=job['id']
+    if not job or not job['is_active']:
+        return False
+
+    job_info = JobInfo(
+        job_id=str(job_id),
+        name=job['name'],
+        schedule=job['schedule'],
+        module="cron_jobs",
+        enabled=True,
+        params={'node_id': job['node_id']},
+        description=job.get('description', '')
+    )
+
+    return scheduler_service.add_job(job_info)
 
 def update_node(engine: Engine, node_id: int, node: NodeCreate) -> dict:
     stmt = (

@@ -23,34 +23,37 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """日志配置"""
+    # --- 启动阶段 ---
+    # 1. 日志配置
     from app.core.log.log import setup_logging
     from app.core.config import get_config
-
+    import os
     config_obj = get_config()
     setup_logging(config_obj)
 
     logger.info("应用启动中...")
-    import os
     logger.info(f"启动成功进程id: {os.getpid()}")
 
-    # 数据库初始
+    # 2. 数据库初始化
     from app.core.db.init_db import init_database
     init_database()
 
-    # ws配置
+    # 3. WebSocket 配置
     from app.core.ws.ws_manager import ws_manager
     ws_manager.set_event_loop(asyncio.get_running_loop())
 
-    # 定时任务配置
-    from app.modules.cron.scheduler import scheduler
-    scheduler.start()
+    # 4. 定时任务配置
+    from app.core.scheduler.config import init_schedule,destroy_schedule
+    init_schedule()
 
-    # fastapi
+    # 运行应用
     yield
 
+    # --- 关闭阶段 ---
     logger.info("应用正在关闭...")
-    scheduler.shutdown()
+    # 关闭调度器
+    destroy_schedule()
+
 
 app = FastAPI(title="Note App", lifespan=lifespan)
 

@@ -5,6 +5,7 @@
       :style="{
       marginLeft: collapsed ? '60px' : '200px',
       marginTop: '50px',
+      marginRight: width < 1000 ? '5px':'50px',
       marginBottom: '60px',
       padding: '20px',
       height: 'calc(100vh - 50px)'
@@ -17,6 +18,9 @@
 
 <script setup>
 import AuthDialogs from '@/components/AuthDialogs.vue'
+import {useWindowSize} from "@vueuse/core";
+const { width } = useWindowSize()
+
 const props = defineProps({
   collapsed: Boolean
 })

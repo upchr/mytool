@@ -1,16 +1,33 @@
+# Web 框架
 fastapi==0.128.0
 uvicorn[standard]==0.23.2
-SQLAlchemy==2.0.22
+
+# Pydantic（FastAPI 依赖，确保兼容）
 pydantic>=2.7.0
 
-paramiko==3.4.0
-python-dateutil==2.8.2
-APScheduler==3.10.4
-websockets==12.0
-croniter==3.0.1
+# 数据库
+SQLAlchemy==2.0.22
 python-multipart==0.0.20
-httpx==0.27.0
 
+# 安全与加密
 cryptography==41.0.7
 bcrypt==4.0.1
 PyJWT>=2.8.0
+
+# 网络与工具
+httpx==0.27.0
+paramiko==3.4.0
+python-dateutil==2.8.2
+
+# 定时任务
+APScheduler==3.10.4
+croniter==3.0.1
+
+# ACME 协议（Let's Encrypt 官方客户端）
+acme>=2.0.0
+josepy>=1.12.0
+
+# 腾讯云 SDK（用于 DNSPod DNS-01 验证）
+# tencentcloud-sdk-python>=3.0.0
+
+pyOpenSSL~=25.3.0

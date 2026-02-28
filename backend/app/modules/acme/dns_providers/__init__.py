@@ -1,0 +1,20 @@
+# app/modules/acme/dns_providers/__init__.py
+from abc import ABC, abstractmethod
+
+class DnsProvider(ABC):
+    @abstractmethod
+    def add_txt_record(self, domain: str, subDomain: str, value: str):
+        """添加 TXT 记录"""
+        pass
+
+    @abstractmethod
+    def del_txt_record(self, domain: str, record_id: str):
+        """删除 TXT 记录（可选）"""
+        pass
+
+def get_dns_provider(provider: str) -> DnsProvider:
+    if provider == "tencent":
+        from .tencent import TencentDnsProvider
+        return TencentDnsProvider()
+    else:
+        raise ValueError(f"Unsupported DNS provider: {provider}")

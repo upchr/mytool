@@ -86,6 +86,12 @@ def execute_jobs(request: schemas.ManualExecutionRequest):
 def read_job_executions(job_id: int, limit: int = 10):
     return BaseResponse.success(services.get_executions(engine, job_id, limit))
 
+@router.post("/jobs/sync")
+def sync_jobs():
+    """同步所有任务到调度器"""
+    count = services.sync_all_jobs_to_scheduler(engine)
+    return {"message": f"已同步 {count} 个任务"}
+
 @router.get("/executions/{execution_id}")
 def read_execution(execution_id: int):
     execution = services.get_execution(engine, execution_id)
