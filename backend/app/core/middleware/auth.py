@@ -4,9 +4,12 @@ from sqlalchemy import select
 from app.core.db.database import engine
 from app.core.exception.exceptions import UnauthorizedException, ServerException, UnInitedException
 from app.core.utils.jwt import verify_jwt_token
-from app.modules.sys import system_config_table
+# from app.modules.sys import system_config_table
 import asyncio
 from functools import wraps
+
+from app.modules.sys.models import system_config_table
+
 
 def sync_to_async(func):
     """将同步函数转换为异步函数的装饰器"""

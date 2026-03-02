@@ -8,7 +8,8 @@ import NotificationSettings from '../modules/notify/NotificationSettings.vue'
 import DialogFormEx from '../modules/example/DialogFormEx.vue'
 import SysPage from '../modules/sys/SysPage.vue'
 import SSLDNS from '../modules/ssl/DNS.vue'
-import SSLApply from '../modules/ssl/Apply.vue'
+import SSLApply from '../modules/ssl/apply/JobManager.vue'
+import SSLStore from '../modules/ssl/store/Store.vue'
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon, ChatbubbleEllipsesOutline as NotifyIcon,
@@ -35,6 +36,7 @@ const routes = [
     { path: '/example', component: DialogFormEx },
     { path: '/ssl-dns', component: SSLDNS },
     { path: '/ssl-apply', component: SSLApply },
+    { path: '/ssl-store', component: SSLStore },
 ]
 
 const routeLabels = [

@@ -1,12 +1,7 @@
 <template>
-  <n-card title="证书申请">
-    <n-space justify="end" style="margin-bottom: 10px">
-      <n-button type="primary" @click="showDialog=true;dialogType='add';formData=defaultFormData">添加授权</n-button>
-      <n-button type="error" @click="deleteAll">批量删除</n-button>
-    </n-space>
-    <n-p>你选中了 {{ checkedRowKeys.length }} 行。</n-p>
+  <n-card title="证书仓库">
+
     <n-data-table
-        v-model:checked-row-keys="checkedRowKeys"
         :columns="columns"
         :data="data"
         :pagination="pagination"
@@ -15,6 +10,7 @@
 
 
     <DialogForm
+        disabled="true"
         ref="dialogRef"
         dialogPreset="card"
         v-model:visible="showDialog"
@@ -37,7 +33,7 @@
         <!--获取子组件值formData：<slot name="action" :formData="localFormData"/>-->
         <n-space justify="end">
           <n-button size="small" type="default" @click="handleCancel">取消</n-button>
-          <n-button size="small" type="success" @click="handleSubmit(formData,true)">确定</n-button>
+          <n-button size="small" type="success" @click="handleSuhandleCancelbmit1(formData,true)">下载</n-button>
         </n-space>
       </template>
     </DialogForm>
@@ -52,16 +48,10 @@ import DialogForm from "@/components/DialogForm.vue";
 import {resetPassword} from "@/utils/auth.js";
 const message = useMessage();
 
-const checkedRowKeys = ref([]);
-
 const pagination = {pageSize: 10};
 
 function createColumns({actions }) {
   return [
-    {
-      type: "selection",
-      fixed: "left"
-    },
     {
       title: "ID",
       key: "id",
@@ -107,7 +97,7 @@ function createColumns({actions }) {
       title: "Action",
       key: "actions",
       render(row) {
-        return h('div', {style: {display: 'flex', gap: '8px'}}, [
+        return h('div', { style: { display: 'flex', gap: '8px' } }, [
           // 编辑按钮
           h(
               NButton,
@@ -116,66 +106,48 @@ function createColumns({actions }) {
                 type: "primary",
                 tertiary: true,
                 size: "small",
-                onClick: () => actions.edit(row)
+                onClick: () => actions.cat(row)
               },
-              {default: () => "编辑"}
+              { default: () => "查看" }
           ),
           // 删除按钮
           h(
               NButton,
               {
                 strong: true,
-                type: "error",
+                type: "warning",
                 tertiary: true,
                 size: "small",
-                onClick: () => actions.delete(row)
+                onClick: () => actions.download(row)
               },
-              {default: () => "删除"}
+              { default: () => "下载" }
           )
         ]);
       }
     }
   ];
 }
-
 const columns = createColumns({
   actions: {
-    edit: (row) => {
-      window.$message.info(`编辑 ${row.name}`);
+    cat: (row) => {
+      window.$message.info(`查看 ${row.name}`);
       // 处理编辑逻辑
-      showDialog.value = true;
-      dialogType.value = 'edit'
-
-      formData.value.name = row.name
+      showDialog.value=true
 
     },
-    delete: (row) => {
-      window.$message.error(`删除 ${row.name}`);
+    download: (row) => {
+      window.$message.info(`下载 ${row.name}`);
       // 处理删除逻辑
     }
   }
 });
 
 const data = Array.from({length: 46}).map((_, index) => ({
-  key: index + 1,
-  id: index + 1,
+  key: index+1,
+  id: index+1,
   name: `Edward King ${index}`,
-  tags: [index, index % 2 == 0 ? 'ou' : 'ji']
+  tags: [index,index%2==0?'ou':'ji']
 }));
-
-const deleteAll = async () => {
-  if (checkedRowKeys.value.length === 0) return
-
-  try {
-    console.log(checkedRowKeys.value)
-    // await window.$request.post('/notes/deleteBatch', { note_ids: selectedNoteIds.value })
-    window.$message.success(`成功删除 ${checkedRowKeys.value.length} 个节点`)
-    // cancelBatch()
-    // await loadNotes()
-  } catch (error) {
-    window.$message.error('批量删除失败')
-  }
-}
 
 
 //////////新增、编辑对话框
@@ -203,9 +175,9 @@ const fieldGroups = [
         label: '类型',
         type: 'select',
         options: [
-          {label: '腾讯云', value: 'tencent'},
-          {label: '阿里云', value: 'alibaba'},
-          {label: '其他', value: 'others'}
+          { label: '腾讯云', value: 'tencent' },
+          { label: '阿里云', value: 'alibaba' },
+          { label: '其他', value: 'others' }
         ]
       }
     ]
@@ -229,8 +201,8 @@ const fieldGroups = [
         name: 'secretKey',
         label: 'secretKey',
         type: 'input',
-        inputType: "password",
-        showPasswordOn: "click",
+        inputType:"password",
+        showPasswordOn:"click",
         placeholder: '请输入secretKey',
       }
     ]
@@ -239,16 +211,16 @@ const fieldGroups = [
 // 验证规则
 const formRules = (model) => ({
   type: [
-    {required: true, message: '请选择类型', trigger: ['blur']},
+    { required: true, message: '请选择类型', trigger: ['blur'] },
   ],
   name: [
-    {required: true, message: '请输入名称', trigger: ['blur']},
+    { required: true, message: '请输入名称', trigger: ['blur'] },
   ],
   secretId: [
-    {required: true, message: '请输入secretId', trigger: ['blur']},
+    { required: true, message: '请输入secretId', trigger: ['blur'] },
   ],
   secretKey: [
-    {required: true, message: '请输入secretKey', trigger: ['blur']},
+    { required: true, message: '请输入secretKey', trigger: ['blur'] },
   ]
 })
 
@@ -257,16 +229,16 @@ const showDialog = ref(false)
 const dialogType = ref('add') // 'add' | 'edit'
 
 const dialogTitle = (name) => {
-  return dialogType.value === 'add' ? '添加' : '更新' + name
+  return dialogType.value === 'add' ? '添加' : '更新'+name
 }
 
 const handleCancel = () => {
   console.log('用户取消')
-  showDialog.value = false//控制隐藏，card模式使用
+  showDialog.value=false//控制隐藏，card模式使用
 }
 // 处理提交
-const handleSubmit = async (data, flag = false) => {
-  if (flag) {//自定义按钮时，验证表单
+const handleSubmit = async (data,flag=false) => {
+  if(flag){//自定义按钮时，验证表单
     if (dialogRef.value) {
       try {
         await dialogRef.value.validate()
@@ -278,11 +250,11 @@ const handleSubmit = async (data, flag = false) => {
     }
   }
 
-  formData.value = {...data}
+  formData.value={...data}
 
   try {
-    await resetPassword(data.oldPassword, data.newPassword)
-    showDialog.value = false//控制隐藏，card模式使用
+    await resetPassword(data.oldPassword,data.newPassword)
+    showDialog.value=false//控制隐藏，card模式使用
     // 刷新列表
   } catch (error) {
     console.log(error)
@@ -290,7 +262,7 @@ const handleSubmit = async (data, flag = false) => {
 }
 
 // 字段变更监听（用于联动）
-const handleFieldChange = ({fieldName, value}) => {
+const handleFieldChange = ({ fieldName, value }) => {
   /*  console.log(`字段 ${fieldName} 变化:`, {
       值: value,
       类型: typeof value,

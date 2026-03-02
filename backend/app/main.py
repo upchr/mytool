@@ -12,14 +12,15 @@ from contextlib import asynccontextmanager
 
 from app.core.exception.exception_handler import setup_exception_handlers
 from app.core.middleware.auth import jwt_auth_middleware, check_initialization_middleware
-from app.modules.note.api import router as note_router
-from app.modules.cron.api import router as cron_router
-from app.modules.database.api import router as database_router
-from app.modules.version.api import router as version_router
-from app.modules.notify.api import router as notify_router
-from app.modules.node.api import router as node_router
-from app.modules.example import router as example_router
-from app.modules.sys import router as sys_router
+# from app.modules.note.api import router as note_router
+# from app.modules.cron.api import router as cron_router
+# from app.modules.database.api import router as database_router
+# from app.modules.version.api import router as version_router
+# from app.modules.notify.api import router as notify_router
+# from app.modules.node.api import router as node_router
+# from app.modules.example import router as example_router
+# from app.modules.sys import router as sys_router
+# from app.modules.acme.api import router as ssl_router
 
 """日志调用"""
 logger = logging.getLogger(__name__)
@@ -49,6 +50,9 @@ async def lifespan(app: FastAPI):
     from app.core.scheduler.config import init_schedule,destroy_schedule
     init_schedule()
 
+    # 5路由配置
+    from app.core.routers import router_manager
+    router_manager.register_routers(app)
     # 运行应用
     yield
 
@@ -74,15 +78,16 @@ setup_exception_handlers(app)
 app.middleware("http")(jwt_auth_middleware)
 app.middleware("http")(check_initialization_middleware)
 
-"""路由配置"""
-app.include_router(note_router)
-app.include_router(cron_router)
-app.include_router(node_router)
-app.include_router(database_router)
-app.include_router(version_router)
-app.include_router(notify_router)
-app.include_router(example_router)
-app.include_router(sys_router)
+# """路由配置"""
+# app.include_router(note_router)
+# app.include_router(cron_router)
+# app.include_router(node_router)
+# app.include_router(database_router)
+# app.include_router(version_router)
+# app.include_router(notify_router)
+# app.include_router(example_router)
+# app.include_router(sys_router)
+# app.include_router(ssl_router)
 
 
 """启动main，项目目录为app上级"""
