@@ -7,8 +7,8 @@ import VersionManager from '../modules/version/VersionManager.vue'
 import NotificationSettings from '../modules/notify/NotificationSettings.vue'
 import DialogFormEx from '../modules/example/DialogFormEx.vue'
 import SysPage from '../modules/sys/SysPage.vue'
-import SSLDNS from '../modules/ssl/DNS.vue'
-import SSLApply from '../modules/ssl/apply/JobManager.vue'
+import SSLDns from '../modules/ssl/DNS.vue'
+import SSLApply from '../modules/ssl/apply/Applications.vue'
 import SSLStore from '../modules/ssl/store/Store.vue'
 import {
     AccessibilityOutline as AboutIcon,
@@ -34,7 +34,7 @@ const routes = [
     { path: '/versions', component: VersionManager },
     { path: '/sys', component: SysPage },
     { path: '/example', component: DialogFormEx },
-    { path: '/ssl-dns', component: SSLDNS },
+    { path: '/ssl-dns', component: SSLDns },
     { path: '/ssl-apply', component: SSLApply },
     { path: '/ssl-store', component: SSLStore },
 ]

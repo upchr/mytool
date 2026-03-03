@@ -26,6 +26,9 @@ engine = create_engine(
     connect_args={"check_same_thread": False}  # SQLite 特有
 )
 
+def get_engine():
+    return engine
+
 # Optional: Session
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 

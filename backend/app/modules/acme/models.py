@@ -56,6 +56,8 @@ ssl_applications_table = Table(
     # 自动续期配置
     Column("auto_renew", Boolean, default=True),
     Column("next_renew_at", DateTime),  # 下次自动续期时间
+    Column("auto_notice", Boolean, default=False),
+    Column("when_notice", String(20), default="completed"),  # completed/failed/
 
     # 备注
     Column("description", String(500)),

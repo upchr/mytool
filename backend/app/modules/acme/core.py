@@ -30,9 +30,14 @@ def generate_csr(private_key, domains: list[str]):
     return csr.public_bytes(Encoding.PEM)
 
 class ACMEService:
-    def __init__(self, email: str, cert_dir: str = "./certs", staging: bool = True):
+    def __init__(self, email: str, staging: bool = True):
         self.email = email
-        self.cert_dir = Path(cert_dir)
+
+        if sys.platform.startswith("win"):
+            self.cert_dir = Path.cwd().parent.parent / "data/certs"
+        else:
+            # Linux / Docker 挂载卷
+            self.cert_dir=Path("/toolsplus/data/certs")
         self.cert_dir.mkdir(exist_ok=True)
 
         # 使用 staging 环境用于测试，生产环境改为 False
@@ -378,41 +383,35 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
 
+    #
+    # 创建 ACME 服务 - 使用生产环境
+    acme = ACMEService(
+        email="1017719268@qq.com",
+        staging=True  # 生产环境
+    )
 
-    # if sys.platform.startswith("win"):
-    #     cert_dir = Path.cwd().parent.parent / "data/certs"
-    # else:
-    #     # Linux / Docker 挂载卷
-    #     cert_dir=Path("/toolsplus/data/certs")
-    # cert_dir.mkdir(exist_ok=True)
-    #
-    # # 创建 ACME 服务 - 使用生产环境
-    # acme = ACMEService(
-    #     email="1017719268@qq.com",
-    #     cert_dir=cert_dir,
-    #     staging=True  # 生产环境
-    # )
-    #
-    # # 申请证书
-    # # domains = ["*.chrmjj.fun", "*.gulimall.chrmjj.fun", "chrmjj.fun"]  # 👈 修改这里
-    # domains = ["*.chrmjj.fun"]  # 👈 修改这里
-    # cert, key = acme.issue_certificate(
-    #     domains,
-    #     dns_provider="tencent",
-    #     wait_time=30
-    # )
-    #
-    # print(f"\n✅ 证书生成成功!")
-    # print(f"证书: {cert}")
-    # print(f"密钥: {key}")
+    # 申请证书
+    # domains = ["*.chrmjj.fun", "*.gulimall.chrmjj.fun", "chrmjj.fun"]  # 👈 修改这里
+    domains = ["*.chrmjj.fun"]  # 👈 修改这里
+    cert, key = acme.issue_certificate(
+        domains,
+        dns_provider="tencent",
+        wait_time=30
+    )
 
-    # # 检查续期
-    # if acme.needs_renewal(cert):
-    #     print("需要续期")
-    # else:
-    #     print("证书有效期充足")
+    print(f"\n✅ 证书生成成功!")
+    print(f"证书: {cert}")
+    print(f"密钥: {key}")
+
     # 检查续期
-    if ACMEService.needs_renewal(Path('P:\\workspace\\project\\mytool\\backend\\app\\data\\certs\\chrmjj.fun.crt')):
+    if acme.needs_renewal(cert):
         print("需要续期")
     else:
         print("证书有效期充足")
+
+
+    # # 检查续期
+    # if ACMEService.needs_renewal(Path('P:\\workspace\\project\\mytool\\backend\\app\\data\\certs\\chrmjj.fun.crt')):
+    #     print("需要续期")
+    # else:
+    #     print("证书有效期充足")
