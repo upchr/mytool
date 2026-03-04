@@ -76,6 +76,15 @@
         :scroll-x="1200"
     />
 
+    <!-- todo 嵌套路由出口 - 显示证书详情 -->
+    <router-view v-slot="{ Component }">
+      <transition name="fade">
+        <div v-if="Component" class="router-view-wrapper">
+          <component :is="Component" />
+        </div>
+      </transition>
+    </router-view>
+
     <!-- 新建/编辑申请对话框 -->
     <DialogForm
         ref="dialogRef"
@@ -914,7 +923,7 @@ const handleDelete = (row) => {
 }
 
 const goToCertificate = (certId) => {
-  router.push(`/ssl/certificates?id=${certId}`)
+  router.push(`/ssl-apply/cert/${certId}`)
 }
 
 const handleSearch = () => {

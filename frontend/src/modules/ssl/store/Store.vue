@@ -51,101 +51,14 @@
         :scroll-x="1200"
     />
 
-    <!-- 查看证书详情对话框 -->
-    <n-modal
-        v-model:show="showDetailDialog"
-        preset="card"
-        title="证书详情"
-        style="width: 700px"
-        :bordered="false"
-        :segmented="false"
-    >
-      <n-descriptions v-if="currentCert" :column="2" label-placement="left" bordered>
-        <n-descriptions-item label="ID">{{ currentCert.id }}</n-descriptions-item>
-        <n-descriptions-item label="算法">{{ currentCert.algorithm }}</n-descriptions-item>
-        <n-descriptions-item label="颁发者">{{ currentCert.issuer || '-' }}</n-descriptions-item>
-        <n-descriptions-item label="状态">
-          <n-tag :type="currentCert.is_active ? 'success' : 'error'" size="small">
-            {{ currentCert.is_active ? '有效' : '已失效' }}
-          </n-tag>
-        </n-descriptions-item>
-        <n-descriptions-item label="生效时间" :span="1">
-          {{ formatDate(currentCert.not_before) }}
-        </n-descriptions-item>
-        <n-descriptions-item label="过期时间" :span="1">
-          <span :style="{ color: isExpiringSoon(currentCert.not_after) ? '#d03050' : 'inherit' }">
-            {{ formatDate(currentCert.not_after) }}
-            <n-tag v-if="isExpiringSoon(currentCert.not_after)" type="warning" size="tiny" round>
-              即将过期
-            </n-tag>
-          </span>
-        </n-descriptions-item>
-        <n-descriptions-item label="域名列表" :span="2">
-          <n-space wrap :size="4">
-            <n-tag v-for="domain in currentCert.domains" :key="domain" size="small" type="info" bordered>
-              {{ domain }}
-            </n-tag>
-          </n-space>
-        </n-descriptions-item>
-        <n-descriptions-item label="证书路径" :span="2">
-          <n-ellipsis style="max-width: 500px">
-            {{ currentCert.cert_path || '-' }}
-          </n-ellipsis>
-        </n-descriptions-item>
-        <n-descriptions-item label="证书路径" :span="2">
-          <n-space>
-            <n-button type="info" size="small" @click="copyHandle(currentCert.cert)">复制</n-button>
-            <n-input type="textarea"
-                     :autosize="{
-                    minRows: 4,
-                    maxRows: 6,
-                  }"
-                     v-model:value=currentCert.cert
-            />
-          </n-space>
-        </n-descriptions-item>
-        <n-descriptions-item label="私钥路径" :span="2">
-          <n-ellipsis style="max-width: 500px">
-            {{ currentCert.key_path || '-' }}
-          </n-ellipsis>
-        </n-descriptions-item>
-        <n-descriptions-item label="证书路径" :span="2">
-          <n-space>
-            <n-button type="info" size="small" @click="copyHandle(currentCert.key)">复制</n-button>
-            <n-input type="textarea"
-                     :autosize="{
-                    minRows: 4,
-                    maxRows: 6,
-                }"
-                     v-model:value=currentCert.key
-            />
-          </n-space>
-        </n-descriptions-item>
-        <n-descriptions-item label="创建时间" :span="1">
-          {{ formatDate(currentCert.created_at) }}
-        </n-descriptions-item>
-        <n-descriptions-item label="下载次数" :span="1">
-          {{ downloadCount }}
-          <n-button text type="primary" size="tiny" @click="loadDownloadCount(currentCert.id)">
-            <template #icon>
-              <n-icon><RefreshOutline /></n-icon>
-            </template>
-          </n-button>
-        </n-descriptions-item>
-      </n-descriptions>
-
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showDetailDialog = false">关闭</n-button>
-          <n-button type="primary" @click="handleDownload(currentCert)">
-            <template #icon>
-              <n-icon><DownloadOutline /></n-icon>
-            </template>
-            下载证书
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
+    <!-- 证书详情对话框 -->
+    <CertificateDetail
+        v-if="showDetailDialog"
+        :id="currentCert?.id"
+        :visible="showDetailDialog"
+        @close="showDetailDialog = false"
+        @update:visible="showDetailDialog = $event"
+    />
 
     <!-- 下载对话框 -->
     <DialogForm
@@ -177,15 +90,14 @@
 </template>
 
 <script setup>
-import { h, onMounted, ref, reactive, computed } from "vue"
+import { h, onMounted, ref, reactive } from "vue"
 import {
   NButton, NTag, NSpace, NInput,
-  NSelect, NModal,
-  NEllipsis, NIcon, NDataTable
+  NSelect, NModal, NEllipsis, NIcon, NDataTable, NCard
 } from "naive-ui"
 import { RefreshOutline, DownloadOutline } from "@vicons/ionicons5"
 import DialogForm from "@/components/DialogForm.vue"
-
+import CertificateDetail from "./CertificateDetail.vue"
 
 // ========== 状态定义 ==========
 const loading = ref(false)
@@ -410,16 +322,19 @@ const loadCertificates = async () => {
     if (filterStatus.value !== null && filterStatus.value !== undefined) {
       params.is_active = filterStatus.value
     }
-    // 搜索域名（如果后端支持）
     if (searchKeyword.value) {
       params.search = searchKeyword.value
     }
 
     const res = await window.$request.get('/ssl/certificates', { params })
 
+    if (res.code === 200) {
+      data.value = res.data?.items || []
+      pagination.total = res.data?.total || 0
+    } else {
       data.value = res?.items || []
       pagination.total = res?.total || 0
-
+    }
   } catch (error) {
     console.error('加载证书失败:', error)
     window.$message.error('加载证书失败')
@@ -428,18 +343,14 @@ const loadCertificates = async () => {
   }
 }
 
-const detailCertificates = async (certId) => {
-  try {
-    const res = await window.$request.get(`/ssl/certificates/${certId}`)
-    currentCert.value = res
-  } catch (error) {
-    console.error('加载失败:', error)
-  }
-}
 const loadDownloadCount = async (certId) => {
   try {
     const res = await window.$request.get(`/ssl/certificates/${certId}/downloads/count`)
+    if (res.code === 200) {
+      downloadCount.value = res.data || 0
+    } else {
       downloadCount.value = res || 0
+    }
   } catch (error) {
     console.error('加载下载次数失败:', error)
     downloadCount.value = 0
@@ -453,18 +364,16 @@ const downloadCertificate = async (certId, downloadedBy) => {
       downloaded_by: downloadedBy
     })
 
+    if (res.code === 200) {
       window.$message.success('下载成功')
-
-      // 如果是文件下载，处理文件流
-      if (res?.content) {
-        // 如果有文件内容，创建下载链接
-        const { cert, key, fullchain } = res.content
-        // 这里可以根据需要处理下载逻辑
-        console.log('证书内容:', { cert, key, fullchain })
+      if (res.data?.content) {
+        console.log('证书内容:', res.data.content)
       }
-
       return true
-
+    } else {
+      window.$message.success('下载成功')
+      return true
+    }
   } catch (error) {
     console.error('下载失败:', error)
     window.$message.error(error.response?.data?.message || '下载失败')
@@ -477,9 +386,13 @@ const downloadCertificate = async (certId, downloadedBy) => {
 const deleteCertificate = async (id) => {
   try {
     const res = await window.$request.delete(`/ssl/certificates/${id}`)
+    if (res.code === 200) {
       window.$message.success('删除成功')
       loadCertificates()
-
+    } else {
+      window.$message.success('删除成功')
+      loadCertificates()
+    }
   } catch (error) {
     console.error('删除失败:', error)
     window.$message.error(error.response?.data?.message || '删除失败')
@@ -487,11 +400,8 @@ const deleteCertificate = async (id) => {
 }
 
 // ========== 事件处理 ==========
-const handleView = async (row) => {
-  debugger
-  downloadCount.value = 0
-  await detailCertificates(row.id)
-  await loadDownloadCount(row.id)
+const handleView = (row) => {
+  currentCert.value = row
   showDetailDialog.value = true
 }
 
@@ -501,10 +411,6 @@ const handleDownloadClick = (row) => {
     downloaded_by: ''
   }
   showDownloadDialog.value = true
-}
-
-const handleDownload = async (row) => {
-  await downloadCertificate(row.id, '')
 }
 
 const handleDownloadSubmit = async (data, validate = false) => {
@@ -520,7 +426,6 @@ const handleDownloadSubmit = async (data, validate = false) => {
   const success = await downloadCertificate(data.cert_id, data.downloaded_by)
   if (success) {
     showDownloadDialog.value = false
-    // 刷新下载次数
     if (currentCert.value && currentCert.value.id === data.cert_id) {
       await loadDownloadCount(data.cert_id)
     }
@@ -567,13 +472,6 @@ const handlePageSizeChange = (pageSize) => {
   loadCertificates()
 }
 
-const copy =  (text) => {
-  window.$copyCode(text)
-}
-const copyHandle =  (content) => {
-    copy(content)
-}
-
 // ========== 初始化 ==========
 onMounted(() => {
   loadCertificates()
@@ -581,7 +479,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.n-descriptions {
-  margin-top: 16px;
+.n-card {
+  margin: 16px;
 }
 </style>

@@ -10,6 +10,7 @@ import SysPage from '../modules/sys/SysPage.vue'
 import SSLDns from '../modules/ssl/DNS.vue'
 import SSLApply from '../modules/ssl/apply/Applications.vue'
 import SSLStore from '../modules/ssl/store/Store.vue'
+import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon, ChatbubbleEllipsesOutline as NotifyIcon,
@@ -35,8 +36,20 @@ const routes = [
     { path: '/sys', component: SysPage },
     { path: '/example', component: DialogFormEx },
     { path: '/ssl-dns', component: SSLDns },
-    { path: '/ssl-apply', component: SSLApply },
+    {
+        path: '/ssl-apply',
+        component: SSLApply,
+        children: [
+            {
+                path: 'cert/:id',  // 实际路径: /ssl-apply/cert/123
+                component: SSLDetail,
+                props: true
+            }
+        ]
+    },
     { path: '/ssl-store', component: SSLStore },
+    // { path: '/ssl-store/:id', component: SSLDetail, props: true },
+
 ]
 
 const routeLabels = [
