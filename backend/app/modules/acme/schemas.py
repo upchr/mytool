@@ -85,6 +85,9 @@ class ApplicationBase(BaseModel):
     domains: List[str] = Field(..., description="域名列表", min_items=1)
     algorithm: str = Field("RSA", description="算法：RSA/ECC", pattern="^(RSA|ECC)$")
     renew_before: int = Field(30, description="到期前多少天自动续期", ge=1, le=90)
+
+    email: Optional[str] = Field(None, description="申请人邮箱", max_length=100)
+
     auto_renew: bool = Field(True, description="是否自动续期")
     description: Optional[str] = Field(None, description="备注", max_length=500)
     auto_notice: Optional[bool] = Field(None, description="是否推送")
@@ -97,6 +100,24 @@ class ApplicationBase(BaseModel):
                 raise ValueError(f'无效域名: {domain}')
         return v
 
+class PendingRenewApplication(BaseModel):
+    id: int
+    dns_auth_id: int
+    domains: List[str]
+    algorithm: str
+    renew_before: int
+    email: Optional[str] = None
+
+    auto_renew: bool
+    next_renew_at: Optional[datetime] = None
+    description: Optional[str] =None
+
+    @field_validator('domains', mode='before')
+    def parse_domains(cls, v):
+        """自动解析 JSON 字符串"""
+        if isinstance(v, str):
+            return json.loads(v)
+        return v
 
 class ApplicationCreate(ApplicationBase):
     """创建证书申请"""
@@ -109,6 +130,8 @@ class ApplicationUpdate(BaseModel):
     domains: Optional[List[str]] = Field(None, description="域名列表", min_items=1)
     algorithm: Optional[str] = Field(None, description="算法", pattern="^(RSA|ECC)$")
     renew_before: Optional[int] = Field(None, description="续期提前天数", ge=1, le=90)
+    email: Optional[str] = Field(None, description="申请人邮箱", max_length=100)
+
     auto_renew: Optional[bool] = Field(None, description="是否自动续期")
     description: Optional[str] = Field(None, description="备注", max_length=500)
     auto_notice: Optional[bool] = Field(None, description="是否推送")
@@ -321,5 +344,6 @@ __all__ = [
     "BatchOperationRequest", "RenewRequest", "ExecuteRequest",
     "PageParams", "DNSAuthListResponse", "ApplicationListResponse",
     "ExecutionListResponse", "CertificateListResponse",
-    "DNSAuthStats", "ApplicationStats", "CertificateStats"
+    "DNSAuthStats", "ApplicationStats", "CertificateStats",
+    "PendingRenewApplication"
 ]

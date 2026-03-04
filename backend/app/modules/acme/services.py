@@ -1,6 +1,7 @@
 # app/modules/acme/service.py
 import json
 import logging
+import threading
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from sqlalchemy import select, insert, update, delete, desc, Engine, func, and_
@@ -229,9 +230,83 @@ class ApplicationService:
             "items": result_items
         }
 
+    # def check_recent_processing(self,application_id: int) -> bool:
+    #     """
+    #     检查10分钟内是否有正在处理的申请
+    #
+    #     Returns:
+    #         True: 有正在处理的申请（需要阻止）
+    #         False: 没有正在处理的申请（可以继续）
+    #     """
+    #     # 获取最新的执行记录
+    #     latest_exec = self.execution_repo.get_latest_by_application(application_id)
+    #
+    #     if not latest_exec:
+    #         # 没有执行记录，可以执行
+    #         return False
+    #
+    #     # 检查状态是否为 processing
+    #     if latest_exec['status'] != 'processing':
+    #         # 不是 processing 状态，可以执行
+    #         return False
+    #
+    #     # 计算时间差
+    #     time_diff = datetime.now() - latest_exec['created_at']
+    #
+    #     # 如果 processing 状态的记录在10分钟内
+    #     if time_diff.total_seconds() < 600:  # 600秒 = 10分钟
+    #         logger.info(f"⏳ 上一个申请正在执行中（{int(time_diff.total_seconds())}秒前），请稍后再试")
+    #         return True
+    #     else:
+    #         # 超过10分钟，可能是卡住了，允许重新执行
+    #         logger.info(f"⚠️ 上一个申请状态为 processing 但已超过10分钟（{int(time_diff.total_seconds())}秒前），允许重新执行")
+    #         return False
+    def check_and_clean_stuck_processing(self, application_id: int, stuck_minutes: int = 10) -> bool:
+        """
+        检查并清理卡住的 processing 状态
+
+        Returns:
+            True: 可以执行新任务
+            False: 还有活跃任务，不能执行
+        """
+        latest_exec = self.execution_repo.get_latest_by_application(application_id)
+
+        if not latest_exec:
+            return True
+
+        # 如果不是 processing 状态，可以直接执行
+        if latest_exec['status'] != 'processing':
+            return True
+
+        # 计算时间差
+        time_diff = datetime.now() - latest_exec['created_at']
+        minutes_passed = time_diff.total_seconds() / 60
+
+        if minutes_passed < stuck_minutes:
+            # 10分钟内，还在正常执行中
+            logger.info(f"⏳ 上一个申请正在执行中（{minutes_passed:.1f}分钟前），请稍后再试")
+            return False
+        else:
+            # 超过10分钟，可能是卡住了，自动标记为失败并允许重新执行
+            logger.warning(f"⚠️ 检测到卡住的 processing 任务（{minutes_passed:.1f}分钟前），自动标记为失败")
+
+            # 更新卡住的任务为失败
+            self.execution_repo.fail_execution(
+                latest_exec['id'],
+                "任务执行超时（超过10分钟）"
+            )
+
+            # 更新申请状态
+            self.repo.update_status(application_id, "failed")
+
+            return True
+
     def execute(self, application_id: int, triggered_by: str = "manual") -> Dict[str, Any]:
         """手动执行证书申请"""
-        global cert, key
+        # 检查10分钟内是否有正在处理的申请
+        if not self.check_and_clean_stuck_processing(application_id):
+            raise ValueError("上一个申请正在执行中，请稍后再试（10分钟内只能执行一次）")
+
         application = self.get_by_id(application_id)
         if not application:
             raise ValueError(f"申请 ID:{application_id} 不存在")
@@ -244,84 +319,156 @@ class ApplicationService:
         # 创建执行记录
         execution_id = self.execution_repo.start_execution(application_id, triggered_by)
 
-        try:
-            # TODO: 实际调用acme.sh或certbot申请证书
-            # 这里模拟申请过程
-            logger.info(f"开始申请证书: {application['domains']}")
+        def run_task():
+            cert_data = None
+            error_msg = None
+            cert = None
+            key = None
             try:
-                from app.modules.acme.core import ACMEService
-                acme = ACMEService(
-                    email="1017719268@qq.com",
-                    staging=True  # 生产环境
+                logger.info(f"开始申请证书: {application['domains']}")
+                try:
+                    from app.modules.acme.client import issue_certificate
+                    cert, key = issue_certificate(domains=application['domains'],email=application['email'],dns_provider=dns_auth['provider'])
+                    logger.info(f"申请证书成功: {cert}, {key}")
+                    success = True
+                except Exception as e:
+                    success = False
+                    error_msg=str(e)
+                    logger.error(f"申请证书失败: {error_msg}")
+
+                dns_auth_repo = DNSAuthRepository(self.repo.engine)
+                if success:
+                    # 创建证书记录
+                    cert_data = {
+                        "cert_path":cert,
+                        "key_path":key,
+                        "application_id": application_id,
+                        "execution_id": execution_id,
+                        "domains": json.dumps(application['domains']),
+                        "algorithm": application['algorithm'],
+                        "issuer": "Let's Encrypt",
+                        "not_before": datetime.now(),
+                        "not_after": datetime.now() + timedelta(days=90),
+                        "is_active": True
+                    }
+                    cert_id = self.cert_repo.create(cert_data)
+
+                    # 完成执行
+                    self.execution_repo.complete_execution(
+                        execution_id,
+                        success=True,
+                        cert_id=cert_id,
+                        log="证书申请成功"
+                    )
+
+                    # 更新申请状态
+                    self.repo.update_status(application_id, "completed")
+
+                    # 更新DNS授权统计
+                    dns_auth_repo.update_stats(application['dns_auth_id'], True)
+
+                    # 停用旧证书
+                    self.cert_repo.deactivate_old_certificates(application_id, cert_id)
+
+                    # 更新下次续期时间
+                    self.repo.update_next_renew(application_id, cert_data['not_after'])
+
+                else:
+                    self.execution_repo.fail_execution(execution_id, "申请失败")
+                    self.repo.update_status(application_id, "failed")
+                    dns_auth_repo.update_stats(application['dns_auth_id'], False)
+
+                # 发送通知
+                self._send_notification(
+                    application=application,
+                    success=success,
+                    cert_data=cert_data,
+                    error_msg=error_msg
                 )
-                # 申请证书
-                cert, key = acme.issue_certificate(
-                    domains=application['domains'],
-                    dns_provider=dns_auth['provider'],
-                    wait_time=30
-                )
-                logger.info(f"申请证书成功: {cert}, {key}")
-                success = True
+                # return {
+                #     "execution_id": execution_id,
+                #     "cert_id": cert_id,
+                #     "success": success
+                # }
+
             except Exception as e:
-                success = False
-                logger.error(f"申请证书失败: {str(e)}")
-
-
-
-            cert_id = None
-            dns_auth_repo = DNSAuthRepository(self.repo.engine)
-            if success:
-                # 创建证书记录
-                cert_data = {
-                    "cert_path":cert,
-                    "key_path":key,
-                    "application_id": application_id,
-                    "execution_id": execution_id,
-                    "domains": json.dumps(application['domains']),
-                    "algorithm": application['algorithm'],
-                    "issuer": "Let's Encrypt",
-                    "not_before": datetime.now(),
-                    "not_after": datetime.now() + timedelta(days=90),
-                    "is_active": True
-                }
-                cert_id = self.cert_repo.create(cert_data)
-
-                # 完成执行
-                self.execution_repo.complete_execution(
-                    execution_id,
-                    success=True,
-                    cert_id=cert_id,
-                    log="证书申请成功"
-                )
-
-                # 更新申请状态
-                self.repo.update_status(application_id, "completed")
-
-                # 更新DNS授权统计
-                dns_auth_repo.update_stats(application['dns_auth_id'], True)
-
-                # 停用旧证书
-                self.cert_repo.deactivate_old_certificates(application_id, cert_id)
-
-                # 更新下次续期时间
-                self.repo.update_next_renew(application_id, cert_data['not_after'])
-
-            else:
-                self.execution_repo.fail_execution(execution_id, "申请失败")
+                logger.error(f"证书申请失败: {str(e)}")
+                self.execution_repo.fail_execution(execution_id, str(e))
                 self.repo.update_status(application_id, "failed")
-                dns_auth_repo.update_stats(application['dns_auth_id'], False)
+                raise
+        threading.Thread(target=run_task, daemon=True).start()
 
-            return {
-                "execution_id": execution_id,
-                "cert_id": cert_id,
-                "success": success
-            }
+        return {
+            "execution_id": execution_id,
+            "success": 'back'
+        }
 
-        except Exception as e:
-            logger.error(f"证书申请失败: {str(e)}")
-            self.execution_repo.fail_execution(execution_id, str(e))
-            self.repo.update_status(application_id, "failed")
-            raise
+    def _send_notification(self, application: dict, success: bool,
+                           cert_data: dict = None, error_msg: str = None):
+        """
+        发送证书续期通知
+
+        Args:
+            application: 申请信息
+            success: 是否成功
+            cert_data: 证书数据（成功时）
+            error_msg: 错误信息（失败时）
+        """
+        # 检查是否需要发送通知
+        if not application.get('auto_notice'):
+            logger.debug(f"申请 {application.get('id')} 未开启通知，跳过")
+            return
+
+        # 确定通知时机
+        when_notice = application.get('when_notice')
+
+        # 构建通知内容
+        content = None
+        domains = application.get('domains', [])
+        domains_str = ', '.join(domains) if isinstance(domains, list) else str(domains)
+
+        if success and when_notice == 'completed' and cert_data:
+            # 成功通知
+            next_renew = cert_data.get('not_after')
+            if next_renew:
+                next_renew_str = next_renew.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                next_renew_str = "未知"
+
+            content = (
+                f"✅ 证书续签成功\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"📌 申请ID：{application.get('id')}\n"
+                f"🌐 域名：{domains_str}\n"
+                f"📅 下次续签：{next_renew_str}\n"
+                f"━━━━━━━━━━━━━━━━"
+            )
+            logger.info(f"准备发送成功通知: 申请ID={application.get('id')}")
+
+        elif not success and when_notice == 'failed':
+            # 失败通知
+            content = (
+                f"❌ 证书续签失败\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"📌 申请ID：{application.get('id')}\n"
+                f"🌐 域名：{domains_str}\n"
+                f"💥 错误：{error_msg}\n"
+                f"━━━━━━━━━━━━━━━━"
+            )
+            logger.info(f"准备发送失败通知: 申请ID={application.get('id')}")
+
+        # 发送通知
+        if content:
+            try:
+                # 异步发送通知
+                from app.modules.notify.handler.manager import notification_manager
+                import asyncio
+                asyncio.run(notification_manager.send_broadcast(content=content))
+                logger.info(f"✅ 通知发送成功: 申请ID={application.get('id')}")
+            except Exception as e:
+                logger.error(f"❌ 通知发送失败: {e}")
+        else:
+            logger.debug(f"无需发送通知: 成功={success}, 时机={when_notice}")
 
     def get_stats(self) -> Dict[str, Any]:
         """获取统计信息"""

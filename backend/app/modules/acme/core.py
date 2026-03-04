@@ -34,11 +34,12 @@ class ACMEService:
         self.email = email
 
         if sys.platform.startswith("win"):
-            self.cert_dir = Path.cwd().parent.parent / "data/certs"
+            base_dir = Path.cwd().parent.parent / "data/certs"
         else:
-            # Linux / Docker 挂载卷
-            self.cert_dir=Path("/toolsplus/data/certs")
-        self.cert_dir.mkdir(exist_ok=True)
+            base_dir = Path("/toolsplus/data/certs")
+        safe_email = self._safe_filename(self.email)
+        self.cert_dir = base_dir / safe_email
+        self.cert_dir.mkdir(exist_ok=True, parents=True)
 
         # 使用 staging 环境用于测试，生产环境改为 False
         if staging:
@@ -59,6 +60,11 @@ class ACMEService:
 
         # 注册账户
         self._register_account()
+
+    def _safe_filename(self, email: str) -> str:
+        """将邮箱转换为安全的文件夹名"""
+        # 替换 @ 和 . 为下划线
+        return email.replace('@', '_at_').replace('.', '_dot_')
 
     def _load_or_create_account_key(self):
         """加载或创建账户密钥"""
@@ -203,7 +209,7 @@ class ACMEService:
 
     def issue_certificate(self, domains: list[str], dns_provider: str = "tencent", wait_time: int = 60):
         """
-        申请证书
+        申请证书 - 优化版本，使用字典记录域名和记录的关系
 
         Args:
             domains: 域名列表，如 ['chrmjj.fun', '*.chrmjj.fun']
@@ -227,13 +233,33 @@ class ACMEService:
 
         # 处理所有授权
         dns_client = get_dns_provider(dns_provider)
-        authz_records = []  # 保存记录ID用于清理
-        challenge_results = []  # 保存每个域名的挑战结果
+
+        # 使用字典记录域名 -> 记录信息
+        # key: 域名 (如 "chrmjj.fun")
+        # value: {
+        #   'record_id': DNS记录ID,
+        #   'main_domain': 主域名,
+        #   'rr': 记录名称,
+        #   'validation': 验证值,
+        #   'authz': 授权对象,
+        #   'challenge': 挑战对象
+        # }
+        domain_records = {}
+
+        # 使用字典记录域名 -> 验证信息 (不包括DNS记录ID，用于后续处理)
+        authz_map = {}
 
         try:
+            # ========== 第一步：收集所有需要验证的域名及其验证信息 ==========
+            logger.info("第一步：收集所有需要验证的域名信息")
             for authz in order.authorizations:
                 domain = authz.body.identifier.value
-                logger.info(f"验证域名: {domain}")
+                logger.info(f"需要验证的域名: {domain}")
+
+                # 检查是否已经处理过这个域名（防止重复）
+                if domain in authz_map:
+                    logger.info(f"域名 {domain} 已收集，跳过")
+                    continue
 
                 # 查找 DNS-01 挑战
                 dns_challenge = None
@@ -247,6 +273,8 @@ class ACMEService:
 
                 # 计算验证值
                 validation = dns_challenge.validation(self.client.net.key)
+
+                # 计算记录名称
                 record_name = dns_challenge.chall.validation_domain_name(domain)
 
                 # 解析域名
@@ -258,6 +286,25 @@ class ACMEService:
                     rr = "_acme-challenge"
                     main_domain = record_name.replace("_acme-challenge.", "")
 
+                # 保存挑战信息
+                authz_map[domain] = {
+                    'authz': authz,
+                    'challenge': dns_challenge,
+                    'validation': validation,
+                    'main_domain': main_domain,
+                    'rr': rr,
+                    'record_name': record_name
+                }
+
+                logger.info(f"域名 {domain} 的验证信息: {rr}.{main_domain} -> {validation}")
+
+            # ========== 第二步：为每个唯一域名添加 DNS 记录 ==========
+            logger.info("第二步：添加 DNS TXT 记录")
+            for domain, info in authz_map.items():
+                validation = info['validation']
+                main_domain = info['main_domain']
+                rr = info['rr']
+
                 logger.info(f"添加 TXT 记录: {rr}.{main_domain} -> {validation}")
 
                 # 调用 DNS 提供商添加记录
@@ -265,42 +312,61 @@ class ACMEService:
                 if not record_id:
                     raise Exception(f"添加 DNS 记录失败 for {domain}")
 
-                authz_records.append((main_domain, record_id))
+                # 保存记录信息
+                domain_records[domain] = {
+                    'record_id': record_id,
+                    'main_domain': main_domain,
+                    'rr': rr,
+                    'validation': validation,
+                    'authz': info['authz'],
+                    'challenge': info['challenge']
+                }
 
-                # 等待 DNS 生效
-                logger.info(f"等待 {wait_time} 秒让 DNS 生效")
+                logger.info(f"✅ 添加成功，记录ID: {record_id}")
+
+            # ========== 第三步：等待 DNS 生效（只需等待一次） ==========
+            if domain_records:
+                logger.info(f"第三步：等待 {wait_time} 秒让 DNS 生效")
                 time.sleep(wait_time)
 
-                # 回应挑战
+            # ========== 第四步：回应所有挑战 ==========
+            logger.info("第四步：回应所有挑战")
+            for domain, info in domain_records.items():
                 logger.info(f"回应挑战: {domain}")
-                self.client.answer_challenge(dns_challenge, dns_challenge.response(self.client.net.key))
+                self.client.answer_challenge(
+                    info['challenge'],
+                    info['challenge'].response(self.client.net.key)
+                )
 
-                # 等待一点时间让 Let's Encrypt 处理
-                time.sleep(5)
+            # 等待 Let's Encrypt 处理
+            logger.info("等待 Let's Encrypt 处理...")
+            time.sleep(10)
 
-                # 检查挑战结果
-                is_valid, status, error = self._check_challenge_results(authz)
-                challenge_results.append({
-                    'domain': domain,
-                    'is_valid': is_valid,
-                    'status': status,
-                    'error': error
-                })
+            # ========== 第五步：检查所有挑战结果 ==========
+            logger.info("第五步：检查挑战结果")
+            failed_domains = []
+
+            for domain, info in domain_records.items():
+                logger.info(f"检查域名 {domain} 的验证结果")
+                is_valid, status, error = self._check_challenge_results(info['authz'])
 
                 if not is_valid:
                     logger.error(f"❌ 域名 {domain} 验证失败: {error}")
+                    failed_domains.append({
+                        'domain': domain,
+                        'error': error
+                    })
                 else:
                     logger.info(f"✅ 域名 {domain} 验证成功")
 
-            # 检查是否有失败的验证
-            failed_domains = [r for r in challenge_results if not r['is_valid']]
+            # 如果有失败的验证，抛出异常
             if failed_domains:
-                error_msg = f"以下域名验证失败: {[r['domain'] for r in failed_domains]}"
+                error_msg = f"以下域名验证失败: {[f['domain'] for f in failed_domains]}"
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
-            # 轮询订单状态 - 使用 poll_and_finalize (ClientV2 API)
-            logger.info("等待订单完成...")
+            # ========== 第六步：轮询订单状态并获取证书 ==========
+            logger.info("第六步：等待订单完成...")
             deadline = datetime.now() + timedelta(seconds=180)
 
             try:
@@ -310,108 +376,96 @@ class ACMEService:
 
             except PollError as e:
                 logger.error(f"❌ 订单轮询失败: {e}")
+                raise
 
             except Exception as e:
                 logger.error(f"❌ 订单处理失败: {e}")
                 raise
 
-            # 获取证书
-            logger.info("获取证书")
+            # ========== 第七步：获取证书 ==========
+            logger.info("第七步：获取证书")
 
-            # 方法1: 直接从 finalized_order 获取 (根据您的 ClientV2 实现)
+            # 方法1: 直接从 finalized_order 获取
             if hasattr(finalized_order, 'fullchain_pem') and finalized_order.fullchain_pem:
                 cert_pem = finalized_order.fullchain_pem
                 logger.info("✅ 证书已从订单获取")
             else:
-                # 方法2: 通过证书 URL 获取 (根据您提供的源码)
+                # 方法2: 通过证书 URL 获取
                 logger.info(f"从证书 URL 下载: {finalized_order.body.certificate}")
                 cert_response = self.client._post_as_get(finalized_order.body.certificate)
                 cert_pem = cert_response.text
                 logger.info("✅ 证书下载成功")
 
-            # 保存证书
+            # ========== 第八步：保存证书 ==========
+            # 提取主域名（去掉通配符）
             main_domain = domains[0].replace("*.", "")
-            cert_path = self.cert_dir / f"{main_domain}.crt"
-            key_path = self.cert_dir / f"{main_domain}.key"
+            date_suffix = datetime.now().strftime("%Y%m%d_%H%M%S")
 
+            cert_path = self.cert_dir / f"{main_domain}_{date_suffix}.crt"
+            key_path = self.cert_dir / f"{main_domain}_{date_suffix}.key"
+
+            # 保存证书
             with open(cert_path, "w") as f:
                 f.write(cert_pem)
+            logger.info(f"✅ 证书已保存: {cert_path}")
 
+            # 保存私钥
             with open(key_path, "wb") as f:
                 f.write(private_key.private_bytes(
                     Encoding.PEM,
                     PrivateFormat.TraditionalOpenSSL,
                     NoEncryption()
                 ))
+            logger.info(f"✅ 私钥已保存: {key_path}")
 
-            logger.info(f"✅ 证书已保存: {cert_path}")
+            logger.info(f"✅ 证书申请成功完成!")
             return str(cert_path), str(key_path)
 
+        except Exception as e:
+            logger.error(f"❌ 证书申请失败: {e}")
+            raise
+
         finally:
-            # 清理 DNS 记录
-            logger.info("清理 DNS 记录")
-            for main_domain, record_id in authz_records:
-                try:
-                    dns_client.del_txt_record(main_domain, record_id)
-                    logger.info(f"已删除记录: {record_id}")
-                except Exception as e:
-                    logger.error(f"删除记录失败 {record_id}: {e}")
+            # ========== 第九步：清理 DNS 记录 ==========
+            if domain_records:
+                logger.info("第九步：清理 DNS 记录")
+                for domain, info in domain_records.items():
+                    try:
+                        dns_client.del_txt_record(info['main_domain'], info['record_id'])
+                        logger.info(f"✅ 已删除 {domain} 的记录: {info['record_id']}")
+                    except Exception as e:
+                        logger.error(f"❌ 删除记录失败 {info['record_id']}: {e}")
+            else:
+                logger.info("没有需要清理的 DNS 记录")
 
     @staticmethod
     def needs_renewal(cert_path: str, days_before=30) -> bool:
         """检查证书是否需要续期"""
-        if not Path(cert_path).exists():
+        try:
+            left_days = ACMEService.left_days(cert_path)
+            return left_days - days_before < 0
+        except Exception as e:
+            logger.error(f"检查证书续期失败: {e}")
+            return True
+
+    @staticmethod
+    def left_days(cert_path: str) -> int:
+        cert_path_obj = Path(cert_path)
+
+        if not cert_path_obj.exists():
             logger.info(f"证书不存在: {cert_path}")
             return True
 
-        with open(cert_path, "rb") as f:
-            cert = x509.load_pem_x509_certificate(f.read())
+        try:
+            with open(cert_path_obj, "rb") as f:
+                cert = x509.load_pem_x509_certificate(f.read())
 
-        expiry = cert.not_valid_after
-        now = datetime.now()
-        days_left = (expiry - now).days
-        logger.info(f"证书剩余 {days_left} 天")
+            expiry = cert.not_valid_after
+            now = datetime.now()
+            days_left = (expiry + timedelta(hours=9) - now).days
+            logger.info(f"证书剩余 {days_left} 天")
 
-        return now + timedelta(days=days_before) >= expiry
-
-
-# 使用示例
-if __name__ == "__main__":
-    # 设置日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
-    #
-    # 创建 ACME 服务 - 使用生产环境
-    acme = ACMEService(
-        email="1017719268@qq.com",
-        staging=True  # 生产环境
-    )
-
-    # 申请证书
-    # domains = ["*.chrmjj.fun", "*.gulimall.chrmjj.fun", "chrmjj.fun"]  # 👈 修改这里
-    domains = ["*.chrmjj.fun"]  # 👈 修改这里
-    cert, key = acme.issue_certificate(
-        domains,
-        dns_provider="tencent",
-        wait_time=30
-    )
-
-    print(f"\n✅ 证书生成成功!")
-    print(f"证书: {cert}")
-    print(f"密钥: {key}")
-
-    # 检查续期
-    if acme.needs_renewal(cert):
-        print("需要续期")
-    else:
-        print("证书有效期充足")
-
-
-    # # 检查续期
-    # if ACMEService.needs_renewal(Path('P:\\workspace\\project\\mytool\\backend\\app\\data\\certs\\chrmjj.fun.crt')):
-    #     print("需要续期")
-    # else:
-    #     print("证书有效期充足")
+            return days_left
+        except Exception as e:
+            logger.error(f"检查证书续期失败: {e}")
+            return 0

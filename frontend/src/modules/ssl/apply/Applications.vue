@@ -338,7 +338,8 @@ const formData = ref({
   auto_renew: true,
   auto_notice: false,
   when_notice: 'completed',
-  description: ''
+  description: '',
+  email: ''
 })
 
 const defaultFormData = {
@@ -349,7 +350,8 @@ const defaultFormData = {
   auto_renew: true,
   auto_notice: false,
   when_notice: 'completed',
-  description: ''
+  description: '',
+  email: ''
 }
 
 const dialogTitle = computed(() => {
@@ -379,7 +381,15 @@ const fieldGroups = computed(() => [
         options: dnsAuthOptions.value,
         span: 24,
         required: true
-      }
+      },
+      {
+        name: 'email',
+        label: '邮箱',
+        type: 'input',
+        placeholder: '请输入申请人邮箱',
+        span: 12,
+        required: true
+      },
     ]
   },
 
@@ -513,6 +523,14 @@ const columns = [
     }
   },
   {
+    title: "邮箱",
+    key: "email",
+    width: 80,
+    render(row) {
+      return row.email
+    }
+  },
+  {
     title: "状态",
     key: "status",
     width: 100,
@@ -553,7 +571,7 @@ const columns = [
   {
     title: "操作",
     key: "actions",
-    width: 110,
+    width: 150,
     fixed: "right",
     render(row) {
       return h(NSpace, { size: 'small' }, {

@@ -12,21 +12,21 @@ class CronJobProvider(JobProvider):
     def get_module_name(self) -> str:
         return "cron_jobs"
 
-    def get_all_jobs(self) -> List[JobInfo]:
-        jobs = []
-        db_jobs = services.get_cron_jobs(engine)
-
-        for job in db_jobs:
-            jobs.append(JobInfo(
-                job_id=str(job['id']),
-                name=job['name'],
-                schedule=job['schedule'],
-                module=self.get_module_name(),
-                enabled=job['is_active'],
-                params={'node_id': job['node_id']},
-                description=job.get('description', '')
-            ))
-        return jobs
+    # def get_all_jobs(self) -> List[JobInfo]:
+    #     jobs = []
+    #     db_jobs = services.get_cron_jobs(engine)
+    #
+    #     for job in db_jobs:
+    #         jobs.append(JobInfo(
+    #             job_id=str(job['id']),
+    #             name=job['name'],
+    #             schedule=job['schedule'],
+    #             module=self.get_module_name(),
+    #             enabled=job['is_active'],
+    #             params={'node_id': job['node_id']},
+    #             description=job.get('description', '')
+    #         ))
+    #     return jobs
 
     def get_enabled_jobs(self) -> List[JobInfo]:
         jobs = []

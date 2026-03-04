@@ -35,10 +35,10 @@ class JobProvider(ABC):
         """返回模块名称"""
         pass
 
-    @abstractmethod
-    def get_all_jobs(self) -> List[JobInfo]:
-        """获取所有任务"""
-        pass
+    # @abstractmethod
+    # def get_all_jobs(self) -> List[JobInfo]:
+    #     """获取所有任务,没用"""
+    #     pass
 
     @abstractmethod
     def get_enabled_jobs(self) -> List[JobInfo]:

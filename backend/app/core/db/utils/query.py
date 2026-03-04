@@ -1,5 +1,6 @@
 #app/core/db/utils/query.py
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, text
+
 
 class QueryBuilder:
     """查询构建器，让 Core 用起来像 ORM 一样方便"""
@@ -10,6 +11,10 @@ class QueryBuilder:
         self._conditions = []
 
     def where(self, condition):
+        """支持列对象和文本条件"""
+        if isinstance(condition, str):
+            # 如果是字符串，自动包装为 text
+            condition = text(condition)
         self._conditions.append(condition)
         return self
 

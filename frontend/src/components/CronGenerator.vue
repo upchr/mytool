@@ -180,7 +180,11 @@ const cronExpression = computed(() => {
 
 
 // 更新 Cron 表达式
-const updateCron = async () => {
+const updateCron = async (value) => {
+  if (value === ''|| value === 'custom') {
+    console.log('空值，不处理')
+    return
+  }
   try {
     const res = await window.$request.post('/cron/jobs/crons',{cron: cronExpression.value})
     previewTimes.value = res

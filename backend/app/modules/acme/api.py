@@ -100,7 +100,7 @@ async def get_dns_auth(
 async def list_dns_auth(
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=100),
-        provider: Optional[str] = Query(None, regex="^(tencent|aliyun|cloudflare)$"),
+        provider: Optional[str] = Query(None, pattern="^(tencent|aliyun|cloudflare)$"),
         is_active: Optional[bool] = None,
         search: Optional[str] = None,
         engine=Depends(get_engine)
@@ -197,7 +197,7 @@ async def get_application(
 async def list_applications(
         page: int = Query(1, ge=1),
         page_size: int = Query(20, ge=1, le=100),
-        status: Optional[str] = Query(None, regex="^(pending|processing|completed|failed)$"),
+        status: Optional[str] = Query(None, pattern="^(pending|processing|completed|failed)$"),
         dns_auth_id: Optional[int] = None,
         auto_renew: Optional[bool] = None,
         engine=Depends(get_engine)
@@ -261,7 +261,7 @@ async def list_certificates(
         page_size: int = Query(20, ge=1, le=100),
         is_active: Optional[bool] = None,
         application_id: Optional[int] = None,
-        algorithm: Optional[str] = Query(None, regex="^(RSA|ECC)$"),
+        algorithm: Optional[str] = Query(None, pattern="^(RSA|ECC)$"),
         engine=Depends(get_engine)
 ):
     """获取证书列表"""

@@ -48,6 +48,7 @@ ssl_applications_table = Table(
     Column("domains", String(1000), nullable=False),  # JSON数组：["example.com", "*.example.com"]
     Column("algorithm", String(20), default="RSA"),  # RSA/ECC
     Column("renew_before", Integer, default=30),  # 到期前多少天自动续期
+    Column("email", String(100), nullable=True),  # 申请人邮箱
 
     # 状态
     Column("status", String(20), default="pending"),  # pending/processing/completed/failed

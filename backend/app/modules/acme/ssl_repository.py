@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from app.core.db.utils.repository import BaseRepository
 from app.core.db.utils.query import QueryBuilder
 from app.modules.acme import models
+from app.modules.acme.schemas import PendingRenewApplication
 
 
 class DNSAuthRepository(BaseRepository):
@@ -101,18 +102,19 @@ class ApplicationRepository(BaseRepository):
             .order_by(desc('created_at'))
         return query.execute(self.engine)
 
-    def get_pending_renew(self) -> List[Dict[str, Any]]:
+    def get_pending_renew(self) -> list[PendingRenewApplication]:
         """获取需要续期的申请"""
         now = datetime.now()
         query = QueryBuilder(self.table) \
             .where_eq('auto_renew', True) \
             .where_eq('status', 'completed') \
-            .where('next_renew_at <= :now') \
+            .where(self.table.c.next_renew_at <= now) \
             .order_by('next_renew_at')
 
         with self.engine.connect() as conn:
             result = conn.execute(query.build(), {"now": now})
-            return [dict(row) for row in result.mappings()]
+            from app.modules.acme.schemas import PendingRenewApplication
+            return [PendingRenewApplication.model_validate(row) for row in result.mappings()]
 
     def update_status(self, id: int, status: str, **kwargs):
         """更新状态"""
