@@ -127,8 +127,8 @@ const pagination = reactive({
 // 筛选选项
 const providerOptions = [
   {label: '腾讯云', value: 'tencent'},
-  {label: '阿里云', value: 'aliyun'},
-  {label: 'CloudFlare', value: 'cloudflare'}
+  {label: '阿里云', value: 'aliyun',disabled: true},
+  {label: 'CloudFlare', value: 'cloudflare',disabled: true},
 ]
 
 const statusOptions = [
@@ -232,7 +232,7 @@ const columns = [
   {
     title: "操作",
     key: "actions",
-    width: 60,
+    width: 120,
     fixed: "right",
     render(row) {
       return h(NSpace, {size: 'small'}, {
@@ -287,6 +287,7 @@ const dialogTitle = computed(() => {
 const fieldGroups = [
   {
     title: '基本信息',
+    description: '目前仅支持腾讯云DNS',
     fields: [
       {
         name: 'name',
@@ -465,6 +466,7 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   dialogType.value = 'edit'
   formData.value = {...row}
+  formData.value.secret_id=''
   showDialog.value = true
 }
 

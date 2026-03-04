@@ -200,6 +200,7 @@ async def list_applications(
         status: Optional[str] = Query(None, pattern="^(pending|processing|completed|failed)$"),
         dns_auth_id: Optional[int] = None,
         auto_renew: Optional[bool] = None,
+        domains: Optional[str] = None,
         engine=Depends(get_engine)
 ):
     """获取证书申请列表"""
@@ -209,7 +210,8 @@ async def list_applications(
         page_size=page_size,
         status=status,
         dns_auth_id=dns_auth_id,
-        auto_renew=auto_renew
+        auto_renew=auto_renew,
+        domains=domains
     )
     return BaseResponse.success(result)
 
@@ -262,6 +264,7 @@ async def list_certificates(
         is_active: Optional[bool] = None,
         application_id: Optional[int] = None,
         algorithm: Optional[str] = Query(None, pattern="^(RSA|ECC)$"),
+        search: Optional[str] = None,
         engine=Depends(get_engine)
 ):
     """获取证书列表"""
@@ -271,26 +274,22 @@ async def list_certificates(
         page_size=page_size,
         is_active=is_active,
         application_id=application_id,
-        algorithm=algorithm
+        algorithm=algorithm,
+        search=search
     )
     return BaseResponse.success(result)
 
 
-@router.post("/certificates/{id}/download", response_model=BaseResponse)
-async def download_certificate(
+@router.get("/certificates/{id}/download-zip", response_model=BaseResponse)
+async def download_certificate_zip(
         id: int,
-        downloaded_by: Optional[str] = None,
         engine=Depends(get_engine)
 ):
-    """下载证书"""
-    try:
-        service = CertificateService(engine)
-        result = service.download(id, downloaded_by)
-        return BaseResponse.success(result)
-    except ValueError as e:
-        return BaseResponse.error(404, str(e))
-    except Exception as e:
-        return BaseResponse.error(500, str(e))
+    """下载证书（打包成zip）"""
+    service = CertificateService(engine)
+    result = service.download_as_zip(id, 'admin')
+    return BaseResponse.success(result)
+
 
 
 @router.get("/certificates/{id}/downloads/count", response_model=BaseResponse[int])

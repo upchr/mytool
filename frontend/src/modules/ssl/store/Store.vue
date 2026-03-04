@@ -422,14 +422,21 @@ const handleDownloadSubmit = async (data, validate = false) => {
       return
     }
   }
-
-  const success = await downloadCertificate(data.cert_id, data.downloaded_by)
-  if (success) {
+  try {
+    await window.$request.exportFile(`/ssl/certificates/${data.cert_id}/download-zip`, {}, `cert.zip`);
+  } catch (error) {
+    window.$message.error(`导出失败`)
+  }finally {
     showDownloadDialog.value = false
-    if (currentCert.value && currentCert.value.id === data.cert_id) {
-      await loadDownloadCount(data.cert_id)
-    }
+
   }
+  // const success = await downloadCertificate(data.cert_id, data.downloaded_by)
+  // if (success) {
+  //   showDownloadDialog.value = false
+  //   if (currentCert.value && currentCert.value.id === data.cert_id) {
+  //     await loadDownloadCount(data.cert_id)
+  //   }
+  // }
 }
 
 const handleDelete = (row) => {

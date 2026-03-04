@@ -118,7 +118,7 @@
     </DialogForm>
 
     <!-- 执行历史对话框 -->
-    <n-modal
+    <n-modal class="mediaModal "
         v-model:show="showExecutionsDialog"
         preset="card"
         title="执行历史"
@@ -131,7 +131,6 @@
               :columns="executionColumns"
               :data="executions"
               :loading="executionsLoading"
-              :pagination="executionsPagination"
               :bordered="false"
           />
         </n-tab-pane>
@@ -194,7 +193,7 @@
     </n-modal>
 
     <!-- 执行详情对话框 -->
-    <n-modal
+    <n-modal class="mediaModal "
         v-model:show="showExecutionDetailDialog"
         preset="card"
         title="执行详情"
@@ -259,7 +258,7 @@ import {
   RefreshOutline,
   SearchOutline,
   PlayOutline,
-  // HistoryOutline,
+  ListCircleOutline,
   DocumentTextOutline
 } from "@vicons/ionicons5"
 import DialogForm from "@/components/DialogForm.vue"
@@ -362,6 +361,7 @@ const dialogTitle = computed(() => {
 const fieldGroups = computed(() => [
   {
     title: '基本信息',
+    description: '支持多个域名打包为一个证书。邮箱用于申请证书时注册验证',
     fields: [
       {
         name: 'domains',
@@ -395,6 +395,7 @@ const fieldGroups = computed(() => [
 
   {
     title: '自动续期配置',
+    description: '开启自动续签时，在上次申请证书成功时会进行续签。可配置结果通知！',
     fields: [
       {
         name: 'auto_renew',
@@ -420,7 +421,7 @@ const fieldGroups = computed(() => [
         checkedValue: true,
         uncheckedValue: false,
         span: 8,
-        description: '执行完成后发送通知'
+        description: '执行完成后发送通知。通知配置，见菜单“消息通知”'
       },
       {
         name: 'when_notice',
@@ -477,7 +478,11 @@ const formRules = {
   renew_before: [
     { required: true, type: 'number',message: '请输入续期天数', trigger: ['blur'] },
     { type: 'number', min: 1, max: 90, message: '天数必须在1-90之间', trigger: ['blur'] }
-  ]
+  ],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
+  ],
 }
 
 // ========== 表格列定义 ==========
@@ -584,7 +589,7 @@ const columns = [
             onClick: () => handleViewExecutions(row)
           }, {
             default: () => '历史',
-            icon: () => h(NIcon, null, { default: () => h(PlayOutline) })
+            icon: () => h(NIcon, null, { default: () => h(ListCircleOutline) })
           }),
           h(NButton, {
             strong: true,
@@ -789,7 +794,7 @@ const loadApplications = async () => {
       params.auto_renew = filterAutoRenew.value
     }
     if (searchKeyword.value) {
-      params.search = searchKeyword.value
+      params.domains = searchKeyword.value
     }
 
     const res = await window.$request.get('/ssl/applications', { params })

@@ -198,6 +198,9 @@ class ApplicationService:
         # 应用过滤条件
         for key, value in filters.items():
             if value is not None and hasattr(self.repo.table.c, key):
+                if key =='domains':
+                    query.where_like(key, f'%{value}%')
+                    continue
                 query.where_eq(key, value)
 
         # 总数
@@ -501,8 +504,11 @@ class CertificateService:
         query = QueryBuilder(self.repo.table)
 
         for key, value in filters.items():
-            if value is not None and hasattr(self.repo.table.c, key):
-                query.where_eq(key, value)
+            if value is not None:
+                if key == 'search' and value:
+                    query.where_like('domains', f'%{value}%')
+                elif hasattr(self.repo.table.c, key):
+                    query.where_eq(key, value)
 
         total_query = select(func.count()).select_from(query.table)
         if query._conditions:
@@ -552,6 +558,92 @@ class CertificateService:
                 "fullchain": "完整链内容..."
             }
         }
+
+    def download_as_zip(self, id: int, downloaded_by: str = None) -> Dict[str, Any]:
+        """将证书文件打包成zip下载"""
+        cert = self.get_by_id(id)
+        if not cert:
+            raise ValueError(f"证书 ID:{id} 不存在")
+
+        # 记录下载日志
+        self.download_repo.create({
+            "cert_id": id,
+            "downloaded_by": downloaded_by or "unknown"
+        })
+        import io
+        # 创建内存中的zip文件
+        zip_buffer = io.BytesIO()
+        import base64
+
+        import zipfile
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # 添加证书文件
+            if cert.get('cert_path') and Path(cert['cert_path']).exists():
+                cert_content = Path(cert['cert_path']).read_text(encoding='utf-8')
+                zip_file.writestr(f"{cert['domains'][0]}.crt", cert_content)
+
+            # 添加私钥文件
+            if cert.get('key_path') and Path(cert['key_path']).exists():
+                key_content = Path(cert['key_path']).read_text(encoding='utf-8')
+                zip_file.writestr(f"{cert['domains'][0]}.key", key_content)
+
+            # 添加完整链文件（如果有）
+            if cert.get('fullchain_path') and Path(cert['fullchain_path']).exists():
+                fullchain_content = Path(cert['fullchain_path']).read_text(encoding='utf-8')
+                zip_file.writestr(f"{cert['domains'][0]}_fullchain.crt", fullchain_content)
+
+            # 添加说明文件
+            readme_content = self._generate_readme(cert)
+            zip_file.writestr("README.txt", readme_content)
+
+        # 获取zip文件的二进制内容
+        zip_buffer.seek(0)
+        zip_content = zip_buffer.getvalue()
+
+        # 转换为base64
+        zip_base64 = base64.b64encode(zip_content).decode('utf-8')
+
+        # 生成文件名
+        main_domain = cert['domains'][0].replace('*.', '')
+        filename = f"{main_domain}_cert_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+
+        return {
+            "content": zip_base64,
+            "filename": filename,
+            "encoding": "base64",
+            "mime_type": "application/zip"
+        }
+
+    def _generate_readme(self, cert: Dict) -> str:
+        """生成说明文件"""
+        domains = ', '.join(cert.get('domains', []))
+        not_after = cert.get('not_after')
+        if not_after:
+            expiry = not_after.strftime('%Y-%m-%d %H:%M:%S')
+        else:
+            expiry = '未知'
+
+        readme = f"""证书信息
+================================
+域名: {domains}
+颁发者: {cert.get('issuer', "Let's Encrypt")}
+算法: {cert.get('algorithm', 'RSA')}
+过期时间: {expiry}
+创建时间: {cert.get('created_at', datetime.now()).strftime('%Y-%m-%d %H:%M:%S')}
+
+文件说明:
+- *.crt: 证书文件
+- *.key: 私钥文件
+- *_fullchain.crt: 完整证书链
+
+使用示例 (Nginx):
+ssl_certificate     /path/to/{cert['domains'][0]}.crt;
+ssl_certificate_key /path/to/{cert['domains'][0]}.key;
+
+================================
+生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+        return readme
 
     def get_download_count(self, id: int) -> int:
         """获取下载次数"""

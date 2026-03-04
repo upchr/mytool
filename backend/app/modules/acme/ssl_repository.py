@@ -203,6 +203,7 @@ class ExecutionRepository(BaseRepository):
         return self.update(id, {
             "status": "failed",
             "error": error,
+            "log": error,
             "completed_at": datetime.now()
         })
 

@@ -18,8 +18,8 @@ class SslJobProvider(JobProvider):
         return [JobInfo(
             job_id="renewal_check",
             name="证书续期定时检查",
-            # schedule='0 2 * * *',  # 0 2 * * *
-            schedule='*/5 * * * *',  # 0 2 * * *
+            schedule='0 2 * * *',  # 0 2 * * *
+            # schedule='*/5 * * * *',  # 0 2 * * *
             module=self.get_module_name(),
             params={}
         )]

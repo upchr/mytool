@@ -1,6 +1,6 @@
 <!-- CertificateDetail.vue -->
 <template>
-  <n-modal
+  <n-modal class="mediaModal "
       v-model:show="showModal"
       preset="card"
       :title="`证书详情 - ID: ${certData?.id || ''}`"
@@ -239,15 +239,21 @@ const loadDownloadCount = async (certId) => {
 const handleDownload = async () => {
   if (!certData.value) return
 
-  downloading.value = true
+  // downloading.value = true
+  // try {
+  //   const res = await window.$request.post(`/ssl/certificates/${certData.value.id}/download`)
+  //   window.$message.success('下载成功')
+  //   await loadDownloadCount(certData.value.id)
+  // } catch (error) {
+  //   window.$message.error('下载失败')
+  // } finally {
+  //   downloading.value = false
+  // }
+
   try {
-    const res = await window.$request.post(`/ssl/certificates/${certData.value.id}/download`)
-    window.$message.success('下载成功')
-    await loadDownloadCount(certData.value.id)
+    await window.$request.exportFile(`/ssl/certificates/${certData.value.id}/download-zip`, {}, `cert.zip`);
   } catch (error) {
-    window.$message.error('下载失败')
-  } finally {
-    downloading.value = false
+    window.$message.error(`导出失败`)
   }
 }
 
