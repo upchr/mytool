@@ -1,8 +1,6 @@
 #app/core/db/database.py
 import logging
 import os
-import sys
-from pathlib import Path
 
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker
@@ -10,11 +8,13 @@ from sqlalchemy.orm import sessionmaker
 logger = logging.getLogger(__name__)
 
 """数据库链接配置"""
-if sys.platform.startswith("win"):
-    data_dir = Path.cwd().parent.parent / "data"
-else:
-    # Linux / Docker 挂载卷
-    data_dir=Path("/toolsplus/data")
+from app.core.utils.path_utils import path_utils
+data_dir=path_utils.get_data_dir()
+# if sys.platform.startswith("win"):
+#     data_dir = Path.cwd().parent.parent / "data"
+# else:
+#     # Linux / Docker 挂载卷
+#     data_dir=Path("/toolsplus/data")
 
 logger.info(f"数据库路径：{data_dir}")
 data_dir.mkdir(exist_ok=True)

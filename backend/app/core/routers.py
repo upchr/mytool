@@ -14,11 +14,13 @@ class RouterManager:
 
     def _discover_routers(self):
         """自动发现所有模块的路由"""
-        import pkgutil
         import importlib
-        from pathlib import Path
+        # import pkgutil
+        # from pathlib import Path
+        # modules_path = Path.cwd() / 'modules'
 
-        modules_path = Path.cwd() / 'modules'
+        from app.core.utils.path_utils import path_utils
+        modules_path=path_utils.get_app_modules_dir()
 
         for item in modules_path.iterdir():
             if item.is_dir() and (item / "api.py").exists():

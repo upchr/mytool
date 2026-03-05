@@ -38,6 +38,9 @@ async def lifespan(app: FastAPI):
     logger.info("应用启动中...")
     logger.info(f"启动成功进程id: {os.getpid()}")
 
+    from app.core.utils.path_utils import path_utils
+    path_utils.print_paths()
+
     # 2. 数据库初始化
     from app.core.db.init_db import init_database
     init_database()

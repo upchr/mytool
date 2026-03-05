@@ -33,10 +33,12 @@ class ACMEService:
     def __init__(self, email: str, staging: bool = True):
         self.email = email
 
-        if sys.platform.startswith("win"):
-            base_dir = Path.cwd().parent.parent / "data/certs"
-        else:
-            base_dir = Path("/toolsplus/data/certs")
+        from app.core.utils.path_utils import path_utils
+        base_dir=path_utils.get_cert_dir()
+        # if sys.platform.startswith("win"):
+        #     base_dir = Path.cwd().parent.parent / "data/certs"
+        # else:
+        #     base_dir = Path("/toolsplus/data/certs")
         safe_email = self._safe_filename(self.email)
         self.cert_dir = base_dir / safe_email
         self.cert_dir.mkdir(exist_ok=True, parents=True)

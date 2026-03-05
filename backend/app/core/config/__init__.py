@@ -10,10 +10,12 @@ class Config:
     LOG_LEVEL = logging.INFO
     LOG_FORMAT_CONSOLE = "%(asctime)s %(levelname)-8s [%(name)s] %(message)s"
     LOG_FORMAT_FILE = "%(asctime)s %(levelname)-8s [%(name)s] %(funcName)s:%(lineno)d - %(message)s"
-    if sys.platform.startswith("win"):
-        LOG_DIR = Path.cwd().parent.parent / "data/logs"
-    else:
-        LOG_DIR=Path("/toolsplus/data/logs")
+    from app.core.utils.path_utils import path_utils
+    LOG_DIR=path_utils.get_log_dir()
+    # if sys.platform.startswith("win"):
+    #     LOG_DIR = Path.cwd().parent.parent / "data/logs"
+    # else:
+    #     LOG_DIR=Path("/toolsplus/data/logs")
     LOG_FILENAME = "app.log"
     LOG_MAX_BYTES = 10 * 1024 * 1024  # 10MB
     LOG_BACKUP_COUNT = 10

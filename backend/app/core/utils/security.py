@@ -23,11 +23,13 @@ class SecurityManager:
             return key
 
         # 2. 否则从 data 目录读取
-        if sys.platform.startswith("win"):
-            key_path = Path.cwd().parent.parent / "data"
-        else:
-            # Linux / Docker 挂载卷
-            key_path=Path("/toolsplus/data")
+        from app.core.utils.path_utils import path_utils
+        key_path=path_utils.get_data_dir()
+        # if sys.platform.startswith("win"):
+        #     key_path = Path.cwd().parent.parent / "data"
+        # else:
+        #     # Linux / Docker 挂载卷
+        #     key_path=Path("/toolsplus/data")
         key_path.mkdir(exist_ok=True)
         key_path = f"{key_path}/encryption.key"
 

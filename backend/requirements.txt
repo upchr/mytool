@@ -10,7 +10,7 @@ SQLAlchemy==2.0.22
 python-multipart==0.0.20
 
 # 安全与加密
-cryptography==41.0.7
+cryptography>=43.0.0
 bcrypt==4.0.1
 PyJWT>=2.8.0
 

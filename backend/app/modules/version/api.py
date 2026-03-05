@@ -35,10 +35,12 @@ BRANCH = "main"
 VERSION_URL=f"https://gitee.com/{REPO_USER}/{REPO_NAME}/raw/{BRANCH}/fnpack.json"
 def get_current_version():
     try:
-        if sys.platform.startswith("win"):
-            version_dir = Path.cwd().parent
-        else:
-            version_dir=Path("/toolsplus")
+        from app.core.utils.path_utils import path_utils
+        version_dir=path_utils.get_version_dir()
+        # if sys.platform.startswith("win"):
+        #     version_dir = Path.cwd().parent
+        # else:
+        #     version_dir=Path("/toolsplus")
         version_file = f"{version_dir}/version.txt"
         logger.info(f"version版本文件路径：{version_file}")
 

@@ -10,8 +10,9 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 # 获取 modules 目录的绝对路径
-modules_dir = Path.cwd() / "modules"
-
+from app.core.utils.path_utils import path_utils
+modules_dir=path_utils.get_app_modules_dir()
+# modules_dir = Path.cwd() / "modules"
 for item in modules_dir.iterdir():
     if item.is_dir() and (item / "__init__.py").exists():
         modname = item.name
