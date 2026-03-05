@@ -250,7 +250,7 @@ async def execute_application(
         triggered_by = request.triggered_by if request else "manual"
         id = request.application_id if request else None
         result = service.execute(id, triggered_by)
-        return BaseResponse.success(result, message="执行成功")
+        return BaseResponse.success(result, message="后台执行中，异常时10分钟后可重试~")
     except ValueError as e:
         return BaseResponse.error(400, str(e))
     except Exception as e:

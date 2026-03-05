@@ -893,7 +893,7 @@ const executeApplication = async (id) => {
       application_id: id,
       triggered_by: 'manual'
     })
-      window.$message.success('执行成功')
+      window.$message.success('后台执行中，异常时10分钟后可重试~')
       // 刷新执行历史
       if (currentApplication.value && currentApplication.value.id === id) {
         await loadExecutions(id)

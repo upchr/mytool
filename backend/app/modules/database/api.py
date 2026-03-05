@@ -20,6 +20,7 @@ MODULE_TABLES = {
     "jobs": {"label":"任务管理","tables":["cron_jobs", "job_executions"]},
     "credentials": {"label":"凭据管理","tables":["credential_templates"]},
     "notifications": {"label":"消息通知","tables":["notification_services", "notification_settings"]},
+    "ssl": {"label":"证书管理","tables":["ssl_dns_auth","ssl_applications","ssl_application_executions","ssl_certificates","ssl_download_logs"]},
     # 添加更多模块...
 }
 

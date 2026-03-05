@@ -14,10 +14,11 @@ from app.modules.acme.dns_providers import DnsProvider
 logger = logging.getLogger(__name__)
 
 class TencentDnsProvider(DnsProvider):
-    def __init__(self):
+    def __init__(self, secret_id: str, secret_key: str):
         # 从环境变量读取密钥
-        self.secret_id = os.getenv("TENCENT_SECRET_ID")
-        self.secret_key = os.getenv("TENCENT_SECRET_KEY")
+        super().__init__(secret_id, secret_key)
+        # self.secret_id = os.getenv("TENCENT_SECRET_ID")
+        # self.secret_key = os.getenv("TENCENT_SECRET_KEY")
 
         if not self.secret_id or not self.secret_key:
             raise ValueError("请设置 TENCENT_SECRET_ID 和 TENCENT_SECRET_KEY")
@@ -251,13 +252,16 @@ if __name__ == "__main__":
     from app.core.log.log import setup_logging
     from app.core.config import get_config
 
+    # todo log载入
     config_obj = get_config()
     setup_logging(config_obj)
 
     logger.debug("=== 腾讯云 DNS 提供者测试 ===")
 
     # 创建实例
-    provider = TencentDnsProvider()
+    secret_id = os.getenv("TENCENT_SECRET_ID")
+    secret_key = os.getenv("TENCENT_SECRET_KEY")
+    provider = TencentDnsProvider(secret_id,secret_key)
 
     # 测试添加记录
     logger.debug("\n=== 测试添加 TXT 记录 ===")

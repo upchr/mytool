@@ -1,6 +1,6 @@
 services:
   note-app:
-    image: chrplus/toolsplus:latest
+    image: chrplus/toolsplus22:latest
     build:
       context: ..
       dockerfile: docker/Dockerfile

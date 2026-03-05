@@ -30,25 +30,26 @@ def generate_csr(private_key, domains: list[str]):
     return csr.public_bytes(Encoding.PEM)
 
 class ACMEService:
-    def __init__(self, email: str, staging: bool = True):
+    def __init__(self, email: str,secret_id: str,secret_key: str,dns_provider: str, staging: bool = True):
+        # 基础参数
         self.email = email
+        self.secret_id = secret_id
+        self.secret_key = secret_key
+        self.dns_provider = dns_provider
 
+        # 生成路径
         from app.core.utils.path_utils import path_utils
         base_dir=path_utils.get_cert_dir()
-        # if sys.platform.startswith("win"):
-        #     base_dir = Path.cwd().parent.parent / "data/certs"
-        # else:
-        #     base_dir = Path("/toolsplus/data/certs")
         safe_email = self._safe_filename(self.email)
         self.cert_dir = base_dir / safe_email
         self.cert_dir.mkdir(exist_ok=True, parents=True)
 
-        # 使用 staging 环境用于测试，生产环境改为 False
+        # 认证信息
         if staging:
+            # 使用 staging 环境用于测试，生产环境改为 False
             self.directory_url = "https://acme-staging-v02.api.letsencrypt.org/directory"
         else:
             self.directory_url = "https://acme-v02.api.letsencrypt.org/directory"
-
         self.account_key_path = self.cert_dir / "account_key.pem"
         self.account_key = self._load_or_create_account_key()
 
@@ -209,13 +210,12 @@ class ACMEService:
             logger.error(f"查询授权状态失败: {e}")
             return False, "error", str(e)
 
-    def issue_certificate(self, domains: list[str], dns_provider: str = "tencent", wait_time: int = 60):
+    def issue_certificate(self, domains: list[str], wait_time: int = 60):
         """
         申请证书 - 优化版本，使用字典记录域名和记录的关系
 
         Args:
             domains: 域名列表，如 ['chrmjj.fun', '*.chrmjj.fun']
-            dns_provider: DNS 提供商名称
             wait_time: DNS 生效等待时间（秒）
 
         Returns:
@@ -234,7 +234,7 @@ class ACMEService:
         order = self.client.new_order(csr_pem)
 
         # 处理所有授权
-        dns_client = get_dns_provider(dns_provider)
+        dns_client = get_dns_provider(self.dns_provider,self.secret_id,self.secret_key)
 
         # 使用字典记录域名 -> 记录信息
         # key: 域名 (如 "chrmjj.fun")

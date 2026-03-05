@@ -2,8 +2,12 @@
 from abc import ABC, abstractmethod
 
 class DnsProvider(ABC):
+    def __init__(self, secret_id: str, secret_key: str):
+        self.secret_id = secret_id
+        self.secret_key = secret_key
+
     @abstractmethod
-    def add_txt_record(self, domain: str, subDomain: str, value: str):
+    def add_txt_record(self, domain: str, sub_domain: str, value: str):
         """添加 TXT 记录"""
         pass
 
@@ -12,9 +16,9 @@ class DnsProvider(ABC):
         """删除 TXT 记录（可选）"""
         pass
 
-def get_dns_provider(provider: str) -> DnsProvider:
+def get_dns_provider(provider: str,secret_id: str,secret_key: str) -> DnsProvider:
     if provider == "tencent":
         from .tencent import TencentDnsProvider
-        return TencentDnsProvider()
+        return TencentDnsProvider(secret_id=secret_id,secret_key=secret_key)
     else:
         raise ValueError(f"Unsupported DNS provider: {provider}")

@@ -361,7 +361,7 @@ class ApplicationService:
                 logger.info(f"开始申请证书: {application['domains']}")
                 try:
                     from app.modules.acme.client import issue_certificate
-                    cert, key = issue_certificate(domains=application['domains'],email=application['email'],dns_provider=dns_auth['provider'])
+                    cert, key = issue_certificate(domains=application['domains'],email=application['email'],secret_id=dns_auth['secret_id'],secret_key=dns_auth['secret_key'],dns_provider=dns_auth['provider'])
                     logger.info(f"申请证书成功: {cert}, {key}")
                     success = True
                 except Exception as e:
@@ -407,7 +407,7 @@ class ApplicationService:
                     self.repo.update_next_renew(application_id, cert_data['not_after'])
 
                 else:
-                    self.execution_repo.fail_execution(execution_id, "申请失败")
+                    self.execution_repo.fail_execution(execution_id, f"申请证书失败: {error_msg}")
                     self.repo.update_status(application_id, "failed")
                     dns_auth_repo.update_stats(application['dns_auth_id'], False)
 
