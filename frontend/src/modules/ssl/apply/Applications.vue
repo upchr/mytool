@@ -53,11 +53,19 @@
           刷新
         </n-button>
 
-        <n-button type="primary" @click="handleAdd">
+                <n-button type="primary" @click="handleAdd">
           <template #icon>
             <n-icon><AddOutline /></n-icon>
           </template>
           新建申请
+        </n-button>
+        <n-button type="error" @click="handleDel"
+                  :disabled="checkedRowKeys.length === 0"
+        >
+          <template #icon>
+            <n-icon><TrashOutline /></n-icon>
+          </template>
+          批量删除 ({{ checkedRowKeys.length }})
         </n-button>
       </n-space>
     </n-space>
@@ -71,9 +79,8 @@
         :pagination="pagination"
         :bordered="false"
         :row-key="row => row.id"
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
         :scroll-x="1200"
+        remote
     />
 
     <!-- todo 嵌套路由出口 - 显示证书详情 -->
@@ -131,6 +138,8 @@
               :columns="executionColumns"
               :data="executions"
               :loading="executionsLoading"
+              :pagination="executionsPagination"
+              remote
               :bordered="false"
           />
         </n-tab-pane>
@@ -255,6 +264,7 @@ import {
 } from "naive-ui"
 import {
   AddOutline,
+  TrashOutline,
   RefreshOutline,
   SearchOutline,
   PlayOutline,
@@ -291,9 +301,10 @@ const dialogRef = ref(null)
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 0,
+  itemCount: 0,
   showSizePicker: true,
   pageSizes: [10, 20, 30, 50],
+  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
   onChange: (page) => handlePageChange(page),
   onUpdatePageSize: (pageSize) => handlePageSizeChange(pageSize)
 })
@@ -302,9 +313,12 @@ const pagination = reactive({
 const executionsPagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 0,
+  itemCount: 0,
   showSizePicker: true,
-  pageSizes: [10, 20, 50]
+  pageSizes: [10, 20, 50],
+  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
+  onChange: (page) => handleExecPageChange(page),
+  onUpdatePageSize: (pageSize) => handleExecPageSizeChange(pageSize)
 })
 
 // 筛选选项
@@ -800,7 +814,7 @@ const loadApplications = async () => {
     const res = await window.$request.get('/ssl/applications', { params })
 
       data.value = res?.items || []
-      pagination.total = res?.total || 0
+      pagination.itemCount = res?.total || 0
   } catch (error) {
     console.error('加载证书申请失败:', error)
     window.$message.error('加载失败')
@@ -818,9 +832,8 @@ const loadExecutions = async (applicationId) => {
     }
 
     const res = await window.$request.get(`/ssl/applications/${applicationId}/executions`, { params })
-
-      executions.value = res || []
-      executionsPagination.total = res?.total || 0
+    executions.value = res.items || []
+    executionsPagination.itemCount = res?.total || 0
   } catch (error) {
     console.error('加载执行历史失败:', error)
     window.$message.error('加载执行历史失败')
@@ -902,6 +915,46 @@ const handleAdd = () => {
   showDialog.value = true
 }
 
+// const handleDel = () => {
+//   dialogType.value = 'add'
+//   formData.value = { ...defaultFormData }
+//   showDialog.value = true
+// }
+const handleDel = () => {
+  if (checkedRowKeys.value.length === 0) {
+    window.$message.warning('请先选择要删除的项')
+    return
+  }
+
+  window.$dialog.warning({
+    title: '批量删除确认',
+    content: `确定要删除选中的 ${checkedRowKeys.value.length} 个证书申请吗？`,
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      await batchDeleteApplications()
+    }
+  })
+}
+
+// 批量删除API调用
+const batchDeleteApplications = async () => {
+  try {
+
+    // 发送对象，ids: List[int] = Body(..., embed=True),取出。或者模型取出
+    // await window.$request.post('/ssl/applications/batch', {
+    //    ids: checkedRowKeys.value
+    // })
+    const res = await window.$request.post('/ssl/applications/batch', checkedRowKeys.value)
+    window.$message.success(`${res.message }`)
+
+    checkedRowKeys.value = [] // 清空选择
+    loadApplications() // 重新加载数据
+  } catch (error) {
+    console.error('批量删除失败:', error)
+  }
+}
+
 const handleEdit = (row) => {
   dialogType.value = 'edit'
   formData.value = { ...row }
@@ -976,6 +1029,16 @@ const handlePageSizeChange = (pageSize) => {
   pagination.pageSize = pageSize
   pagination.page = 1
   loadApplications()
+}
+const handleExecPageChange = (page) => {
+  executionsPagination.page = page
+  loadExecutions(currentApplication.value.id)
+}
+
+const handleExecPageSizeChange = (pageSize) => {
+  executionsPagination.pageSize = pageSize
+  executionsPagination.page = 1
+  loadExecutions(currentApplication.value.id)
 }
 
 const handleCancel = () => {

@@ -14,5 +14,5 @@ class BaseResponse(BaseModel, Generic[T]):
         return cls(code=200, message=message, data=data)
 
     @classmethod
-    def error(cls, code: int, message: str, detail: Any = None) -> "BaseResponse[Any]":
+    def error(cls, code: int = 500, message: str = '', detail: Any = None) -> "BaseResponse[Any]":
         return cls(code=code, message=message, data=detail)

@@ -2,6 +2,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, List
 
+from fastapi.params import Body
+
+from app.core.exception.exceptions import NotFoundException
 from app.core.pojo.response import BaseResponse
 from app.core.db.database import get_engine
 from app.modules.acme import schemas
@@ -142,6 +145,26 @@ async def create_application(
     except Exception as e:
         return BaseResponse.error(500, str(e))
 
+@router.post("/applications/batch")
+async def batch_delete_applications(
+        #todo 批量删除
+        # ids: List[int] = Body(..., embed=True), #接收对象机构。或者定义模型
+        ids: List[int], #接收数组
+        engine=Depends(get_engine)
+):
+    """批量删除证书申请"""
+    service = ApplicationService(engine)
+
+    try:
+        deleted_count = service.batch_delete(ids)
+
+        return BaseResponse.success({
+            "deleted": deleted_count,
+            "total": len(ids),
+            "message": f"成功删除 {deleted_count} 个申请"
+        })
+    except Exception as e:
+        return BaseResponse.error(message=f"批量删除失败: {str(e)}")
 
 @router.put("/applications/{id}", response_model=BaseResponse[schemas.ApplicationRead])
 async def update_application(
@@ -256,6 +279,19 @@ async def get_certificate(
         return BaseResponse.error(404, f"证书 ID:{id} 不存在")
     return BaseResponse.success(result)
 
+@router.delete("/certificates/{id}", response_model=BaseResponse)
+async def delete_certificates(
+        id: int,
+        engine=Depends(get_engine)
+):
+    service = CertificateService(engine)
+    success = service.delete(id)
+    if not success:
+        # return BaseResponse.error(404, f"证书 ID:{id} 不存在")
+        raise NotFoundException(detail=f"证书 ID:{id} 不存在")
+    return BaseResponse.success(message="删除成功")
+
+
 
 @router.get("/certificates", response_model=BaseResponse[schemas.CertificateListResponse])
 async def list_certificates(
@@ -313,14 +349,20 @@ async def get_certificate_stats(engine=Depends(get_engine)):
 
 # ========== 执行历史 ==========
 
-@router.get("/applications/{application_id}/executions", response_model=BaseResponse[List[schemas.ExecutionRead]])
+@router.get("/applications/{application_id}/executions", response_model=BaseResponse[schemas.ExecutionListResponse])
 async def list_application_executions(
         application_id: int,
+        page: int = Query(1, ge=1, description="页码，从1开始"),
+        page_size: int = Query(10, ge=1, le=100, description="每页条数"),
         engine=Depends(get_engine)
 ):
     """获取申请的执行历史"""
     service = ExecutionService(engine)
-    results = service.get_by_application(application_id)
+    results = service.get_by_application(
+        page=page,
+        page_size=page_size,
+        application_id=application_id
+        )
     return BaseResponse.success(results)
 
 

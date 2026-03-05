@@ -46,9 +46,8 @@
         :pagination="pagination"
         :bordered="false"
         :row-key="row => row.id"
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
         :scroll-x="1200"
+        remote
     />
 
     <!-- 证书详情对话框 -->
@@ -116,9 +115,10 @@ const downloadDialogRef = ref(null)
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 0,
+  itemCount: 0,
   showSizePicker: true,
   pageSizes: [10, 20, 30, 50],
+  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
   onChange: (page) => handlePageChange(page),
   onUpdatePageSize: (pageSize) => handlePageSizeChange(pageSize)
 })
@@ -328,13 +328,9 @@ const loadCertificates = async () => {
 
     const res = await window.$request.get('/ssl/certificates', { params })
 
-    if (res.code === 200) {
-      data.value = res.data?.items || []
-      pagination.total = res.data?.total || 0
-    } else {
       data.value = res?.items || []
-      pagination.total = res?.total || 0
-    }
+      pagination.itemCount = res?.total || 0
+
   } catch (error) {
     console.error('加载证书失败:', error)
     window.$message.error('加载证书失败')
@@ -347,7 +343,7 @@ const loadDownloadCount = async (certId) => {
   try {
     const res = await window.$request.get(`/ssl/certificates/${certId}/downloads/count`)
     if (res.code === 200) {
-      downloadCount.value = res.data || 0
+      downloadCount.value = res || 0
     } else {
       downloadCount.value = res || 0
     }
@@ -366,8 +362,8 @@ const downloadCertificate = async (certId, downloadedBy) => {
 
     if (res.code === 200) {
       window.$message.success('下载成功')
-      if (res.data?.content) {
-        console.log('证书内容:', res.data.content)
+      if (res?.content) {
+        console.log('证书内容:', res.content)
       }
       return true
     } else {
@@ -386,16 +382,10 @@ const downloadCertificate = async (certId, downloadedBy) => {
 const deleteCertificate = async (id) => {
   try {
     const res = await window.$request.delete(`/ssl/certificates/${id}`)
-    if (res.code === 200) {
       window.$message.success('删除成功')
       loadCertificates()
-    } else {
-      window.$message.success('删除成功')
-      loadCertificates()
-    }
   } catch (error) {
     console.error('删除失败:', error)
-    window.$message.error(error.response?.data?.message || '删除失败')
   }
 }
 

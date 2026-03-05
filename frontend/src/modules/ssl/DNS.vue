@@ -57,10 +57,8 @@
         :pagination="pagination"
         :bordered="false"
         :row-key="row => row.id"
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
         :scroll-x="1200"
-
+        remote
     />
 
     <!-- 新增/编辑对话框 -->
@@ -117,9 +115,10 @@ const filterStatus = ref(null)
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 0,
+  itemCount: 0,
   showSizePicker: true,
   pageSizes: [10, 20, 30, 50],
+  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
   onChange: (page) => handlePageChange(page),
   onUpdatePageSize: (pageSize) => handlePageSizeChange(pageSize)
 })
@@ -390,9 +389,9 @@ const loadDNSs = async () => {
     }
 
     const res = await window.$request.get('/ssl/dns-auth', {params})
-
-      data.value = res.items || []
-      pagination.total = res.total || 0
+    debugger
+    data.value = res.items || []
+    pagination.itemCount = res.total || 0
 
   } catch (error) {
     console.error('加载失败:', error)
@@ -488,7 +487,7 @@ const deleteAll = () => {
     return
   }
 
-  window.$message.warning({
+  window.$dialog.warning({
     title: '批量删除',
     content: `确定要删除选中的 ${checkedRowKeys.value.length} 个授权吗？`,
     positiveText: '确定',

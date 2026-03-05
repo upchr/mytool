@@ -169,6 +169,36 @@ class ApplicationService:
         success = self.repo.update(id, update_data)
         return self.get_by_id(id) if success else None
 
+    def batch_delete(self, ids: List[int]):
+        """批量删除申请"""
+        # return self.repo.delete_many(ids)
+        for id in ids:
+            # 检查是否有证书
+            certificates = self.cert_repo.get_by_application(id)
+            if certificates:
+                raise ValueError(f"ID:{id}申请下有 {len(certificates)} 个证书，无法删除")
+        return self.batch_delete_with_executions(ids)
+
+    def batch_delete_with_executions(self, ids: List[int]) -> int:
+        """批量删除申请及其关联的执行历史（同一个事务中）"""
+        from sqlalchemy import delete
+
+        with self.repo.engine.begin() as conn:
+            # 1. 先删除关联的执行历史
+            if ids:
+                delete_executions_stmt = delete(self.execution_repo.table).where(
+                    self.execution_repo.table.c.application_id.in_(ids)
+                )
+                conn.execute(delete_executions_stmt)
+
+            # 2. 再删除申请
+            delete_apps_stmt = delete(self.repo.table).where(
+                self.repo.table.c.id.in_(ids)
+            )
+            result = conn.execute(delete_apps_stmt)
+
+            return result.rowcount
+
     def delete(self, id: int) -> bool:
         """删除申请"""
         # 检查是否有证书
@@ -499,6 +529,9 @@ class CertificateService:
 
         return data
 
+    def delete(self, id: int) -> bool:
+        return self.repo.delete(id)>0
+
     def get_list(self, page: int = 1, page_size: int = 20, **filters) -> Dict[str, Any]:
         """获取列表（带分页）"""
         query = QueryBuilder(self.repo.table)
@@ -660,8 +693,43 @@ class ExecutionService:
     def __init__(self, engine: Engine):
         self.repo = ExecutionRepository(engine)
 
-    def get_by_application(self, application_id: int) -> List[Dict[str, Any]]:
+    def get_by_application(self, page: int = 1, page_size: int = 20, **filters) -> Dict[str, Any]:
         """根据申请ID获取执行历史"""
+        """获取列表（带分页）"""
+        query = QueryBuilder(self.repo.table)
+
+        # 应用过滤条件
+        for key, value in filters.items():
+            if value is not None:
+                if key == 'search' and value:
+                    query.where_like('name', f'%{value}%')
+                elif hasattr(self.repo.table.c, key):
+                    query.where_eq(key, value)
+
+        # 总数
+        total_query = select(func.count()).select_from(query.table)
+        if query._conditions:
+            total_query = total_query.where(and_(*query._conditions))
+
+        with self.repo.engine.connect() as conn:
+            total = conn.execute(total_query).scalar() or 0
+
+            # 分页
+            query = query.order_by(desc('created_at')) \
+                .limit(page_size) \
+                .offset((page - 1) * page_size)
+
+            items = query.execute(self.repo.engine)
+
+        return {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "pages": (total + page_size - 1) // page_size,
+            "items": [schemas.ExecutionRead.model_validate(item).model_dump() for item in items]
+        }
+
+
         return self.repo.get_by_application(application_id)
 
     def get_latest_by_application(self, application_id: int) -> Optional[Dict[str, Any]]:
