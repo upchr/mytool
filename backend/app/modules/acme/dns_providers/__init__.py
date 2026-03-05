@@ -21,4 +21,4 @@ def get_dns_provider(provider: str,secret_id: str,secret_key: str) -> DnsProvide
         from .tencent import TencentDnsProvider
         return TencentDnsProvider(secret_id=secret_id,secret_key=secret_key)
     else:
-        raise ValueError(f"Unsupported DNS provider: {provider}")
+        raise ValueError(f"暂不支持该DNS提供商: {provider}")

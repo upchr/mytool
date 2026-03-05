@@ -469,7 +469,7 @@ class ApplicationService:
                 next_renew_str = "未知"
 
             content = (
-                f"✅ 证书续签成功\n"
+                f"✅ 证书申请/续签成功\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"📌 申请ID：{application.get('id')}\n"
                 f"🌐 域名：{domains_str}\n"
@@ -481,7 +481,7 @@ class ApplicationService:
         elif not success and when_notice == 'failed':
             # 失败通知
             content = (
-                f"❌ 证书续签失败\n"
+                f"❌ 证书申请/续签失败\n"
                 f"━━━━━━━━━━━━━━━━\n"
                 f"📌 申请ID：{application.get('id')}\n"
                 f"🌐 域名：{domains_str}\n"
