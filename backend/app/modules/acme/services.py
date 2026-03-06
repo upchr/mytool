@@ -609,36 +609,47 @@ class CertificateService:
         import base64
 
         import zipfile
-        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # 添加证书文件
-            if cert.get('cert_path') and Path(cert['cert_path']).exists():
-                cert_content = Path(cert['cert_path']).read_text(encoding='utf-8')
-                zip_file.writestr(f"{cert['domains'][0]}.crt", cert_content)
 
-            # 添加私钥文件
-            if cert.get('key_path') and Path(cert['key_path']).exists():
-                key_content = Path(cert['key_path']).read_text(encoding='utf-8')
-                zip_file.writestr(f"{cert['domains'][0]}.key", key_content)
+        # 匹配域名和日期时间
+        pattern = r'^(.+?)_(\d{8}_\d{6})\.'
+        import re
+        match = re.match(pattern, Path(cert['cert_path']).name)
 
-            # 添加完整链文件（如果有）
-            if cert.get('fullchain_path') and Path(cert['fullchain_path']).exists():
-                fullchain_content = Path(cert['fullchain_path']).read_text(encoding='utf-8')
-                zip_file.writestr(f"{cert['domains'][0]}_fullchain.crt", fullchain_content)
+        zip_base64=None
+        filename=None
+        if match:
+            domain = match.group(1)
+            datetime_str = match.group(2)
 
-            # 添加说明文件
-            readme_content = self._generate_readme(cert)
-            zip_file.writestr("README.txt", readme_content)
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                # 添加证书文件
+                if cert.get('cert_path') and Path(cert['cert_path']).exists():
+                    cert_content = Path(cert['cert_path']).read_text(encoding='utf-8')
+                    zip_file.writestr(f"{domain}.crt", cert_content)
 
-        # 获取zip文件的二进制内容
-        zip_buffer.seek(0)
-        zip_content = zip_buffer.getvalue()
+                # 添加私钥文件
+                if cert.get('key_path') and Path(cert['key_path']).exists():
+                    key_content = Path(cert['key_path']).read_text(encoding='utf-8')
+                    zip_file.writestr(f"{domain}.key", key_content)
 
-        # 转换为base64
-        zip_base64 = base64.b64encode(zip_content).decode('utf-8')
+                # 添加完整链文件（如果有）
+                if cert.get('fullchain_path') and Path(cert['fullchain_path']).exists():
+                    fullchain_content = Path(cert['fullchain_path']).read_text(encoding='utf-8')
+                    zip_file.writestr(f"{domain}_fullchain.crt", fullchain_content)
 
-        # 生成文件名
-        main_domain = cert['domains'][0].replace('*.', '')
-        filename = f"{main_domain}_cert_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+                # 添加说明文件
+                readme_content = self._generate_readme(cert,domain)
+                zip_file.writestr("README.txt", readme_content)
+
+            # 获取zip文件的二进制内容
+            zip_buffer.seek(0)
+            zip_content = zip_buffer.getvalue()
+
+            # 转换为base64
+            zip_base64 = base64.b64encode(zip_content).decode('utf-8')
+
+            # 生成文件名
+            filename = f"{domain}_{datetime_str}.zip"
 
         return {
             "content": zip_base64,
@@ -647,7 +658,7 @@ class CertificateService:
             "mime_type": "application/zip"
         }
 
-    def _generate_readme(self, cert: Dict) -> str:
+    def _generate_readme(self, cert: Dict,domain:str) -> str:
         """生成说明文件"""
         domains = ', '.join(cert.get('domains', []))
         not_after = cert.get('not_after')
@@ -661,8 +672,8 @@ class CertificateService:
 域名: {domains}
 颁发者: {cert.get('issuer', "Let's Encrypt")}
 算法: {cert.get('algorithm', 'RSA')}
-过期时间: {expiry}
 创建时间: {cert.get('created_at', datetime.now()).strftime('%Y-%m-%d %H:%M:%S')}
+过期时间: {expiry}
 
 文件说明:
 - *.crt: 证书文件
@@ -670,11 +681,12 @@ class CertificateService:
 - *_fullchain.crt: 完整证书链
 
 使用示例 (Nginx):
-ssl_certificate     /path/to/{cert['domains'][0]}.crt;
-ssl_certificate_key /path/to/{cert['domains'][0]}.key;
+ssl_certificate     /your_path/{domain}.crt;
+ssl_certificate_key /your_path/{domain}.key;
 
 ================================
-生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+下载时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+By ToolsPlus（开源：https://github.com/upchr/mytool）
 """
         return readme
 

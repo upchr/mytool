@@ -12,6 +12,7 @@ from app.modules.acme.services import (
     DNSAuthService, ApplicationService,
     CertificateService, ExecutionService
 )
+from fastapi import Request
 
 router = APIRouter(prefix="/ssl", tags=["SSL证书管理"])
 
@@ -319,11 +320,13 @@ async def list_certificates(
 @router.get("/certificates/{id}/download-zip", response_model=BaseResponse)
 async def download_certificate_zip(
         id: int,
+        request: Request,
         engine=Depends(get_engine)
 ):
     """下载证书（打包成zip）"""
     service = CertificateService(engine)
-    result = service.download_as_zip(id, 'admin')
+    from app.core.middleware.base_controller import BaseController
+    result = service.download_as_zip(id, BaseController(request).get_current_username())
     return BaseResponse.success(result)
 
 

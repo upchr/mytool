@@ -58,7 +58,7 @@ def login(req: SysBase):
 
         if security_manager.verify_password(req.password, password_hash):
             # 生成 JWT token
-            token = create_jwt_token({"user_id": 1, "role": "admin"})
+            token = create_jwt_token({"user_id": 1, "username": "admin", "role": "admin"})
             return BaseResponse.success({"token": token})
 
         else:

@@ -60,31 +60,31 @@
     />
 
     <!-- 下载对话框 -->
-    <DialogForm
-        ref="downloadDialogRef"
-        v-model:visible="showDownloadDialog"
-        v-model:formData="downloadForm"
-        :use-field-groups="true"
-        :field-groups="downloadFieldGroups"
-        :rules="downloadRules"
-        title="下载证书"
-        positive-text="下载"
-        @submit="handleDownloadSubmit"
-    >
-      <template #action="{ formData }">
-        <n-space justify="end">
-          <n-button size="small" @click="showDownloadDialog = false">取消</n-button>
-          <n-button
-              size="small"
-              type="success"
-              :loading="downloading"
-              @click="handleDownloadSubmit(formData, true)"
-          >
-            下载
-          </n-button>
-        </n-space>
-      </template>
-    </DialogForm>
+<!--    <DialogForm-->
+<!--        ref="downloadDialogRef"-->
+<!--        v-model:visible="showDownloadDialog"-->
+<!--        v-model:formData="downloadForm"-->
+<!--        :use-field-groups="true"-->
+<!--        :field-groups="downloadFieldGroups"-->
+<!--        :rules="downloadRules"-->
+<!--        title="下载证书"-->
+<!--        positive-text="下载"-->
+<!--        @submit="handleDownloadSubmit"-->
+<!--    >-->
+<!--      <template #action="{ formData }">-->
+<!--        <n-space justify="end">-->
+<!--          <n-button size="small" @click="showDownloadDialog = false">取消</n-button>-->
+<!--          <n-button-->
+<!--              size="small"-->
+<!--              type="success"-->
+<!--              :loading="downloading"-->
+<!--              @click="handleDownloadSubmit(formData, true)"-->
+<!--          >-->
+<!--            下载-->
+<!--          </n-button>-->
+<!--        </n-space>-->
+<!--      </template>-->
+<!--    </DialogForm>-->
   </n-card>
 </template>
 
@@ -292,7 +292,7 @@ const columns = [
             tertiary: true,
             size: "small",
             type: "primary",
-            onClick: () => handleDownloadClick(row)
+            onClick: () => handleDownloadSubmit(row, true)
           }, { default: () => "下载" }),
           h(NButton, {
             strong: true,
@@ -404,18 +404,18 @@ const handleDownloadClick = (row) => {
 }
 
 const handleDownloadSubmit = async (data, validate = false) => {
-  if (validate && downloadDialogRef.value) {
-    try {
-      await downloadDialogRef.value.validate()
-    } catch (error) {
-      console.log('表单验证失败:', error)
-      return
-    }
-  }
+  // if (validate && downloadDialogRef.value) {
+  //   try {
+  //     await downloadDialogRef.value.validate()
+  //   } catch (error) {
+  //     console.log('表单验证失败:', error)
+  //     return
+  //   }
+  // }
   try {
-    await window.$request.exportFile(`/ssl/certificates/${data.cert_id}/download-zip`, {}, `cert.zip`);
+    await window.$request.exportFile(`/ssl/certificates/${data.id}/download-zip`, {}, `cert.zip`);
   } catch (error) {
-    window.$message.error(`导出失败`)
+    window.$message.error(`下载证书失败`)
   }finally {
     showDownloadDialog.value = false
 
