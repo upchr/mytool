@@ -686,7 +686,7 @@ ssl_certificate_key /your_path/{domain}.key;
 
 ================================
 下载时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-By ToolsPlus（开源：https://github.com/upchr/mytool）
+By ToolsPlus.ChrPlus（开源：https://github.com/upchr/mytool）
 """
         return readme
 

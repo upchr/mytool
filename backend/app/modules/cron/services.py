@@ -239,7 +239,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
             initial_log = {"status": "running", "output": "正在连接...\n", "error": "", "end_time": None}
             ws_manager.send_log_sync(execution_id, initial_log)
 
-            _, stdout, stderr = ssh.client.exec_command(job['command'], timeout=60)
+            _, stdout, stderr = ssh.execute_command(job['command'], timeout=60)
 
             while True:
                 if execution_manager.should_stop(execution_id):
