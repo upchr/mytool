@@ -14,10 +14,8 @@ from acme.errors import PollError
 from josepy import JWKRSA
 
 from app.modules.acme.dns_providers import get_dns_provider
-import time
 import logging
 import re
-import subprocess
 import time
 
 logger = logging.getLogger(__name__)
@@ -212,6 +210,7 @@ class ACMEService:
             logger.error(f"查询授权状态失败: {e}")
             return False, "error", str(e)
 
+    # 可用分组
     # def issue_certificate(self, domains: list[str], wait_time: int = 60):
     #     """
     #     申请证书 - 优化版本，使用字典记录域名和记录的关系
@@ -258,9 +257,6 @@ class ACMEService:
     #         for authz in order.authorizations:
     #             identifier = authz.body.identifier.value  # 可能是 "chrmjj.fun" 或 "*.chrmjj.fun"
     #             logger.info(f"需要验证的域名: {identifier}")
-    #             if identifier  in challenge_map:
-    #                 logger.info(f"重复，跳过验证的域名: {identifier}")
-    #                 continue
     #
     #             # 查找 DNS-01 挑战
     #             dns_challenge = None
@@ -491,6 +487,7 @@ class ACMEService:
     #                         logger.error(f"❌ 删除记录失败 {info['record_id']}: {e}")
     #         else:
     #             logger.info("没有需要清理的 DNS 记录")
+    # 单过滤
     def issue_certificate(self, domains: list[str], wait_time: int = 60):
         """
         申请证书 - 优化版本，使用字典记录域名和记录的关系
