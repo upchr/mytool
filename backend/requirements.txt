@@ -18,7 +18,8 @@ PyJWT>=2.8.0
 httpx==0.27.0
 paramiko==3.4.0
 python-dateutil==2.8.2
-
+# DNS 主动探测（可选但推荐）
+dnspython>=2.4.0
 # 定时任务
 APScheduler==3.10.4
 croniter==3.0.1
