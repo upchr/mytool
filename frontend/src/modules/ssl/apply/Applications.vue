@@ -406,6 +406,40 @@ const fieldGroups = computed(() => [
       },
     ]
   },
+  {
+    title: '部署配置',
+    description: '配置部署到那里',
+    visible:false,
+    fields: [
+      {
+        name: 'domains',
+        label: '节点',
+        type: 'select',
+        placeholder: '请输入域名',
+        span: 24,
+        filterable:true,
+        tag:true,
+        multiple:true,
+      },
+      {
+        name: 'luj1',
+        label: '路径1',
+        type: 'select',
+        placeholder: '请选择DNS授权',
+        options: dnsAuthOptions.value,
+        span: 24,
+        required: true
+      },
+      {
+        name: 'lu2',
+        label: '路径2',
+        type: 'input',
+        placeholder: '请输入申请人邮箱',
+        span: 12,
+        required: true
+      },
+    ]
+  },
 
   {
     title: '自动续期配置',
@@ -427,7 +461,13 @@ const fieldGroups = computed(() => [
         min: 1,
         max: 90,
         span: 12
-      },
+      }
+    ]
+  },
+  {
+    title: '通知配置',
+    description: '可配置任务执行结果通知！通知配置，见菜单“消息通知”',
+    fields: [
       {
         name: 'auto_notice',
         label: '执行通知',
@@ -435,7 +475,6 @@ const fieldGroups = computed(() => [
         checkedValue: true,
         uncheckedValue: false,
         span: 8,
-        description: '执行完成后发送通知。通知配置，见菜单“消息通知”'
       },
       {
         name: 'when_notice',

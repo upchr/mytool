@@ -39,15 +39,26 @@
         <!-- 分组模式 -->
         <template v-if="props.useFieldGroups">
           <div
-              v-for="(group, groupIndex) in props.fieldGroups"
+              v-for="(group, groupIndex) in internalGroups "
               :key="groupIndex"
-              v-show="group.visible !== false"
               class="field-group"
           >
             <!-- 组标题 -->
-            <NH3 v-if="group.title" style="margin: 0 0 16px 0; font-size: 16px">
-              {{ group.title }}
-            </NH3>
+            <!-- 组标题 - 使用 n-flex -->
+            <n-flex v-if="group.title" justify="space-between" align="center" style="margin: 0 0 16px 0;">
+              <NH3 style="margin: 0; font-size: 16px">{{ group.title }}</NH3>
+              <n-switch :round="false"
+                  v-model:value="group.visible"
+                  @update:value="toggleGroupVisibility(groupIndex, $event)"
+              >
+                <template #checked>
+                  隐藏
+                </template>
+                <template #unchecked>
+                  显示
+                </template>
+              </n-switch>
+            </n-flex>
 
             <!-- 组描述 -->
             <p v-if="group.description" style="margin: 0 0 16px 0; color: #666; font-size: 13px">
@@ -55,7 +66,7 @@
             </p>
 
             <!-- 组内字段 -->
-            <n-form-item
+            <n-form-item v-show="group.visible"
                 v-for="field in group.fields"
                 :key="field.name"
                 :label="field.label"
@@ -204,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, nextTick, h } from 'vue'
+import {ref, watch, computed, nextTick, h, onMounted} from 'vue'
 import {
   NModal,
   NForm,
@@ -482,6 +493,23 @@ const getFieldProps = (field) => {
       return { ...baseProps, ...field.props }
   }
 }
+
+// 添加响应式的内部状态
+const internalGroups = ref([])
+
+// 监听 props 变化
+watch(() => props.fieldGroups, (newGroups) => {
+  internalGroups.value = newGroups.map(group => ({
+    ...group,
+    visible: group.visible !== undefined ? group.visible : true
+  }))
+}, { immediate: true, deep: true })
+
+// 切换方法
+const toggleGroupVisibility = (groupIndex, visible) => {
+  internalGroups.value[groupIndex].visible = visible
+}
+
 
 // 字段值变化
 const handleFieldChange = (fieldName, value) => {
