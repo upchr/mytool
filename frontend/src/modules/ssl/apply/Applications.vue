@@ -255,7 +255,7 @@
 </template>
 
 <script setup>
-import { h, onMounted, ref, reactive, computed } from "vue"
+import {h, onMounted, ref, reactive, computed} from "vue"
 import {
   NButton, NTag, NSpace, NInput,
   NSelect, NModal, NDescriptions, NDescriptionsItem,
@@ -272,7 +272,7 @@ import {
   DocumentTextOutline
 } from "@vicons/ionicons5"
 import DialogForm from "@/components/DialogForm.vue"
-import { useRouter } from 'vue-router'
+import {useRouter} from 'vue-router'
 
 const router = useRouter()
 
@@ -304,7 +304,7 @@ const pagination = reactive({
   itemCount: 0,
   showSizePicker: true,
   pageSizes: [10, 20, 30, 50],
-  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
+  prefix: ({itemCount}) => `总共 ${itemCount} 条`,
   onChange: (page) => handlePageChange(page),
   onUpdatePageSize: (pageSize) => handlePageSizeChange(pageSize)
 })
@@ -316,22 +316,22 @@ const executionsPagination = reactive({
   itemCount: 0,
   showSizePicker: true,
   pageSizes: [10, 20, 50],
-  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
+  prefix: ({itemCount}) => `总共 ${itemCount} 条`,
   onChange: (page) => handleExecPageChange(page),
   onUpdatePageSize: (pageSize) => handleExecPageSizeChange(pageSize)
 })
 
 // 筛选选项
 const statusOptions = [
-  { label: '待处理', value: 'pending' },
-  { label: '处理中', value: 'processing' },
-  { label: '已完成', value: 'completed' },
-  { label: '失败', value: 'failed' }
+  {label: '待处理', value: 'pending'},
+  {label: '处理中', value: 'processing'},
+  {label: '已完成', value: 'completed'},
+  {label: '失败', value: 'failed'}
 ]
 
 const autoRenewOptions = [
-  { label: '开启', value: true },
-  { label: '关闭', value: false }
+  {label: '开启', value: true},
+  {label: '关闭', value: false}
 ]
 
 // DNS授权选项
@@ -371,6 +371,24 @@ const dialogTitle = computed(() => {
   return dialogType.value === 'add' ? '新建证书申请' : '编辑证书申请'
 })
 
+// 节点选项
+const nodes = ref([])
+const nodeOptions = computed(() => [
+  ...nodes.value.map(node => ({
+    label: `${node.name} (${node.host})`,
+    value: node.id
+  }))
+])
+const loadNodes = async () => {
+  try {
+    const res = await window.$request.get('/nodes/only_active/true')
+    nodes.value = res
+  } catch (error) {
+    window.$message.error('加载节点失败')
+  }
+}
+
+
 // 字段分组
 const fieldGroups = computed(() => [
   {
@@ -383,9 +401,9 @@ const fieldGroups = computed(() => [
         type: 'select',
         placeholder: '请输入域名',
         span: 24,
-        filterable:true,
-        tag:true,
-        multiple:true,
+        filterable: true,
+        tag: true,
+        multiple: true,
       },
       {
         name: 'dns_auth_id',
@@ -401,6 +419,39 @@ const fieldGroups = computed(() => [
         label: '邮箱',
         type: 'input',
         placeholder: '请输入申请人邮箱',
+        span: 12,
+        required: true
+      },
+    ]
+  },
+  {
+    title: '部署配置',
+    description: '如果需要在证书生成后，上传到对应节点位置，在此配置',
+    visible: false,
+    fields: [
+      {
+        name: 'node_id',
+        label: '节点',
+        type: 'select',
+        placeholder: '查询节点列表返回的',
+        options: nodeOptions.value,
+        span: 24,
+        filterable: true,
+        tag: true,
+      },
+      {
+        name: 'crt_path',
+        label: 'crt路径',
+        type: 'input',
+        placeholder: '请输入crt上传路径',
+        span: 24,
+        required: true
+      },
+      {
+        name: 'key_path',
+        label: 'key路径',
+        type: 'input',
+        placeholder: '请输入key上传路径',
         span: 12,
         required: true
       },
@@ -427,7 +478,13 @@ const fieldGroups = computed(() => [
         min: 1,
         max: 90,
         span: 12
-      },
+      }
+    ]
+  },
+  {
+    title: '通知配置',
+    description: '可配置任务执行结果通知！通知配置，见菜单“消息通知”',
+    fields: [
       {
         name: 'auto_notice',
         label: '执行通知',
@@ -435,7 +492,6 @@ const fieldGroups = computed(() => [
         checkedValue: true,
         uncheckedValue: false,
         span: 8,
-        description: '执行完成后发送通知。通知配置，见菜单“消息通知”'
       },
       {
         name: 'when_notice',
@@ -466,16 +522,14 @@ const fieldGroups = computed(() => [
 ])
 
 // 表单验证规则
-const formRules = {
+const formRules = (model) => ({
   dns_auth_id: [
     {required: true, type: 'number', message: '请选择DNS授权', trigger: ['blur', 'change']}
   ],
   domains: [
-    {required: true, type: 'array', message: '至少添加一个域名1', trigger: ['change']},
+    {required: true, type: 'array', message: '至少添加一个域名', trigger: ['change']},
     {
       validator: (rule, value) => {
-        if (!value || value.length === 0) return new Error('至少添加一个域名')
-        debugger
         for (let domain of value) {
           if (!domain || domain.trim() === '') {
             return new Error('域名不能为空')
@@ -489,6 +543,17 @@ const formRules = {
       trigger: ['blur']
     }
   ],
+  node_id: [
+    {
+      validator: (rule, value) => {
+        if (value)
+          if ( (!model.crt_path || !model.crt_path.trim()) || (!model.key_path || !model.key_path.trim()))
+            return new Error('选择上传节点后，需要配置crt、key上传路径')
+        return true
+      },
+      trigger: ['blur']
+    }
+  ],
   renew_before: [
     {required: true, type: 'number', message: '请输入续期天数', trigger: ['blur']},
     {type: 'number', min: 1, max: 90, message: '天数必须在1-90之间', trigger: ['blur']}
@@ -497,7 +562,7 @@ const formRules = {
     {required: true, message: '请输入邮箱', trigger: 'blur'},
     {type: 'email', message: '邮箱格式不正确', trigger: 'blur'}
   ],
-}
+})
 
 // ========== 表格列定义 ==========
 const columns = [
@@ -1066,13 +1131,14 @@ const handleSubmit = async (data, validate = false) => {
 }
 
 const handleFieldChange = ({fieldName, value}) => {
-  // console.log(`字段 ${fieldName} 变化:`, value)
+  console.log(`字段 ${fieldName} 变化:`, value)
 }
 
 // ========== 初始化 ==========
 onMounted(async () => {
   await loadDNSAuths()
   await loadApplications()
+  await loadNodes()
 })
 </script>
 

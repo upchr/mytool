@@ -60,29 +60,22 @@ const routeLabels = [
         key: 'notes'
     },
     {
+        path: '/nodes',
+        label: '节点管理',
+        icon: PCIcon,
+        key: 'nodes'
+    },
+    {
         path: '/notify',
         label: '消息通知',
         icon: NotifyIcon,
         key: 'notify'
     },
     {
-        label: '定时脚本',
+        path: '/jobs',
+        label: '任务管理',
         icon: ClockIcon,
-        key: 'cron',
-        children: [
-            {
-                path: '/nodes',
-                label: '节点管理',
-                icon: PCIcon,
-                key: 'nodes'
-            },
-            {
-                path: '/jobs',
-                label: '任务管理',
-                icon: ClockIcon,
-                key: 'jobs'
-            },
-        ]
+        key: 'jobs'
     },
     {
         label: '证书管理',

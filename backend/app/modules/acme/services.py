@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 from sqlalchemy import select, insert, update, delete, desc, Engine, func, and_
 from pathlib import Path
 
+from app.core.db.database import engine
 from app.core.db.utils.query import QueryBuilder
 from app.modules.acme import schemas
 from app.modules.acme.ssl_repository import (
@@ -402,6 +403,23 @@ class ApplicationService:
 
                     # 停用旧证书
                     self.cert_repo.deactivate_old_certificates(application_id, cert_id)
+
+                    def upload_task():
+                        try:
+                            from app.modules.node.services import get_node
+                            node_dict = get_node(engine, application['node_id'])
+                            from app.modules.node.schemas import NodeRead
+                            from app.core.sh.ssh_client import SSHClient
+                            ssh = SSHClient(NodeRead(**node_dict))
+                            ssh.connect()
+                            ssh.upload_file(cert, application['crt_path'])
+                            ssh.upload_file(key, application['key_path'])
+                            logger.info(f"证书上传成功: {application['crt_path']}")
+                        except Exception as e:
+                            logger.error(f"证书上传失败: {str(e)}")
+                            # 上传失败不影响主流程，只记录日志
+                    threading.Thread(target=upload_task, daemon=True).start()
+
 
                     # 更新下次续期时间
                     self.repo.update_next_renew(application_id, cert_data['not_after'])

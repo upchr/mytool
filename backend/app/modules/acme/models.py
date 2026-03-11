@@ -60,6 +60,12 @@ ssl_applications_table = Table(
     Column("auto_notice", Boolean, default=False),
     Column("when_notice", String(20), default="completed"),  # completed/failed/
 
+    #上传配置
+    Column("node_id", Integer),
+    Column("crt_path", String(500)),
+    Column("key_path", String(500)),
+
+
     # 备注
     Column("description", String(500)),
 

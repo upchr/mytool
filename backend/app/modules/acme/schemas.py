@@ -92,6 +92,12 @@ class ApplicationBase(BaseModel):
     description: Optional[str] = Field(None, description="备注", max_length=500)
     auto_notice: Optional[bool] = Field(None, description="是否推送")
     when_notice: Optional[str] = Field(None, description="推送时机", pattern="^(completed|failed)$")
+
+    node_id: Optional[int] = Field(None, description="上传节点id", gt=0)
+    crt_path: Optional[str] = Field(None, description="crt_path", max_length=500)
+    key_path: Optional[str] = Field(None, description="key_path", max_length=500)
+
+
     @field_validator('domains')
     def validate_domains(cls, v):
         """简单域名格式验证"""
@@ -111,6 +117,10 @@ class PendingRenewApplication(BaseModel):
     auto_renew: bool
     next_renew_at: Optional[datetime] = None
     description: Optional[str] =None
+
+    node_id: int
+    crt_path: str
+    key_path: str
 
     @field_validator('domains', mode='before')
     def parse_domains(cls, v):
@@ -138,6 +148,9 @@ class ApplicationUpdate(BaseModel):
     when_notice: Optional[str] = Field(None, description="推送时机", pattern="^(completed|failed)$")
     status: Optional[str] = Field(None, description="状态", pattern="^(pending|processing|completed|failed)$")
 
+    node_id: int = Field(..., description="上传节点id", gt=0)
+    crt_path: Optional[str] = Field(None, description="crt_path", max_length=500)
+    key_path: Optional[str] = Field(None, description="key_path", max_length=500)
 
 class ApplicationRead(ApplicationBase):
     """证书申请读取"""
