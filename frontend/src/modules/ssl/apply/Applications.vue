@@ -53,7 +53,7 @@
           刷新
         </n-button>
 
-                <n-button type="primary" @click="handleAdd">
+        <n-button type="primary" @click="handleAdd">
           <template #icon>
             <n-icon><AddOutline /></n-icon>
           </template>
@@ -126,11 +126,11 @@
 
     <!-- 执行历史对话框 -->
     <n-modal class="mediaModal "
-        v-model:show="showExecutionsDialog"
-        preset="card"
-        title="执行历史"
-        style="width: 800px"
-        :bordered="false"
+             v-model:show="showExecutionsDialog"
+             preset="card"
+             title="执行历史"
+             style="width: 800px"
+             :bordered="false"
     >
       <n-tabs type="line" animated>
         <n-tab-pane name="history" tab="执行记录">
@@ -203,10 +203,10 @@
 
     <!-- 执行详情对话框 -->
     <n-modal class="mediaModal "
-        v-model:show="showExecutionDetailDialog"
-        preset="card"
-        title="执行详情"
-        style="width: 600px"
+             v-model:show="showExecutionDetailDialog"
+             preset="card"
+             title="执行详情"
+             style="width: 600px"
     >
       <n-descriptions v-if="currentExecution" bordered :column="1">
         <n-descriptions-item label="执行ID">{{ currentExecution.id }}</n-descriptions-item>
@@ -406,40 +406,6 @@ const fieldGroups = computed(() => [
       },
     ]
   },
-  {
-    title: '部署配置',
-    description: '配置部署到那里',
-    visible:false,
-    fields: [
-      {
-        name: 'domains',
-        label: '节点',
-        type: 'select',
-        placeholder: '请输入域名',
-        span: 24,
-        filterable:true,
-        tag:true,
-        multiple:true,
-      },
-      {
-        name: 'luj1',
-        label: '路径1',
-        type: 'select',
-        placeholder: '请选择DNS授权',
-        options: dnsAuthOptions.value,
-        span: 24,
-        required: true
-      },
-      {
-        name: 'lu2',
-        label: '路径2',
-        type: 'input',
-        placeholder: '请输入申请人邮箱',
-        span: 12,
-        required: true
-      },
-    ]
-  },
 
   {
     title: '自动续期配置',
@@ -461,13 +427,7 @@ const fieldGroups = computed(() => [
         min: 1,
         max: 90,
         span: 12
-      }
-    ]
-  },
-  {
-    title: '通知配置',
-    description: '可配置任务执行结果通知！通知配置，见菜单“消息通知”',
-    fields: [
+      },
       {
         name: 'auto_notice',
         label: '执行通知',
@@ -475,17 +435,18 @@ const fieldGroups = computed(() => [
         checkedValue: true,
         uncheckedValue: false,
         span: 8,
+        description: '执行完成后发送通知。通知配置，见菜单“消息通知”'
       },
       {
         name: 'when_notice',
         label: '通知时机',
         type: 'select',
         options: [
-          { label: '执行完成时', value: 'completed' },
-          { label: '失败时', value: 'failed' },
+          {label: '执行完成时', value: 'completed'},
+          {label: '失败时', value: 'failed'},
         ],
         span: 8,
-        if: { auto_notice: true }
+        if: {auto_notice: true}
       }
     ]
   },
@@ -498,7 +459,7 @@ const fieldGroups = computed(() => [
         type: 'textarea',
         placeholder: '请输入描述信息',
         span: 24,
-        autosize: { minRows: 2, maxRows: 4 }
+        autosize: {minRows: 2, maxRows: 4}
       }
     ]
   }
@@ -507,10 +468,10 @@ const fieldGroups = computed(() => [
 // 表单验证规则
 const formRules = {
   dns_auth_id: [
-    { required: true,type:'number', message: '请选择DNS授权', trigger: ['blur', 'change'] }
+    {required: true, type: 'number', message: '请选择DNS授权', trigger: ['blur', 'change']}
   ],
   domains: [
-    { required: true, type: 'array',message: '至少添加一个域名1', trigger: ['change'] },
+    {required: true, type: 'array', message: '至少添加一个域名1', trigger: ['change']},
     {
       validator: (rule, value) => {
         if (!value || value.length === 0) return new Error('至少添加一个域名')
@@ -529,12 +490,12 @@ const formRules = {
     }
   ],
   renew_before: [
-    { required: true, type: 'number',message: '请输入续期天数', trigger: ['blur'] },
-    { type: 'number', min: 1, max: 90, message: '天数必须在1-90之间', trigger: ['blur'] }
+    {required: true, type: 'number', message: '请输入续期天数', trigger: ['blur']},
+    {type: 'number', min: 1, max: 90, message: '天数必须在1-90之间', trigger: ['blur']}
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
+    {required: true, message: '请输入邮箱', trigger: 'blur'},
+    {type: 'email', message: '邮箱格式不正确', trigger: 'blur'}
   ],
 }
 
@@ -555,7 +516,7 @@ const columns = [
     title: "域名",
     key: "domains",
     width: 120,
-    ellipsis: { tooltip: true },
+    ellipsis: {tooltip: true},
     render(row) {
       const domains = Array.isArray(row.domains) ? row.domains : []
       return h('div', [
@@ -564,10 +525,10 @@ const columns = [
               size: 'small',
               type: 'info',
               bordered: false,
-              style: { marginRight: '4px' }
-            }, { default: () => domain })
+              style: {marginRight: '4px'}
+            }, {default: () => domain})
         ),
-        domains.length > 2 && h('span', { style: { fontSize: '12px' } }, ` +${domains.length - 2}`)
+        domains.length > 2 && h('span', {style: {fontSize: '12px'}}, ` +${domains.length - 2}`)
       ])
     }
   },
@@ -595,7 +556,7 @@ const columns = [
     render(row) {
       const type = getStatusType(row.status)
       const text = getStatusText(row.status)
-      return h(NTag, { type, bordered: false }, { default: () => text })
+      return h(NTag, {type, bordered: false}, {default: () => text})
     }
   },
   {
@@ -607,7 +568,7 @@ const columns = [
         type: row.auto_renew ? 'success' : 'default',
         bordered: false,
         size: 'small'
-      }, { default: () => row.auto_renew ? '开启' : '关闭' })
+      }, {default: () => row.auto_renew ? '开启' : '关闭'})
     }
   },
   {
@@ -632,7 +593,7 @@ const columns = [
     width: 150,
     fixed: "right",
     render(row) {
-      return h(NSpace, { size: 'small' }, {
+      return h(NSpace, {size: 'small'}, {
         default: () => [
           h(NButton, {
             strong: true,
@@ -642,7 +603,7 @@ const columns = [
             onClick: () => handleViewExecutions(row)
           }, {
             default: () => '历史',
-            icon: () => h(NIcon, null, { default: () => h(ListCircleOutline) })
+            icon: () => h(NIcon, null, {default: () => h(ListCircleOutline)})
           }),
           h(NButton, {
             strong: true,
@@ -650,7 +611,7 @@ const columns = [
             size: "small",
             type: "primary",
             onClick: () => handleEdit(row)
-          }, { default: () => "编辑" }),
+          }, {default: () => "编辑"}),
           h(NButton, {
             strong: true,
             tertiary: true,
@@ -660,7 +621,7 @@ const columns = [
             disabled: row.status === 'processing'
           }, {
             default: () => '执行',
-            icon: () => h(NIcon, null, { default: () => h(PlayOutline) })
+            icon: () => h(NIcon, null, {default: () => h(PlayOutline)})
           }),
           h(NButton, {
             strong: true,
@@ -668,7 +629,7 @@ const columns = [
             size: "small",
             type: "error",
             onClick: () => handleDelete(row)
-          }, { default: () => "删除" })
+          }, {default: () => "删除"})
         ]
       })
     }
@@ -689,7 +650,7 @@ const executionColumns = [
     render(row) {
       const type = getExecutionStatusType(row.status)
       const text = getExecutionStatusText(row.status)
-      return h(NTag, { type, bordered: false, size: 'small' }, { default: () => text })
+      return h(NTag, {type, bordered: false, size: 'small'}, {default: () => text})
     }
   },
   {
@@ -726,7 +687,7 @@ const executionColumns = [
         type: 'primary',
         size: 'small',
         onClick: () => goToCertificate(row.cert_id)
-      }, { default: () => row.cert_id }) : '-'
+      }, {default: () => row.cert_id}) : '-'
     }
   },
   {
@@ -742,7 +703,7 @@ const executionColumns = [
         onClick: () => viewExecutionDetail(row)
       }, {
         default: () => '详情',
-        icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
+        icon: () => h(NIcon, null, {default: () => h(DocumentTextOutline)})
       })
     }
   }
@@ -820,9 +781,9 @@ const getDNSAuthName = (id) => {
 const loadDNSAuths = async () => {
   try {
     const res = await window.$request.get('/ssl/dns-auth', {
-      params: { page: 1, page_size: 100 }
+      params: {page: 1, page_size: 100}
     })
-      dnsAuthList.value = res?.items || []
+    dnsAuthList.value = res?.items || []
 
   } catch (error) {
     console.error('加载DNS授权失败:', error)
@@ -850,10 +811,10 @@ const loadApplications = async () => {
       params.domains = searchKeyword.value
     }
 
-    const res = await window.$request.get('/ssl/applications', { params })
+    const res = await window.$request.get('/ssl/applications', {params})
 
-      data.value = res?.items || []
-      pagination.itemCount = res?.total || 0
+    data.value = res?.items || []
+    pagination.itemCount = res?.total || 0
   } catch (error) {
     console.error('加载证书申请失败:', error)
     window.$message.error('加载失败')
@@ -870,7 +831,7 @@ const loadExecutions = async (applicationId) => {
       page_size: executionsPagination.pageSize
     }
 
-    const res = await window.$request.get(`/ssl/applications/${applicationId}/executions`, { params })
+    const res = await window.$request.get(`/ssl/applications/${applicationId}/executions`, {params})
     executions.value = res.items || []
     executionsPagination.itemCount = res?.total || 0
   } catch (error) {
@@ -886,9 +847,9 @@ const createApplication = async () => {
   try {
     console.log(formData)
     const res = await window.$request.post('/ssl/applications', formData.value)
-      window.$message.success('创建成功')
-      showDialog.value = false
-      loadApplications()
+    window.$message.success('创建成功')
+    showDialog.value = false
+    loadApplications()
   } catch (error) {
     console.error('创建失败:', error)
     window.$message.error(error.response?.data?.message || '创建失败')
@@ -903,9 +864,9 @@ const updateApplication = async () => {
     console.log(formData)
 
     const res = await window.$request.put(`/ssl/applications/${formData.value.id}`, formData.value)
-      window.$message.success('更新成功')
-      showDialog.value = false
-      loadApplications()
+    window.$message.success('更新成功')
+    showDialog.value = false
+    loadApplications()
   } catch (error) {
     console.error('更新失败:', error)
     window.$message.error(error.response?.data?.message || '更新失败')
@@ -917,8 +878,8 @@ const updateApplication = async () => {
 const deleteApplication = async (id) => {
   try {
     const res = await window.$request.delete(`/ssl/applications/${id}`)
-      window.$message.success('删除成功')
-      loadApplications()
+    window.$message.success('删除成功')
+    loadApplications()
   } catch (error) {
     console.error('删除失败:', error)
     window.$message.error(error.response?.data?.message || '删除失败')
@@ -932,13 +893,13 @@ const executeApplication = async (id) => {
       application_id: id,
       triggered_by: 'manual'
     })
-      window.$message.success('后台执行中，异常时10分钟后可重试~')
-      // 刷新执行历史
-      if (currentApplication.value && currentApplication.value.id === id) {
-        await loadExecutions(id)
-      }
-      // 刷新申请列表
-      await loadApplications()
+    window.$message.success('后台执行中，异常时10分钟后可重试~')
+    // 刷新执行历史
+    if (currentApplication.value && currentApplication.value.id === id) {
+      await loadExecutions(id)
+    }
+    // 刷新申请列表
+    await loadApplications()
   } catch (error) {
     console.error('执行失败:', error)
     window.$message.error(error.response?.data?.message || '执行失败')
@@ -950,7 +911,7 @@ const executeApplication = async (id) => {
 // ========== 事件处理 ==========
 const handleAdd = () => {
   dialogType.value = 'add'
-  formData.value = { ...defaultFormData }
+  formData.value = {...defaultFormData}
   showDialog.value = true
 }
 
@@ -985,7 +946,7 @@ const batchDeleteApplications = async () => {
     //    ids: checkedRowKeys.value
     // })
     const res = await window.$request.post('/ssl/applications/batch', checkedRowKeys.value)
-    window.$message.success(`${res.message }`)
+    window.$message.success(`${res.message}`)
 
     checkedRowKeys.value = [] // 清空选择
     loadApplications() // 重新加载数据
@@ -996,7 +957,7 @@ const batchDeleteApplications = async () => {
 
 const handleEdit = (row) => {
   dialogType.value = 'edit'
-  formData.value = { ...row }
+  formData.value = {...row}
   showDialog.value = true
 }
 
@@ -1082,7 +1043,7 @@ const handleExecPageSizeChange = (pageSize) => {
 
 const handleCancel = () => {
   showDialog.value = false
-  formData.value = { ...defaultFormData }
+  formData.value = {...defaultFormData}
 }
 
 const handleSubmit = async (data, validate = false) => {
@@ -1095,7 +1056,7 @@ const handleSubmit = async (data, validate = false) => {
     }
   }
 
-  formData.value = { ...data }
+  formData.value = {...data}
 
   if (dialogType.value === 'add') {
     await createApplication()
@@ -1104,7 +1065,7 @@ const handleSubmit = async (data, validate = false) => {
   }
 }
 
-const handleFieldChange = ({ fieldName, value }) => {
+const handleFieldChange = ({fieldName, value}) => {
   // console.log(`字段 ${fieldName} 变化:`, value)
 }
 

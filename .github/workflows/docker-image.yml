@@ -67,54 +67,45 @@ jobs:
       - name: Send Bark notification (success)
         if: success()
         run: |
-          curl -X POST "https://api.day.app/${{ secrets.BARK_TOKEN }}" \
+          curl -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json; charset=utf-8' \
-            -d $'{
-              "title": "✅ Docker 构建成功",
-              "body": "Tag: ${{ env.TAG }}",
-              "group": "ToolsPlus",
-              "icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-              "sound": "minuet",
-              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }'
-          curl -X POST "${{ secrets.WECHAT_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json; charset=utf-8" \
             -d '{
-              "msgtype": "news",
-              "news": {
-                "articles" : [
-                  {
-                    "title" : "ToolsPlus✅",
-                    "description" : "Docker 构建成功\nTag: ${{ env.TAG }}",
-                    "url" : "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                    "picurl" : "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+              "msg_type": "interactive",
+              "card": {
+                "type":"template",
+                "data": {
+                  "template_id":"AAqKyUKd4t2t1",
+                  "template_version_name":"1.1.1",
+                  "template_variable": {
+                    "status":"成功",
+                    "status_color":"green",
+                    "step":"流程一",
+                    "description":"Docker 构建成功\nTag: ${{ env.TAG }}",
+                    "log_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
-                ]}
+                }
+              }
             }'
 
       - name: Send Bark notification (failure)
         if: failure()
         run: |
-          curl -X POST "https://api.day.app/${{ secrets.BARK_TOKEN }}" \
+          curl -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
             -H 'Content-Type: application/json; charset=utf-8' \
-            -d $'{
-              "title": "❌ Docker 构建失败",
-              "body": "Tag: ${{ env.TAG }}",
-              "group": "ToolsPlus",
-              "icon": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png",
-              "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }'
-          curl -X POST "${{ secrets.WECHAT_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json; charset=utf-8" \
             -d '{
-              "msgtype": "news",
-              "news": {
-                "articles" : [
-                  {
-                    "title" : "ToolsPlus❌",
-                    "description" : "Docker 构建失败\nTag: ${{ env.TAG }}",
-                    "url" : "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                    "picurl" : "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+              "msg_type": "interactive",
+              "card": {
+                "type":"template",
+                "data": {
+                  "template_id":"AAqKyUKd4t2t1",
+                  "template_version_name":"1.1.1",
+                  "template_variable": {
+                    "status":"失败",
+                    "status_color":"red",
+                    "step":"流程一",
+                    "description":"Docker 构建失败\nTag: ${{ env.TAG }}",
+                    "log_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                   }
-                ]}
+                }
+              }
             }'

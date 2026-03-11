@@ -10,6 +10,7 @@ from .wxcom import WechatStrategy
 from .qq import QQStrategy
 from .mail import EmailStrategy
 from .dingtalk import DingtalkStrategy
+from .feishu import FeishuStrategy
 
 # 可选：在导入时打印信息
 print(f"通知策略注册表已导入，共 {len([x for x in locals().values() if hasattr(x, 'strategy_name')])} 个策略类")
