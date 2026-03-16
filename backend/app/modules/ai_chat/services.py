@@ -1,6 +1,8 @@
 import httpx
 import logging
 import os
+import asyncio
+import re
 from typing import AsyncIterator, List, Optional
 import json
 
@@ -10,10 +12,10 @@ logger = logging.getLogger(__name__)
 class AIChatService:
     def __init__(self):
         # 使用你提供的默认配置，可通过环境变量覆盖
-        self.api_key = os.getenv("AI_API_KEY", "sk-f1e3d6a8c133f8234e8d4d703c066971")
-        self.api_base = os.getenv("AI_API_BASE", "https://apis.iflow.cn/v1")
+        self.api_key = os.getenv("AI_API_KEY")
+        self.api_base = os.getenv("AI_API_BASE")
         # 默认使用你指定的模型，可通过 AI_MODEL 覆盖
-        self.model = os.getenv("AI_MODEL", "iflow-rome-30ba3b")
+        self.model = os.getenv("AI_MODEL")
         self.timeout = 30.0
 
     async def chat(self, message: str, history: Optional[List] = None) -> str:
@@ -129,7 +131,14 @@ class AIChatService:
         messages.append({"role": "user", "content": message})
 
         if not self.api_key:
-            yield self._get_mock_response(message)
+            # 未配置 API Key 时，使用流式输出模拟响应（按短句分段，模拟真实效果）
+            mock_response = self._get_mock_response(message)
+            # 按标点符号分割成小段，模拟流式输出效果
+            segments = re.split(r'([,.!?.,:;\s]+)', mock_response)
+            for segment in segments:
+                if segment:
+                    yield segment
+                    await asyncio.sleep(0.05)  # 添加微小延迟，模拟网络传输
             return
 
         url = f"{self.api_base.rstrip('/')}/chat/completions"

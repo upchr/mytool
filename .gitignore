@@ -10,7 +10,7 @@ frontend/dist
 frontend/node_modules
 
 docker/data
-
+package-lock.json
 #密码
 .env
 .env.*
