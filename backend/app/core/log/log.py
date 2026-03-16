@@ -33,7 +33,9 @@ def setup_logging(config_obj):
     if root_logger.handlers:
         root_logger.handlers.clear()
 
-    if getattr(config_obj, 'ENVIRONMENT', 'dev') == 'prod':
+    env = getattr(config_obj, 'ENVIRONMENT', 'dev')
+
+    if env == 'prod':
         # 生产环境：写入文件
         os.makedirs(config_obj.LOG_DIR, exist_ok=True)
         log_path = os.path.join(config_obj.LOG_DIR, config_obj.LOG_FILENAME)
@@ -47,9 +49,15 @@ def setup_logging(config_obj):
         logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
         logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
     else:
-        # 开发环境：控制台 + emoji
+        # 开发环境：根据控制台编码选择是否使用表情
         handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(IconFormatter())
+        encoding = getattr(sys.stdout, "encoding", "") or ""
+        if encoding.lower().startswith("utf"):
+            handler.setFormatter(IconFormatter())
+        else:
+            # 避免 Windows GBK 控制台输出 emoji 导致 UnicodeEncodeError
+            handler.setFormatter(PlainFormatter())
+
         logging.getLogger("sqlalchemy.engine").setLevel(config_obj.LOG_LEVEL)
         logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
 

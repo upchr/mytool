@@ -11,9 +11,12 @@ import SSLDns from '../modules/ssl/DNS.vue'
 import SSLApply from '../modules/ssl/apply/Applications.vue'
 import SSLStore from '../modules/ssl/store/Store.vue'
 import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
+import AIChat from '../modules/ai-chat/AIChat.vue'
+import HelloWorld from '../modules/helloworld/HelloWorld.vue'
 import {
     AccessibilityOutline as AboutIcon,
-    AlarmOutline as ClockIcon, ChatbubbleEllipsesOutline as NotifyIcon,
+    AlarmOutline as ClockIcon,
+    ChatbubbleEllipsesOutline as NotifyIcon,
     ReaderOutline as NoteIcon,
     ServerOutline as DatabaseIcon,
     TvOutline as PCIcon,
@@ -35,6 +38,8 @@ const routes = [
     { path: '/versions', component: VersionManager },
     { path: '/sys', component: SysPage },
     { path: '/example', component: DialogFormEx },
+    { path: '/ai-chat', component: AIChat },
+    { path: '/hello', component: HelloWorld },
     { path: '/ssl-dns', component: SSLDns },
     {
         path: '/ssl-apply',
@@ -76,6 +81,12 @@ const routeLabels = [
         label: '任务管理',
         icon: ClockIcon,
         key: 'jobs'
+    },
+    {
+        path: '/ai-chat',
+        label: 'AI 助手',
+        icon: NotifyIcon,
+        key: 'ai-chat'
     },
     {
         label: '证书管理',
@@ -133,6 +144,12 @@ const routeLabels = [
         label: '关于版本',
         icon: VersionIcon,
         key: 'versions'
+    },
+    {
+        path: '/hello',
+        label: 'HelloWorld',
+        icon: ExampleIcon,
+        key: 'hello'
     },
     {
         label: '示例菜单',  // 示例多级菜单

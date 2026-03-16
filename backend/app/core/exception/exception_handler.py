@@ -43,7 +43,8 @@ def setup_exception_handlers(app: FastAPI):
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
-        out_flag=True
+        out_flag = True
+
         if isinstance(exc, SQLAlchemyError):
             response = BaseResponse.error(500, "数据库操作失败")
         elif isinstance(exc, BusinessException):
@@ -52,10 +53,12 @@ def setup_exception_handlers(app: FastAPI):
                 message=exc.message,
                 detail=exc.detail
             )
-            out_flag=False
+            out_flag = False
         else:
             response = BaseResponse.error(500, "服务器内部错误")
 
         if out_flag:
             logger.error(f"全局异常: {str(exc)}\n{traceback.format_exc()}")
-        return JSONResponse(status_code=exc.code, content=response.dict())
+
+        # 这里必须使用响应体中的 code，而不是直接访问 exc.code（很多异常没有 code 属性）
+        return JSONResponse(status_code=response.code, content=response.dict())
