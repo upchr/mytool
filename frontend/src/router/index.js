@@ -15,6 +15,7 @@ import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import HelloWorld from '../modules/helloworld/HelloWorld.vue'
 import TemplateMarket from '../modules/task-template/TemplateMarket.vue'
+import PluginMarket from '../modules/plugin/PluginMarket.vue'
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon,
@@ -32,6 +33,8 @@ import {
     SettingsOutline as ConfigIcon,
     SparklesOutline as AiIcon,
     StorefrontOutline as TemplateIcon,
+    ExtensionPuzzleOutline as PluginIcon,
+    GitBranchOutline as WorkflowIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -39,6 +42,7 @@ const routes = [
     { path: '/nodes', component: NodeManager },
     { path: '/jobs', component: JobManager },
     { path: '/template-market', component: TemplateMarket },
+    { path: '/plugin-market', component: PluginMarket },
     { path: '/notify', component: NotificationSettings },
     { path: '/database', component: DatabaseManager },
     { path: '/versions', component: VersionManager },
@@ -94,6 +98,12 @@ const routeLabels = [
         label: '模板市场',
         icon: TemplateIcon,
         key: 'template-market'
+    },
+    {
+        path: '/plugin-market',
+        label: '插件市场',
+        icon: PluginIcon,
+        key: 'plugin-market'
     },
     {
         label: 'AI 助手',

@@ -66,6 +66,11 @@ async def lifespan(app: FastAPI):
     from app.modules.plugin.services import init_builtin_plugins
     await init_builtin_plugins()
     logger.info("✅ 内置插件初始化完成")
+
+    # 8 初始化内置工作流
+    from app.modules.workflow.services import init_builtin_workflows
+    await init_builtin_workflows()
+    logger.info("✅ 内置工作流初始化完成")
     # 运行应用
     yield
 
