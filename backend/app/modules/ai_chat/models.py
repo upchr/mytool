@@ -28,6 +28,7 @@ ai_config_table = Table(
     "ai_config",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("name", String(255), nullable=False, default="新配置", comment="配置名称"),
     Column("api_key", Text, nullable=True, comment="API Key"),
     Column("api_base", String(255), nullable=True, comment="API Base URL"),
     Column("model", String(100), nullable=True, comment="模型名称"),

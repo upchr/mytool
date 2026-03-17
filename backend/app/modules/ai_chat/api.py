@@ -103,6 +103,7 @@ async def get_config_list():
             for row in result:
                 config = {
                     "id": row.id,
+                    "name": row.name,
                     "api_key": row.api_key,
                     "api_base": row.api_base,
                     "model": row.model,
@@ -140,6 +141,7 @@ async def get_config_detail(config_id: int = 1):
             if result:
                 config = {
                     "id": result.id,
+                    "name": result.name,
                     "api_key": result.api_key,
                     "api_base": result.api_base,
                     "model": result.model,
@@ -175,6 +177,7 @@ async def create_config(request: schemas.AIConfigCreate):
         with engine.connect() as conn:
             # 创建新配置
             insert_stmt = models.ai_config_table.insert().values(
+                name=request.name,
                 api_key=request.api_key,
                 api_base=request.api_base,
                 model=request.model,
@@ -224,6 +227,8 @@ async def save_config(config_id: int, request: schemas.AIConfigUpdate):
 
             # 更新配置
             update_values = {"updated_at": now}
+            if request.name is not None:
+                update_values["name"] = request.name
             if request.api_key is not None:
                 update_values["api_key"] = request.api_key
             if request.api_base is not None:

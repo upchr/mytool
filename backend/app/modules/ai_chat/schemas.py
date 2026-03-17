@@ -64,6 +64,7 @@ class MessageCreate(BaseModel):
 class AIConfigSchema(BaseModel):
     """AI 配置数据模型"""
     id: Optional[int] = None
+    name: Optional[str] = None
     api_key: Optional[str] = None
     api_base: Optional[str] = None
     model: Optional[str] = None
@@ -77,6 +78,7 @@ class AIConfigSchema(BaseModel):
 
 class AIConfigUpdate(BaseModel):
     """更新 AI 配置请求"""
+    name: Optional[str] = Field(None, description="配置名称")
     api_key: Optional[str] = Field(None, description="API Key")
     api_base: Optional[str] = Field(None, description="API Base URL")
     model: Optional[str] = Field(None, description="模型名称")
@@ -85,6 +87,7 @@ class AIConfigUpdate(BaseModel):
 
 class AIConfigCreate(BaseModel):
     """创建 AI 配置请求"""
+    name: str = Field(..., description="配置名称")
     api_key: str = Field(..., description="API Key")
     api_base: str = Field(..., description="API Base URL")
     model: str = Field(..., description="模型名称")
@@ -94,6 +97,7 @@ class AIConfigCreate(BaseModel):
 class AIConfigResponse(BaseModel):
     """AI 配置响应"""
     id: int
+    name: Optional[str] = None
     api_key: Optional[str] = None
     api_base: Optional[str] = None
     model: Optional[str] = None

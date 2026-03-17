@@ -25,7 +25,7 @@
               </template>
               
               <div class="config-info">
-                <div class="config-name">配置 #{{ config.id }}</div>
+                <div class="config-name">{{ config.name || '未命名配置' }}</div>
                 <div class="config-details">
                   <span>{{ config.model }}</span>
                   <span class="divider">|</span>
@@ -34,8 +34,7 @@
                 <div class="config-time">
                   更新于: {{ formatTime(config.updated_at) }}
                 </div>
-              </div>
-              
+              </div>              
               <template #suffix>
                 <div class="config-actions">
                   <n-button
@@ -100,6 +99,13 @@
           label-placement="left"
           label-width="120px"
       >
+        <n-form-item label="配置名称" path="name">
+          <n-input
+              v-model:value="formData.name"
+              placeholder="例如: GPT-4 配置"
+          />
+        </n-form-item>
+
         <n-form-item label="API Key" path="api_key">
           <n-input
               v-model:value="formData.api_key"
@@ -167,6 +173,7 @@ const editConfigId = ref(null)
 
 const configList = ref([])
 const formData = ref({
+  name: '',
   api_key: '',
   api_base: '',
   model: '',
@@ -174,6 +181,11 @@ const formData = ref({
 })
 
 const rules = {
+  name: {
+    required: true,
+    message: '请输入配置名称',
+    trigger: ['blur', 'input']
+  },
   api_key: {
     required: true,
     message: '请输入 API Key',
@@ -194,7 +206,7 @@ const rules = {
 }
 
 const isFormValid = computed(() => {
-  return formData.value.api_key && formData.value.api_base && formData.value.model
+  return formData.value.name && formData.value.api_key && formData.value.api_base && formData.value.model
 })
 
 // 格式化时间
@@ -229,6 +241,7 @@ const showCreateDialog = () => {
   isEdit.value = false
   editConfigId.value = null
   formData.value = {
+    name: '',
     api_key: '',
     api_base: '',
     model: '',
@@ -242,6 +255,7 @@ const editConfig = (config) => {
   isEdit.value = true
   editConfigId.value = config.id
   formData.value = {
+    name: config.name || '',
     api_key: config.api_key || '',
     api_base: config.api_base || '',
     model: config.model || '',
