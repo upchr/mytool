@@ -199,6 +199,45 @@ async def create_config(request: schemas.AIConfigCreate):
     except Exception as e:
         logger.error(f"创建配置失败: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"创建配置失败: {str(e)}")
+
+@router.post("/config/test-connection")
+async def test_connection(request: schemas.TestConnectionRequest):
+    """
+    测试 AI 配置连接
+
+    使用传入的配置直接测试连接，不修改数据库中的激活状态。
+
+    Args:
+        request: 测试连接请求，包含 api_key, api_base, model
+
+    Returns:
+        测试结果
+    """
+    try:
+        result = await services.ai_chat_service.test_connection(
+            api_key=request.api_key,
+            api_base=request.api_base,
+            model=request.model,
+            message=request.message
+        )
+
+        if result["success"]:
+            return BaseResponse.success(data={
+                "success": True,
+                "content": result["content"]
+            })
+        else:
+            return BaseResponse.error(
+                error_code="CONNECTION_FAILED",
+                error_msg=result["error"]
+            )
+    except Exception as e:
+        logger.error(f"测试连接接口错误: {e}")
+        return BaseResponse.error(
+            error_code="CONNECTION_FAILED",
+            error_msg=str(e)
+        )
+
 @router.post("/config/{config_id}")
 async def save_config(config_id: int, request: schemas.AIConfigUpdate):
     """
@@ -254,7 +293,6 @@ async def save_config(config_id: int, request: schemas.AIConfigUpdate):
     except Exception as e:
         logger.error(f"保存配置失败: {e}")
         raise HTTPException(status_code=500, detail="保存配置失败")
-
 
 @router.delete("/config/{config_id}")
 async def delete_config(config_id: int):

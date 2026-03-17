@@ -29,6 +29,7 @@ import {
     BusinessOutline as SSLDNSIcon,
     EyeOutline as SSLMiIcon,
     SettingsOutline as ConfigIcon,
+    SparklesOutline as AiIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -87,13 +88,13 @@ const routeLabels = [
     },
     {
         label: 'AI 助手',
-        icon: NotifyIcon,
+        icon: AiIcon,
         key: 'ai-chat',
         children: [
             {
                 path: '/ai-chat',
                 label: 'AI 聊天',
-                icon: NotifyIcon,
+                icon: AiIcon,
                 key: 'ai-chat-main'
             },
             {

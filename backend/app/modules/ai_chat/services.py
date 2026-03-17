@@ -240,6 +240,98 @@ class AIChatService:
         """错误兜底响应"""
         return "抱歉，AI 服务暂时不可用。请稍后重试或检查 iflow API 配置。"
 
+    async def test_connection(self, api_key: str, api_base: str, model: str, message: str = "你好，这是一个测试消息") -> dict:
+        """
+        使用指定的配置测试连接
+
+        Args:
+            api_key: API Key
+            api_base: API Base URL
+            model: 模型名称
+            message: 测试消息
+
+        Returns:
+            测试结果，包含 success 和 content/error 字段
+        """
+        try:
+            url = f"{api_base.rstrip('/')}/chat/completions"
+
+            # 构建测试消息
+            messages = [
+                {
+                    "role": "system",
+                    "content": "你是一个有帮助的 AI 助手，专注于回答用户的问题和提供帮助。",
+                },
+                {"role": "user", "content": message}
+            ]
+
+            # 构建请求负载
+            payload = {
+                "model": model,
+                "messages": messages,
+                "stream": False,
+                "max_tokens": 512,
+                "stop": ["null"],
+                "temperature": 0.7,
+                "top_p": 0.7,
+                "top_k": 50,
+                "frequency_penalty": 0.5,
+                "n": 1,
+                "response_format": {"type": "text"},
+            }
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    error_text = e.response.text
+                    logger.error(f"测试连接失败 HTTP 错误: {e.response.status_code}\n响应内容: {error_text}")
+                    return {
+                        "success": False,
+                        "error": f"HTTP {e.response.status_code}: {error_text}"
+                    }
+
+                data = response.json()
+                content = (
+                    data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                )
+
+                if not content:
+                    logger.error(f"测试连接返回内容为空: {data}")
+                    return {
+                        "success": False,
+                        "error": "AI 返回内容为空"
+                    }
+
+                return {
+                    "success": True,
+                    "content": content
+                }
+
+        except httpx.HTTPError as e:
+            logger.error(f"测试连接请求失败: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+        except Exception as e:
+            logger.error(f"测试连接异常: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
 
 # 全局服务实例
 ai_chat_service = AIChatService()

@@ -104,3 +104,11 @@ class AIConfigResponse(BaseModel):
     is_enabled: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+
+class TestConnectionRequest(BaseModel):
+    """测试连接请求"""
+    api_key: str = Field(..., description="API Key")
+    api_base: str = Field(..., description="API Base URL")
+    model: str = Field(..., description="模型名称")
+    message: str = Field(default="你好，这是一个测试消息", description="测试消息")

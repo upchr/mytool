@@ -77,11 +77,11 @@
             <ul>
               <li><strong>API Key:</strong> 从 AI 服务提供商的开放平台获取，例如
                 <a href="https://platform.iflow.cn/profile?tab=apiKey" target="_blank" rel="noopener noreferrer">
-                  iFlow 开放平台
+                  iFlow 开放平台（免费：每7天需刷新密钥）
                 </a>
               </li>
               <li><strong>API Base URL:</strong> AI 服务的 API 基础地址，通常格式为 https://api.example.com/v1</li>
-              <li><strong>模型名称:</strong> 具体要使用的模型，例如 gpt-4、gpt-3.5-turbo、claude-3 等</li>
+              <li><strong>模型名称:</strong> 具体要使用的模型，例如 gpt-5、glm-5 等</li>
               <li><strong>切换配置:</strong> 点击"激活"按钮可以切换当前使用的配置</li>
               <li>配置保存后会立即生效，无需重启服务</li>
             </ul>
@@ -310,50 +310,24 @@ const testConnection = async () => {
     return
   }
 
-  // 如果是新建模式，提示用户先保存配置
-  if (!isEdit.value) {
-    message.warning('请先保存配置后再测试')
-    return
-  }
-
   testing.value = true
   try {
-    // 记录当前激活的配置
-    const currentActive = configList.value.find(c => c.is_enabled)
-    const originalActiveId = currentActive ? currentActive.id : null
-
-    // 临时设置为激活配置
-    await window.$request.post(`/ai-chat/config/${editConfigId.value}/set-active`)
-
-    // 发送测试消息
-    const testRes = await window.$request.post('/ai-chat/chat', {
-      message: '你好，这是一个测试消息',
-      history: []
+    // 直接使用表单配置进行测试，不需要先保存或设置为激活状态
+    const testRes = await window.$request.post('/ai-chat/config/test-connection', {
+      api_key: formData.value.api_key,
+      api_base: formData.value.api_base,
+      model: formData.value.model,
+      message: '你好，这是一个测试消息'
     })
 
-    if (testRes && testRes.content) {
+    if (testRes.success) {
       message.success('连接测试成功！AI 响应正常')
     } else {
-      message.warning('连接测试成功，但 AI 未返回预期响应')
-    }
-
-    // 恢复原来的激活状态
-    if (originalActiveId && originalActiveId !== editConfigId.value) {
-      await window.$request.post(`/ai-chat/config/${originalActiveId}/set-active`)
+      message.error(`连接测试失败：${testRes.msg || '未知错误'}`)
     }
   } catch (error) {
     console.error('测试连接失败:', error)
     message.error('测试连接失败，请检查配置和网络')
-
-    // 尝试恢复原来的激活状态
-    try {
-      const currentActive = configList.value.find(c => c.is_enabled)
-      if (currentActive && currentActive.id !== editConfigId.value) {
-        await window.$request.post(`/ai-chat/config/${currentActive.id}/set-active`)
-      }
-    } catch (restoreError) {
-      console.error('恢复激活状态失败:', restoreError)
-    }
   } finally {
     testing.value = false
   }
