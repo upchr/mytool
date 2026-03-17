@@ -56,6 +56,11 @@ async def lifespan(app: FastAPI):
     # 5路由配置
     from app.core.routers import router_manager
     router_manager.register_routers(app)
+
+    # 6 初始化内置任务模板
+    from app.modules.task_template.services import init_builtin_templates
+    await init_builtin_templates()
+    logger.info("✅ 内置任务模板初始化完成")
     # 运行应用
     yield
 
