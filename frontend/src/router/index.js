@@ -11,7 +11,7 @@ import SSLDns from '../modules/ssl/DNS.vue'
 import SSLApply from '../modules/ssl/apply/Applications.vue'
 import SSLStore from '../modules/ssl/store/Store.vue'
 import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
-import AIChat from '../modules/ai-chat/AIChat.vue'
+import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import HelloWorld from '../modules/helloworld/HelloWorld.vue'
 import {
     AccessibilityOutline as AboutIcon,
