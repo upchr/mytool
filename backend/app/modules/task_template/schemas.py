@@ -148,11 +148,18 @@ class TaskTemplateDetail(TaskTemplate):
     cron_suggestions: List[TemplateCronSuggestion] = Field(default_factory=list)
 
 
-# ============== 一键导入请求 ==============
+# ============== 一键应用请求 ==============
 
-class TemplateImportRequest(BaseModel):
+class TemplateApplyRequest(BaseModel):
     template_id: str = Field(..., description="模板ID")
     node_id: int = Field(..., description="节点ID")
-    config: Dict[str, Any] = Field(default_factory=dict, description="模板参数配置")
+    variables: Dict[str, Any] = Field(default_factory=dict, description="模板变量替换")
     schedule: Optional[str] = Field(None, description="Cron表达式，不填则使用默认建议")
     name: Optional[str] = Field(None, description="任务名称，不填则使用模板名称")
+    description: Optional[str] = Field(None, description="任务描述")
+    is_active: Optional[bool] = Field(None, description="是否立即激活")
+    error_times: Optional[int] = Field(None, description="连续失败次数阈值")
+
+
+# 兼容旧名称
+TemplateImportRequest = TemplateApplyRequest
