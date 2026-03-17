@@ -11,8 +11,8 @@ class CronJobBase(BaseModel):
     command: str
     description: Optional[str] = None
     is_active: bool = True
-    is_notice: bool = False
-    error_times: int
+    is_notice: Optional[bool] = Field(default=False, description="是否通知")
+    error_times: Optional[int] = Field(default=0, description="错误次数")
     consecutive_failures: Optional[int] = None
 
 class CronJobUpdateNotice(CronJobBase):

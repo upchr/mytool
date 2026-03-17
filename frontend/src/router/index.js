@@ -163,12 +163,6 @@ const routeLabels = [
         key: 'versions'
     },
     {
-        path: '/hello',
-        label: 'HelloWorld',
-        icon: ExampleIcon,
-        key: 'hello'
-    },
-    {
         label: '示例菜单',  // 示例多级菜单
         icon: ExampleIcon,
         key: 'example',
