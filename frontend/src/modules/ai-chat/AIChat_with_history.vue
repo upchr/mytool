@@ -105,11 +105,21 @@
                   type="primary"
                   :loading="isLoading"
                   @click="sendMessage"
-                  :disabled="!inputMessage.trim()"
+                  :disabled="!inputMessage.trim() || isLoading"
               >
                 发送
               </n-button>
-              <n-button @click="clearMessages" :disabled="messages.length === 0">
+              <n-button
+                  v-if="isLoading"
+                  type="warning"
+                  @click="cancelMessage"
+              >
+                <template #icon>
+                  <n-icon :component="StopIcon" />
+                </template>
+                中断
+              </n-button>
+              <n-button @click="clearMessages" :disabled="messages.length === 0 || isLoading">
                 清空
               </n-button>
             </div>
@@ -144,7 +154,7 @@
 <script setup>
 import {ref, nextTick, onMounted, computed} from 'vue'
 import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag, NModal, NForm, NFormItem} from 'naive-ui'
-import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon} from '@vicons/ionicons5'
+import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon, StopCircleOutline as StopIcon} from '@vicons/ionicons5'
 import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -156,6 +166,10 @@ const isLoading = ref(false)
 const messagesContainer = ref(null)
 const message = useMessage()
 const isConfigured = ref(true) // API Key 配置状态
+
+// 中断相关
+const abortController = ref(null)
+const currentAssistantMsg = ref(null) // 当前正在接收的助手消息
 
 // AI 配置相关
 const configList = ref([])
@@ -422,6 +436,9 @@ const sendMessage = async () => {
 
   try {
     isLoading.value = true
+    // 创建 AbortController 用于中断请求
+    abortController.value = new AbortController()
+
     // 先创建一个空的 assistant 消息，后续流式追加
     const assistantMsg = {
       role: 'assistant',
@@ -429,6 +446,7 @@ const sendMessage = async () => {
       timestamp: Date.now()
     }
     messages.value.push(assistantMsg)
+    currentAssistantMsg.value = assistantMsg
     scrollToBottom()
 
     const token = getAuthToken()
@@ -442,7 +460,8 @@ const sendMessage = async () => {
         message: content,
         history: messages.value.slice(0, -2), // 排除当前 user + 这个空 assistant
         conversation_id: currentConversationId.value
-      })
+      }),
+      signal: abortController.value.signal
     })
 
     if (!res.ok || !res.body) {
@@ -454,38 +473,52 @@ const sendMessage = async () => {
     let buffer = ''
     let receivedCount = 0
 
-    while (true) {
-      const {value, done} = await reader.read()
-      if (done) break
+    try {
+      while (true) {
+        const {value, done} = await reader.read()
+        if (done) break
 
-      const text = decoder.decode(value, {stream: true})
-      buffer += text
-      receivedCount++
+        const text = decoder.decode(value, {stream: true})
+        buffer += text
+        receivedCount++
 
-      // SSE 以 \n\n 分隔事件
-      const parts = buffer.split('\n\n')
-      buffer = parts.pop() || ''
+        // SSE 以 \n\n 分隔事件
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
 
-      for (const part of parts) {
-        const lines = part.split('\n')
-        for (const line of lines) {
-          if (!line.startsWith('data:')) continue
-          const jsonStr = line.slice(5).trim()
-          try {
-            const data = JSON.parse(jsonStr)
-            if (data.delta) {
-              appendAssistantDelta(assistantMsg, data.delta)
-              // 每次更新后强制刷新视图
-              await nextTick()
+        for (const part of parts) {
+          const lines = part.split('\n')
+          for (const line of lines) {
+            if (!line.startsWith('data:')) continue
+            const jsonStr = line.slice(5).trim()
+            try {
+              const data = JSON.parse(jsonStr)
+              if (data.delta) {
+                appendAssistantDelta(assistantMsg, data.delta)
+                // 每次更新后强制刷新视图
+                await nextTick()
+              }
+              if (data.error) throw new Error(data.error)
+            } catch (e) {
+              // JSON 解析失败直接跳过
+              console.warn('JSON 解析失败:', jsonStr, e)
+              continue
             }
-            if (data.error) throw new Error(data.error)
-          } catch (e) {
-            // JSON 解析失败直接跳过
-            console.warn('JSON 解析失败:', jsonStr, e)
-            continue
           }
         }
       }
+    } catch (readError) {
+      // 如果是主动中断，不显示错误消息
+      if (readError.name === 'AbortError') {
+        console.log('用户中断了回答')
+        // 保存已接收的部分内容
+        if (assistantMsg.content) {
+          assistantMsg.content += '\n\n[回答已被中断]'
+          await saveMessageToDB('assistant', assistantMsg.content)
+        }
+        return
+      }
+      throw readError
     }
 
     // 流式完成后，保存完整的 AI 回复到数据库
@@ -498,6 +531,8 @@ const sendMessage = async () => {
     console.error('AI chat error:', error)
   } finally {
     isLoading.value = false
+    abortController.value = null
+    currentAssistantMsg.value = null
     scrollToBottom()
   }
 }
@@ -506,6 +541,14 @@ const sendMessage = async () => {
 const clearMessages = () => {
   messages.value = []
   message.success('消息已清空')
+}
+
+// 中断回答
+const cancelMessage = () => {
+  if (abortController.value) {
+    abortController.value.abort()
+    message.info('已中断回答')
+  }
 }
 
 // 加载配置列表
