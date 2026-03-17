@@ -81,7 +81,7 @@ async def delete_template(template_id: str):
 
 @router.post("/{template_id}/import")
 async def import_template(template_id: str, data: TemplateImportRequest):
-    """一键导入模板为任务"""
+    """一键导入模板为任务（简化版，先返回配置）"""
     # 获取模板详情
     template = await TaskTemplateService.get_template_detail(template_id)
     if not template:
@@ -103,7 +103,7 @@ async def import_template(template_id: str, data: TemplateImportRequest):
     if not schedule:
         raise HTTPException(status_code=400, detail="请提供Cron表达式或选择建议")
 
-    # 这里会集成到cron模块创建任务，暂时返回配置
+    # 返回任务配置，后续完善cron集成
     return {
         "message": "导入成功",
         "task_config": {
@@ -111,7 +111,8 @@ async def import_template(template_id: str, data: TemplateImportRequest):
             "node_id": data.node_id,
             "schedule": schedule,
             "template_id": template_id,
-            "config": data.config
+            "config": data.config,
+            "script": template.script.script_content if template.script else None
         }
     }
 
