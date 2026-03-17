@@ -22,6 +22,11 @@
               <div class="history-title">{{ conv.title }}</div>
               <div class="history-time">{{ formatDateTime(conv.updated_at) }}</div>
               <div class="history-actions">
+                <n-button text size="tiny" @click.stop="editConversationTitle(conv)">
+                  <template #icon>
+                    <n-icon :component="EditIcon" />
+                  </template>
+                </n-button>
                 <n-button text size="tiny" type="error" @click.stop="deleteConversation(conv.id)">
                   <template #icon>
                     <n-icon :component="DeleteIcon" />
@@ -112,13 +117,34 @@
         </n-card>
       </div>
     </div>
+
+    <!-- 编辑标题对话框 -->
+    <n-modal v-model:show="showEditDialog" preset="card" title="编辑对话标题" style="width: 400px">
+      <n-form :model="{ title: editingTitle }" label-placement="left" label-width="80px">
+        <n-form-item label="对话标题" path="title">
+          <n-input
+              v-model:value="editingTitle"
+              placeholder="请输入对话标题"
+              maxlength="50"
+              show-count
+              @keydown.enter="saveEditedTitle"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <n-button @click="showEditDialog = false">取消</n-button>
+          <n-button type="primary" @click="saveEditedTitle">保存</n-button>
+        </div>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup>
 import {ref, nextTick, onMounted, computed} from 'vue'
-import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag} from 'naive-ui'
-import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon} from '@vicons/ionicons5'
+import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag, NModal, NForm, NFormItem} from 'naive-ui'
+import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon} from '@vicons/ionicons5'
 import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -150,6 +176,9 @@ const showHistory = ref(true)
 const conversations = ref([])
 const currentConversationId = ref(null)
 const currentConversationTitle = ref('AI 助手')
+const editingConversationId = ref(null)
+const editingTitle = ref('')
+const showEditDialog = ref(false)
 
 const md = new MarkdownIt({
   html: false,
@@ -210,6 +239,29 @@ const appendAssistantDelta = (assistantMsg, delta) => {
   scrollToBottom()
 }
 
+// 智能生成对话标题
+const generateConversationTitle = (message) => {
+  // 移除标点符号和特殊字符，只保留中文、英文、数字
+  const cleanedText = message.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, '').trim()
+
+  // 移除常见的无意义词汇
+  const stopWords = ['你好', '您好', '请问', '帮我', '能不能', '可以', '如何', '怎么样', '为什么', '什么', '怎么', '吗', '呢', '啊', '吧', '的', '了', '是', '在', '有', '和', '与', '或', '但是', '因为', '所以', '如果', '那么', '这个', '那个', '这些', '那些', '我', '你', '他', '她', '它', '我们', '你们', '他们']
+  const words = cleanedText.split(/\s+/).filter(word => word && !stopWords.includes(word))
+
+  // 如果有足够的关键词，使用前3个关键词组合
+  if (words.length >= 3) {
+    return words.slice(0, 3).join(' ')
+  }
+
+  // 如果有1-2个关键词，直接使用
+  if (words.length > 0) {
+    return words.join(' ')
+  }
+
+  // 如果没有提取到关键词，使用原始消息的前20个字符
+  return message.length > 20 ? message.substring(0, 20) + '...' : message
+}
+
 // 加载对话列表
 const loadConversations = async () => {
   try {
@@ -243,7 +295,7 @@ const loadConversation = async (conversationId) => {
 
 // 创建新对话
 const createNewConversation = async () => {
-  const defaultTitle = `新对话 ${new Date().toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})}`
+  const defaultTitle = '新对话'
 
   try {
     const result = await window.$request.post('/ai-chat/conversations', {
@@ -278,6 +330,39 @@ const deleteConversation = async (conversationId) => {
   }
 }
 
+// 编辑对话标题
+const editConversationTitle = (conversation) => {
+  editingConversationId.value = conversation.id
+  editingTitle.value = conversation.title
+  showEditDialog.value = true
+}
+
+// 保存编辑的标题
+const saveEditedTitle = async () => {
+  if (!editingTitle.value.trim()) {
+    message.warning('标题不能为空')
+    return
+  }
+
+  try {
+    await window.$request.put(`/ai-chat/conversations/${editingConversationId.value}`, {
+      title: editingTitle.value.trim()
+    })
+
+    // 如果编辑的是当前对话，更新标题
+    if (editingConversationId.value === currentConversationId.value) {
+      currentConversationTitle.value = editingTitle.value.trim()
+    }
+
+    await loadConversations()
+    showEditDialog.value = false
+    message.success('标题已更新')
+  } catch (e) {
+    console.error('更新标题失败:', e)
+    message.error('更新标题失败')
+  }
+}
+
 // 保存消息到数据库
 const saveMessageToDB = async (role, content) => {
   if (!currentConversationId.value) return
@@ -299,8 +384,8 @@ const sendMessage = async () => {
 
   // 如果没有当前对话，自动创建一个新对话
   if (!currentConversationId.value) {
-    // 使用用户消息的前20个字符作为对话标题
-    const title = content.length > 20 ? content.substring(0, 20) + '...' : content
+    // 使用智能生成的标题
+    const title = generateConversationTitle(content)
     try {
       const result = await window.$request.post('/ai-chat/conversations', {
         title: title

@@ -512,6 +512,52 @@ async def get_conversation(conversation_id: int):
         raise HTTPException(status_code=500, detail="获取对话失败")
 
 
+@router.put("/conversations/{conversation_id}")
+async def update_conversation(conversation_id: int, request: schemas.ConversationUpdate):
+    """
+    更新对话标题
+
+    Args:
+        conversation_id: 对话ID
+        request: 更新请求
+
+    Returns:
+        更新结果
+    """
+    try:
+        engine = get_engine()
+        now = datetime.now()
+
+        with engine.connect() as conn:
+            # 检查对话是否存在
+            conv_stmt = select(models.conversations_table).where(
+                models.conversations_table.c.id == conversation_id
+            )
+            conv_result = conn.execute(conv_stmt).first()
+
+            if not conv_result:
+                raise HTTPException(status_code=404, detail="对话不存在")
+
+            # 更新对话标题
+            update_values = {"updated_at": now}
+            if request.title is not None:
+                update_values["title"] = request.title
+
+            update_stmt = update(models.conversations_table).where(
+                models.conversations_table.c.id == conversation_id
+            ).values(**update_values)
+            conn.execute(update_stmt)
+
+            conn.commit()
+
+            return BaseResponse.success(data={"message": "对话标题已更新"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"更新对话标题失败: {e}")
+        raise HTTPException(status_code=500, detail="更新对话标题失败")
+
+
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: int):
     """
