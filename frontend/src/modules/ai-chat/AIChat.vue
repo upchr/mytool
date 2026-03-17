@@ -60,7 +60,7 @@
 <script setup>
 import {ref, nextTick, onMounted} from 'vue'
 import {NCard, NInput, NButton, NIcon, useMessage, NAlert} from 'naive-ui'
-import {PersonOutline as PersonIcon, ChatbubbleEllipsesOutline as RobotIcon} from '@vicons/ionicons5'
+import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon} from '@vicons/ionicons5'
 import request from '@/utils/request'
 import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'

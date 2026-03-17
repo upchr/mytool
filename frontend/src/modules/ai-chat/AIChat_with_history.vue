@@ -11,7 +11,7 @@
               </template>
             </n-button>
           </template>
-          
+
           <div class="history-list">
             <div
               v-for="conv in conversations"
@@ -29,12 +29,12 @@
                 </n-button>
               </div>
             </div>
-            
+
             <n-empty v-if="conversations.length === 0" description="暂无历史对话" size="small" />
           </div>
         </n-card>
       </div>
-      
+
       <!-- 右侧聊天区域 -->
       <div class="chat-main">
         <n-card :title="currentConversationTitle" class="chat-card">
@@ -118,7 +118,7 @@
 <script setup>
 import {ref, nextTick, onMounted, computed} from 'vue'
 import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag} from 'naive-ui'
-import {PersonOutline as PersonIcon, ChatbubbleEllipsesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon} from '@vicons/ionicons5'
+import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon} from '@vicons/ionicons5'
 import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -179,11 +179,11 @@ const formatTime = (timestamp) => {
 const formatDateTime = (dateTimeStr) => {
   if (!dateTimeStr) return ''
   const date = new Date(dateTimeStr)
-  return date.toLocaleString('zh-CN', { 
-    month: '2-digit', 
-    day: '2-digit', 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 
@@ -225,14 +225,14 @@ const loadConversation = async (conversationId) => {
   try {
     currentConversationId.value = conversationId
     const conversation = await window.$request.get(`/ai-chat/conversations/${conversationId}`)
-    
+
     // 加载消息
     messages.value = conversation.messages.map(msg => ({
       role: msg.role,
       content: msg.content,
       timestamp: new Date(msg.created_at).getTime()
     }))
-    
+
     currentConversationTitle.value = conversation.title
     scrollToBottom()
   } catch (e) {
@@ -244,7 +244,7 @@ const loadConversation = async (conversationId) => {
 // 创建新对话
 const createNewConversation = async () => {
   const defaultTitle = `新对话 ${new Date().toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'})}`
-  
+
   try {
     const result = await window.$request.post('/ai-chat/conversations', {
       title: defaultTitle
@@ -264,7 +264,7 @@ const createNewConversation = async () => {
 const deleteConversation = async (conversationId) => {
   try {
     await window.$request.delete(`/ai-chat/conversations/${conversationId}`)
-    
+
     if (currentConversationId.value === conversationId) {
       currentConversationId.value = null
       currentConversationTitle.value = 'AI 助手'
@@ -281,7 +281,7 @@ const deleteConversation = async (conversationId) => {
 // 保存消息到数据库
 const saveMessageToDB = async (role, content) => {
   if (!currentConversationId.value) return
-  
+
   try {
     await window.$request.post(`/ai-chat/conversations/${currentConversationId.value}/messages`, {
       role: role,
@@ -306,7 +306,7 @@ const sendMessage = async () => {
 
   inputMessage.value = ''
   scrollToBottom()
-  
+
   // 保存到数据库
   await saveMessageToDB('user', content)
 
@@ -382,7 +382,7 @@ const sendMessage = async () => {
     if (assistantMsg.content) {
       await saveMessageToDB('assistant', assistantMsg.content)
     }
-    
+
   } catch (error) {
     message.error('发送消息失败，请重试')
     console.error('AI chat error:', error)
@@ -443,7 +443,7 @@ onMounted(async () => {
     content: '您好！我是 AI 助手，有什么可以帮助您的吗？',
     timestamp: Date.now()
   })
-  
+
   // 检查 API Key 配置状态
   try {
     const result = await window.$request.get('/ai-chat/config')
@@ -451,10 +451,10 @@ onMounted(async () => {
   } catch (e) {
     console.warn('检查 AI 配置失败:', e)
   }
-  
+
   // 加载配置列表
   await loadConfigList()
-  
+
   // 加载历史对话列表
   await loadConversations()
 })
