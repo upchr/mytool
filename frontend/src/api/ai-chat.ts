@@ -1,6 +1,3 @@
-import request from '@/utils/request'
-import {getAuthToken} from '@/utils/auth'
-
 // AI 配置接口
 export interface AIConfig {
   id?: number
@@ -12,28 +9,39 @@ export interface AIConfig {
   updated_at?: string
 }
 
+// 获取 AI 配置列表
+export const getAIConfigList = async () => {
+  return window.$request.get('/ai-chat/config/list')
+}
+
 // 获取 AI 配置详情
-export const getAIConfigDetail = async () => {
-  const token = getAuthToken()
-  return request.get('/ai-chat/config/detail', {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+export const getAIConfigDetail = async (configId: number = 1) => {
+  return window.$request.get(`/ai-chat/config/detail?config_id=${configId}`)
 }
 
 // 保存 AI 配置
-export const saveAIConfig = async (config: AIConfig) => {
-  const token = getAuthToken()
-  return request.post('/ai-chat/config', config, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+export const saveAIConfig = async (configId: number, config: AIConfig) => {
+  return window.$request.post(`/ai-chat/config/${configId}`, config)
+}
+
+// 创建 AI 配置
+export const createAIConfig = async (config: AIConfig) => {
+  return window.$request.post('/ai-chat/config/create', config)
+}
+
+// 删除 AI 配置
+export const deleteAIConfig = async (configId: number) => {
+  return window.$request.delete(`/ai-chat/config/${configId}`)
+}
+
+// 设置激活的 AI 配置
+export const setActiveAIConfig = async (configId: number) => {
+  return window.$request.post(`/ai-chat/config/${configId}/set-active`)
 }
 
 // 获取 AI 配置状态
 export const getAIConfigStatus = async () => {
-  const token = getAuthToken()
-  return request.get('/ai-chat/config', {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.get('/ai-chat/config')
 }
 
 // AI 聊天接口
@@ -51,10 +59,7 @@ export interface ChatRequest {
 
 // 发送聊天消息（非流式）
 export const sendChatMessage = async (data: ChatRequest) => {
-  const token = getAuthToken()
-  return request.post('/ai-chat/chat', data, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.post('/ai-chat/chat', data)
 }
 
 // 对话管理接口
@@ -73,40 +78,25 @@ export interface ConversationCreate {
 
 // 获取对话列表
 export const getConversations = async () => {
-  const token = getAuthToken()
-  return request.get('/ai-chat/conversations', {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.get('/ai-chat/conversations')
 }
 
 // 创建对话
 export const createConversation = async (data?: ConversationCreate) => {
-  const token = getAuthToken()
-  return request.post('/ai-chat/conversations', data || {}, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.post('/ai-chat/conversations', data || {})
 }
 
 // 获取对话详情
 export const getConversation = async (conversationId: number) => {
-  const token = getAuthToken()
-  return request.get(`/ai-chat/conversations/${conversationId}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.get(`/ai-chat/conversations/${conversationId}`)
 }
 
 // 删除对话
 export const deleteConversation = async (conversationId: number) => {
-  const token = getAuthToken()
-  return request.delete(`/ai-chat/conversations/${conversationId}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.delete(`/ai-chat/conversations/${conversationId}`)
 }
 
 // 在对话中添加消息
 export const createMessage = async (conversationId: number, message: ChatMessage) => {
-  const token = getAuthToken()
-  return request.post(`/ai-chat/conversations/${conversationId}/messages`, message, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
-  })
+  return window.$request.post(`/ai-chat/conversations/${conversationId}/messages`, message)
 }

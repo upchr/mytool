@@ -83,6 +83,14 @@ class AIConfigUpdate(BaseModel):
     is_enabled: Optional[bool] = Field(None, description="是否启用")
 
 
+class AIConfigCreate(BaseModel):
+    """创建 AI 配置请求"""
+    api_key: str = Field(..., description="API Key")
+    api_base: str = Field(..., description="API Base URL")
+    model: str = Field(..., description="模型名称")
+    is_enabled: bool = Field(True, description="是否启用")
+
+
 class AIConfigResponse(BaseModel):
     """AI 配置响应"""
     id: int

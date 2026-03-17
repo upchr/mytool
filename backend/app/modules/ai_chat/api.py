@@ -83,10 +83,48 @@ async def get_config():
     )
 
 
+@router.get("/config/list")
+async def get_config_list():
+    """
+    获取 AI 配置列表
+
+    Returns:
+        所有 AI 配置的列表
+    """
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            stmt = select(models.ai_config_table).order_by(
+                models.ai_config_table.c.id
+            )
+            result = conn.execute(stmt)
+
+            configs = []
+            for row in result:
+                config = {
+                    "id": row.id,
+                    "api_key": row.api_key,
+                    "api_base": row.api_base,
+                    "model": row.model,
+                    "is_enabled": row.is_enabled,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                }
+                configs.append(config)
+
+            return BaseResponse.success(data=configs)
+    except Exception as e:
+        logger.error(f"获取配置列表失败: {e}")
+        raise HTTPException(status_code=500, detail="获取配置列表失败")
+
+
 @router.get("/config/detail")
-async def get_config_detail():
+async def get_config_detail(config_id: int = 1):
     """
     获取 AI 配置详情（从数据库读取）
+
+    Args:
+        config_id: 配置 ID，默认为 1
 
     Returns:
         完整的 AI 配置信息
@@ -95,10 +133,10 @@ async def get_config_detail():
         engine = get_engine()
         with engine.connect() as conn:
             stmt = select(models.ai_config_table).where(
-                models.ai_config_table.c.id == 1
+                models.ai_config_table.c.id == config_id
             )
             result = conn.execute(stmt).first()
-            
+
             if result:
                 config = {
                     "id": result.id,
@@ -110,29 +148,61 @@ async def get_config_detail():
                     "updated_at": result.updated_at.isoformat() if result.updated_at else None,
                 }
             else:
-                # 如果数据库中没有配置，返回默认空配置
-                config = {
-                    "id": 1,
-                    "api_key": None,
-                    "api_base": None,
-                    "model": None,
-                    "is_enabled": True,
-                    "created_at": None,
-                    "updated_at": None,
-                }
-            
+                raise HTTPException(status_code=404, detail="配置不存在")
+
             return BaseResponse.success(data=config)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"获取配置详情失败: {e}")
         raise HTTPException(status_code=500, detail="获取配置详情失败")
 
+@router.post("/config/create")
+async def create_config(request: schemas.AIConfigCreate):
+    """
+    创建新的 AI 配置
 
-@router.post("/config")
-async def save_config(request: schemas.AIConfigUpdate):
+    Args:
+        request: 配置创建请求
+
+    Returns:
+        创建的配置信息
+    """
+    try:
+        engine = get_engine()
+        now = datetime.now()
+
+        with engine.connect() as conn:
+            # 创建新配置
+            insert_stmt = models.ai_config_table.insert().values(
+                api_key=request.api_key,
+                api_base=request.api_base,
+                model=request.model,
+                is_enabled=request.is_enabled,
+                created_at=now,
+                updated_at=now
+            )
+            result = conn.execute(insert_stmt)
+            conn.commit()
+
+            config_id = result.inserted_primary_key[0]
+
+            logger.info(f"创建配置成功，ID: {config_id}")
+
+            return BaseResponse.success(data={
+                "id": config_id,
+                "message": "配置创建成功"
+            })
+    except Exception as e:
+        logger.error(f"创建配置失败: {type(e).__name__}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"创建配置失败: {str(e)}")
+@router.post("/config/{config_id}")
+async def save_config(config_id: int, request: schemas.AIConfigUpdate):
     """
     保存 AI 配置
 
     Args:
+        config_id: 配置 ID
         request: 配置更新请求
 
     Returns:
@@ -140,53 +210,137 @@ async def save_config(request: schemas.AIConfigUpdate):
     """
     try:
         engine = get_engine()
-        now = datetime.utcnow()
-        
+        now = datetime.now()
+
         with engine.connect() as conn:
-            # 检查是否已存在配置
+            # 检查配置是否存在
             stmt = select(models.ai_config_table).where(
-                models.ai_config_table.c.id == 1
+                models.ai_config_table.c.id == config_id
             )
             result = conn.execute(stmt).first()
-            
-            if result:
-                # 更新现有配置
-                update_values = {"updated_at": now}
-                if request.api_key is not None:
-                    update_values["api_key"] = request.api_key
-                if request.api_base is not None:
-                    update_values["api_base"] = request.api_base
-                if request.model is not None:
-                    update_values["model"] = request.model
-                if request.is_enabled is not None:
-                    update_values["is_enabled"] = request.is_enabled
-                
-                update_stmt = update(models.ai_config_table).where(
-                    models.ai_config_table.c.id == 1
-                ).values(**update_values)
-                conn.execute(update_stmt)
-            else:
-                # 创建新配置
-                insert_stmt = models.ai_config_table.insert().values(
-                    id=1,
-                    api_key=request.api_key,
-                    api_base=request.api_base,
-                    model=request.model,
-                    is_enabled=request.is_enabled if request.is_enabled is not None else True,
-                    created_at=now,
-                    updated_at=now
-                )
-                conn.execute(insert_stmt)
-            
+
+            if not result:
+                raise HTTPException(status_code=404, detail="配置不存在")
+
+            # 更新配置
+            update_values = {"updated_at": now}
+            if request.api_key is not None:
+                update_values["api_key"] = request.api_key
+            if request.api_base is not None:
+                update_values["api_base"] = request.api_base
+            if request.model is not None:
+                update_values["model"] = request.model
+            if request.is_enabled is not None:
+                update_values["is_enabled"] = request.is_enabled
+
+            update_stmt = update(models.ai_config_table).where(
+                models.ai_config_table.c.id == config_id
+            ).values(**update_values)
+            conn.execute(update_stmt)
+
             conn.commit()
-            
+
             # 重新加载配置到服务
             services.ai_chat_service.reload_config()
-            
+
             return BaseResponse.success(data={"message": "配置保存成功"})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"保存配置失败: {e}")
         raise HTTPException(status_code=500, detail="保存配置失败")
+
+
+@router.delete("/config/{config_id}")
+async def delete_config(config_id: int):
+    """
+    删除 AI 配置
+
+    Args:
+        config_id: 配置 ID
+
+    Returns:
+        删除结果
+    """
+    try:
+        engine = get_engine()
+
+        with engine.connect() as conn:
+            # 检查配置是否存在
+            stmt = select(models.ai_config_table).where(
+                models.ai_config_table.c.id == config_id
+            )
+            result = conn.execute(stmt).first()
+
+            if not result:
+                raise HTTPException(status_code=404, detail="配置不存在")
+
+            # 删除配置
+            delete_stmt = delete(models.ai_config_table).where(
+                models.ai_config_table.c.id == config_id
+            )
+            conn.execute(delete_stmt)
+
+            conn.commit()
+
+            # 重新加载配置到服务
+            services.ai_chat_service.reload_config()
+
+            return BaseResponse.success(data={"message": "配置删除成功"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"删除配置失败: {e}")
+        raise HTTPException(status_code=500, detail="删除配置失败")
+
+
+@router.post("/config/{config_id}/set-active")
+async def set_active_config(config_id: int):
+    """
+    设置当前激活的 AI 配置
+
+    Args:
+        config_id: 配置 ID
+
+    Returns:
+        设置结果
+    """
+    try:
+        engine = get_engine()
+
+        with engine.connect() as conn:
+            # 检查配置是否存在
+            stmt = select(models.ai_config_table).where(
+                models.ai_config_table.c.id == config_id
+            )
+            result = conn.execute(stmt).first()
+
+            if not result:
+                raise HTTPException(status_code=404, detail="配置不存在")
+
+            # 先禁用所有配置
+            disable_all_stmt = update(models.ai_config_table).values(
+                is_enabled=False
+            )
+            conn.execute(disable_all_stmt)
+
+            # 启用指定配置
+            enable_stmt = update(models.ai_config_table).where(
+                models.ai_config_table.c.id == config_id
+            ).values(is_enabled=True)
+            conn.execute(enable_stmt)
+
+            conn.commit()
+
+            # 重新加载配置到服务
+            services.ai_chat_service.reload_config()
+
+            return BaseResponse.success(data={"message": "已切换到指定配置"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"切换配置失败: {e}")
+        raise HTTPException(status_code=500, detail="切换配置失败")
 
 
 # 对话管理接口
@@ -236,7 +390,7 @@ async def create_conversation(request: schemas.ConversationCreate):
     """
     try:
         engine = get_engine()
-        now = datetime.utcnow()
+        now = datetime.now()
         with engine.connect() as conn:
             stmt = models.conversations_table.insert().values(
                 title=request.title,
@@ -247,7 +401,7 @@ async def create_conversation(request: schemas.ConversationCreate):
             result = conn.execute(stmt)
             conn.commit()
             conversation_id = result.inserted_primary_key[0]
-            
+
             return BaseResponse.success(data={
                 "id": conversation_id,
                 "title": request.title,
@@ -280,16 +434,16 @@ async def get_conversation(conversation_id: int):
                 models.conversations_table.c.id == conversation_id
             )
             conv_result = conn.execute(conv_stmt).first()
-            
+
             if not conv_result:
                 raise HTTPException(status_code=404, detail="对话不存在")
-            
+
             # 获取消息
             msg_stmt = select(models.messages_table).where(
                 models.messages_table.c.conversation_id == conversation_id
             ).order_by(models.messages_table.c.created_at)
             msg_result = conn.execute(msg_stmt)
-            
+
             messages = []
             for msg_row in msg_result:
                 messages.append({
@@ -299,7 +453,7 @@ async def get_conversation(conversation_id: int):
                     "content": msg_row.content,
                     "created_at": msg_row.created_at.isoformat() if msg_row.created_at else None
                 })
-            
+
             return BaseResponse.success(data={
                 "id": conv_result.id,
                 "title": conv_result.title,
@@ -334,22 +488,22 @@ async def delete_conversation(conversation_id: int):
                 models.conversations_table.c.id == conversation_id
             )
             conv_result = conn.execute(conv_stmt).first()
-            
+
             if not conv_result:
                 raise HTTPException(status_code=404, detail="对话不存在")
-            
+
             # 删除消息（级联删除会自动处理）
             delete_msg_stmt = delete(models.messages_table).where(
                 models.messages_table.c.conversation_id == conversation_id
             )
             conn.execute(delete_msg_stmt)
-            
+
             # 删除对话
             delete_conv_stmt = delete(models.conversations_table).where(
                 models.conversations_table.c.id == conversation_id
             )
             conn.execute(delete_conv_stmt)
-            
+
             conn.commit()
             return BaseResponse.success(data={"message": "对话已删除"})
     except HTTPException:
@@ -373,17 +527,17 @@ async def create_message(conversation_id: int, request: schemas.MessageCreate):
     """
     try:
         engine = get_engine()
-        now = datetime.utcnow()
+        now = datetime.now()
         with engine.connect() as conn:
             # 检查对话是否存在
             conv_stmt = select(models.conversations_table).where(
                 models.conversations_table.c.id == conversation_id
             )
             conv_result = conn.execute(conv_stmt).first()
-            
+
             if not conv_result:
                 raise HTTPException(status_code=404, detail="对话不存在")
-            
+
             # 插入消息
             stmt = models.messages_table.insert().values(
                 conversation_id=conversation_id,
@@ -392,16 +546,16 @@ async def create_message(conversation_id: int, request: schemas.MessageCreate):
                 created_at=now
             )
             result = conn.execute(stmt)
-            
+
             # 更新对话的更新时间
             update_conv_stmt = update(models.conversations_table).where(
                 models.conversations_table.c.id == conversation_id
             ).values(updated_at=now)
             conn.execute(update_conv_stmt)
-            
+
             conn.commit()
             message_id = result.inserted_primary_key[0]
-            
+
             return BaseResponse.success(data={
                 "id": message_id,
                 "conversation_id": conversation_id,

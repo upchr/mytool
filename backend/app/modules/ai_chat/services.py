@@ -26,15 +26,16 @@ class AIChatService:
         try:
             from app.core.db.database import get_engine
             from . import models
-            
+
             engine = get_engine()
             with engine.connect() as conn:
+                # 获取所有启用的配置
                 stmt = select(models.ai_config_table).where(
-                    models.ai_config_table.c.id == 1
+                    models.ai_config_table.c.is_enabled == True
                 )
                 result = conn.execute(stmt).first()
-                
-                if result and result.is_enabled:
+
+                if result:
                     # 优先使用数据库配置
                     if result.api_key:
                         self.api_key = result.api_key
@@ -42,8 +43,8 @@ class AIChatService:
                         self.api_base = result.api_base
                     if result.model:
                         self.model = result.model
-                    
-                    logger.info(f"从数据库加载 AI 配置: api_base={self.api_base}, model={self.model}")
+
+                    logger.info(f"从数据库加载 AI 配置 (ID={result.id}): api_base={self.api_base}, model={self.model}")
         except Exception as e:
             logger.warning(f"从数据库加载 AI 配置失败: {e}，使用环境变量配置")
 

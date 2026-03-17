@@ -38,6 +38,25 @@
       <!-- 右侧聊天区域 -->
       <div class="chat-main">
         <n-card :title="currentConversationTitle" class="chat-card">
+          <template #header-extra>
+            <n-select
+                v-model:value="currentConfigId"
+                :options="configOptions"
+                placeholder="选择配置"
+                size="small"
+                style="width: 200px"
+                @update:value="handleConfigChange"
+                :loading="loadingConfigs"
+            >
+              <template #render-label="{ option }">
+                <div class="config-option">
+                  <n-icon :component="option.is_enabled ? CheckmarkCircleIcon : RadioIcon" :size="14" />
+                  <span>{{ option.label }}</span>
+                  <n-tag v-if="option.is_enabled" type="success" size="tiny" style="margin-left: 4px">当前</n-tag>
+                </div>
+              </template>
+            </n-select>
+          </template>
           <div class="chat-messages" ref="messagesContainer">
             <div
                 v-for="(message, index) in messages"
@@ -97,9 +116,9 @@
 </template>
 
 <script setup>
-import {ref, nextTick, onMounted} from 'vue'
-import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty} from 'naive-ui'
-import {PersonOutline as PersonIcon, ChatbubbleEllipsesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon} from '@vicons/ionicons5'
+import {ref, nextTick, onMounted, computed} from 'vue'
+import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag} from 'naive-ui'
+import {PersonOutline as PersonIcon, ChatbubbleEllipsesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon} from '@vicons/ionicons5'
 import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -111,6 +130,20 @@ const isLoading = ref(false)
 const messagesContainer = ref(null)
 const message = useMessage()
 const isConfigured = ref(true) // API Key 配置状态
+
+// AI 配置相关
+const configList = ref([])
+const currentConfigId = ref(null)
+const loadingConfigs = ref(false)
+
+const configOptions = computed(() => {
+  return configList.value.map(config => ({
+    label: `配置 #${config.id} - ${config.model}`,
+    value: config.id,
+    is_enabled: config.is_enabled,
+    api_base: config.api_base
+  }))
+})
 
 // 历史对话相关
 const showHistory = ref(true)
@@ -365,6 +398,42 @@ const clearMessages = () => {
   message.success('消息已清空')
 }
 
+// 加载配置列表
+const loadConfigList = async () => {
+  loadingConfigs.value = true
+  try {
+    const data = await window.$request.get('/ai-chat/config/list')
+    configList.value = data || []
+    // 设置当前激活的配置
+    const activeConfig = configList.value.find(c => c.is_enabled)
+    if (activeConfig) {
+      currentConfigId.value = activeConfig.id
+    }
+  } catch (error) {
+    console.error('加载配置列表失败:', error)
+  } finally {
+    loadingConfigs.value = false
+  }
+}
+
+// 切换配置
+const handleConfigChange = async (configId) => {
+  try {
+    await window.$request.post(`/ai-chat/config/${configId}/set-active`)
+    message.success('已切换到配置 #' + configId)
+    // 重新加载配置列表以更新状态
+    await loadConfigList()
+  } catch (error) {
+    console.error('切换配置失败:', error)
+    message.error('切换配置失败')
+    // 恢复原来的选择
+    const activeConfig = configList.value.find(c => c.is_enabled)
+    if (activeConfig) {
+      currentConfigId.value = activeConfig.id
+    }
+  }
+}
+
 // 初始化欢迎消息和检查配置
 onMounted(async () => {
   messages.value.push({
@@ -380,6 +449,9 @@ onMounted(async () => {
   } catch (e) {
     console.warn('检查 AI 配置失败:', e)
   }
+  
+  // 加载配置列表
+  await loadConfigList()
   
   // 加载历史对话列表
   await loadConversations()
@@ -623,5 +695,19 @@ onMounted(async () => {
 .dark .history-item.active {
   background: #1a3a5a;
   border-color: #1890ff;
+}
+
+.config-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-option :deep(.n-icon) {
+  color: #1976d2;
+}
+
+.dark .config-option :deep(.n-icon) {
+  color: #4dabf7;
 }
 </style>

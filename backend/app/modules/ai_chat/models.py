@@ -27,7 +27,7 @@ messages_table = Table(
 ai_config_table = Table(
     "ai_config",
     metadata,
-    Column("id", Integer, primary_key=True, default=1),
+    Column("id", Integer, primary_key=True, autoincrement=True),
     Column("api_key", Text, nullable=True, comment="API Key"),
     Column("api_base", String(255), nullable=True, comment="API Base URL"),
     Column("model", String(100), nullable=True, comment="模型名称"),
