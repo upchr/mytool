@@ -297,6 +297,31 @@ const sendMessage = async () => {
   const content = inputMessage.value.trim()
   if (!content || isLoading.value) return
 
+  // 如果没有当前对话，自动创建一个新对话
+  if (!currentConversationId.value) {
+    // 使用用户消息的前20个字符作为对话标题
+    const title = content.length > 20 ? content.substring(0, 20) + '...' : content
+    try {
+      const result = await window.$request.post('/ai-chat/conversations', {
+        title: title
+      })
+      currentConversationId.value = result.id
+      currentConversationTitle.value = result.title
+
+      // 保存欢迎消息到数据库
+      if (messages.value.length > 0 && messages.value[0].role === 'assistant') {
+        await saveMessageToDB('assistant', messages.value[0].content)
+      }
+
+      // 刷新对话列表
+      await loadConversations()
+    } catch (e) {
+      console.error('创建对话失败:', e)
+      message.error('创建对话失败')
+      return
+    }
+  }
+
   // 添加用户消息
   messages.value.push({
     role: 'user',
