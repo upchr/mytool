@@ -65,22 +65,22 @@ async def chat_stream(request: schemas.ChatRequest):
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
-@router.get("/config")
-async def get_config():
-    """
-    获取 AI 配置信息
-
-    Returns:
-        当前 AI 配置状态
-    """
-    is_configured = bool(services.ai_chat_service.api_key)
-    return BaseResponse.success(
-        data={
-            "configured": is_configured,
-            "model": services.ai_chat_service.model,
-            "api_base": services.ai_chat_service.api_base,
-        }
-    )
+# @router.get("/config")
+# async def get_config():
+#     """
+#     获取 AI 配置信息
+#
+#     Returns:
+#         当前 AI 配置状态
+#     """
+#     is_configured = bool(services.ai_chat_service.api_key)
+#     return BaseResponse.success(
+#         data={
+#             "configured": is_configured,
+#             "model": services.ai_chat_service.model,
+#             "api_base": services.ai_chat_service.api_base,
+#         }
+#     )
 
 
 @router.get("/config/list")
