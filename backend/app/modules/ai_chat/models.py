@@ -1,5 +1,5 @@
 # app/modules/ai_chat/models.py
-from sqlalchemy import Table, Column, Integer, String, Text, DateTime, ForeignKey, MetaData
+from sqlalchemy import Table, Column, Integer, String, Text, DateTime, ForeignKey, MetaData, Boolean
 from app.core.db.database import metadata, engine
 
 conversations_table = Table(
@@ -24,4 +24,17 @@ messages_table = Table(
     sqlite_autoincrement=True,
 )
 
-__all__ = ["conversations_table", "messages_table"]
+ai_config_table = Table(
+    "ai_config",
+    metadata,
+    Column("id", Integer, primary_key=True, default=1),
+    Column("api_key", Text, nullable=True, comment="API Key"),
+    Column("api_base", String(255), nullable=True, comment="API Base URL"),
+    Column("model", String(100), nullable=True, comment="模型名称"),
+    Column("is_enabled", Boolean, default=True, comment="是否启用"),
+    Column("created_at", DateTime, nullable=False),
+    Column("updated_at", DateTime, nullable=False),
+    sqlite_autoincrement=True,
+)
+
+__all__ = ["conversations_table", "messages_table", "ai_config_table"]

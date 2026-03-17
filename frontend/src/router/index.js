@@ -12,6 +12,7 @@ import SSLApply from '../modules/ssl/apply/Applications.vue'
 import SSLStore from '../modules/ssl/store/Store.vue'
 import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
+import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import HelloWorld from '../modules/helloworld/HelloWorld.vue'
 import {
     AccessibilityOutline as AboutIcon,
@@ -27,6 +28,7 @@ import {
     List as SSLListIcon,
     BusinessOutline as SSLDNSIcon,
     EyeOutline as SSLMiIcon,
+    SettingsOutline as ConfigIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -39,6 +41,7 @@ const routes = [
     { path: '/sys', component: SysPage },
     { path: '/example', component: DialogFormEx },
     { path: '/ai-chat', component: AIChat },
+    { path: '/ai-config', component: AIConfig },
     { path: '/hello', component: HelloWorld },
     { path: '/ssl-dns', component: SSLDns },
     {
@@ -83,10 +86,23 @@ const routeLabels = [
         key: 'jobs'
     },
     {
-        path: '/ai-chat',
         label: 'AI 助手',
         icon: NotifyIcon,
-        key: 'ai-chat'
+        key: 'ai-chat',
+        children: [
+            {
+                path: '/ai-chat',
+                label: 'AI 聊天',
+                icon: NotifyIcon,
+                key: 'ai-chat-main'
+            },
+            {
+                path: '/ai-config',
+                label: 'AI 配置',
+                icon: ConfigIcon,
+                key: 'ai-config'
+            }
+        ]
     },
     {
         label: '证书管理',

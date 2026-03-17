@@ -5,6 +5,7 @@ import asyncio
 import re
 from typing import AsyncIterator, List, Optional
 import json
+from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,39 @@ class AIChatService:
         # 默认使用你指定的模型，可通过 AI_MODEL 覆盖
         self.model = os.getenv("AI_MODEL")
         self.timeout = 30.0
+        # 尝试从数据库加载配置
+        self._load_from_db()
+
+    def _load_from_db(self):
+        """从数据库加载配置"""
+        try:
+            from app.core.db.database import get_engine
+            from . import models
+            
+            engine = get_engine()
+            with engine.connect() as conn:
+                stmt = select(models.ai_config_table).where(
+                    models.ai_config_table.c.id == 1
+                )
+                result = conn.execute(stmt).first()
+                
+                if result and result.is_enabled:
+                    # 优先使用数据库配置
+                    if result.api_key:
+                        self.api_key = result.api_key
+                    if result.api_base:
+                        self.api_base = result.api_base
+                    if result.model:
+                        self.model = result.model
+                    
+                    logger.info(f"从数据库加载 AI 配置: api_base={self.api_base}, model={self.model}")
+        except Exception as e:
+            logger.warning(f"从数据库加载 AI 配置失败: {e}，使用环境变量配置")
+
+    def reload_config(self):
+        """重新加载配置"""
+        logger.info("重新加载 AI 配置")
+        self._load_from_db()
 
     async def chat(self, message: str, history: Optional[List] = None) -> str:
         """

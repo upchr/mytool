@@ -59,3 +59,36 @@ class MessageCreate(BaseModel):
     """创建消息请求"""
     role: str
     content: str
+
+
+class AIConfigSchema(BaseModel):
+    """AI 配置数据模型"""
+    id: Optional[int] = None
+    api_key: Optional[str] = None
+    api_base: Optional[str] = None
+    model: Optional[str] = None
+    is_enabled: bool = True
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AIConfigUpdate(BaseModel):
+    """更新 AI 配置请求"""
+    api_key: Optional[str] = Field(None, description="API Key")
+    api_base: Optional[str] = Field(None, description="API Base URL")
+    model: Optional[str] = Field(None, description="模型名称")
+    is_enabled: Optional[bool] = Field(None, description="是否启用")
+
+
+class AIConfigResponse(BaseModel):
+    """AI 配置响应"""
+    id: int
+    api_key: Optional[str] = None
+    api_base: Optional[str] = None
+    model: Optional[str] = None
+    is_enabled: bool
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None

@@ -83,6 +83,112 @@ async def get_config():
     )
 
 
+@router.get("/config/detail")
+async def get_config_detail():
+    """
+    获取 AI 配置详情（从数据库读取）
+
+    Returns:
+        完整的 AI 配置信息
+    """
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            stmt = select(models.ai_config_table).where(
+                models.ai_config_table.c.id == 1
+            )
+            result = conn.execute(stmt).first()
+            
+            if result:
+                config = {
+                    "id": result.id,
+                    "api_key": result.api_key,
+                    "api_base": result.api_base,
+                    "model": result.model,
+                    "is_enabled": result.is_enabled,
+                    "created_at": result.created_at.isoformat() if result.created_at else None,
+                    "updated_at": result.updated_at.isoformat() if result.updated_at else None,
+                }
+            else:
+                # 如果数据库中没有配置，返回默认空配置
+                config = {
+                    "id": 1,
+                    "api_key": None,
+                    "api_base": None,
+                    "model": None,
+                    "is_enabled": True,
+                    "created_at": None,
+                    "updated_at": None,
+                }
+            
+            return BaseResponse.success(data=config)
+    except Exception as e:
+        logger.error(f"获取配置详情失败: {e}")
+        raise HTTPException(status_code=500, detail="获取配置详情失败")
+
+
+@router.post("/config")
+async def save_config(request: schemas.AIConfigUpdate):
+    """
+    保存 AI 配置
+
+    Args:
+        request: 配置更新请求
+
+    Returns:
+        保存结果
+    """
+    try:
+        engine = get_engine()
+        now = datetime.utcnow()
+        
+        with engine.connect() as conn:
+            # 检查是否已存在配置
+            stmt = select(models.ai_config_table).where(
+                models.ai_config_table.c.id == 1
+            )
+            result = conn.execute(stmt).first()
+            
+            if result:
+                # 更新现有配置
+                update_values = {"updated_at": now}
+                if request.api_key is not None:
+                    update_values["api_key"] = request.api_key
+                if request.api_base is not None:
+                    update_values["api_base"] = request.api_base
+                if request.model is not None:
+                    update_values["model"] = request.model
+                if request.is_enabled is not None:
+                    update_values["is_enabled"] = request.is_enabled
+                
+                update_stmt = update(models.ai_config_table).where(
+                    models.ai_config_table.c.id == 1
+                ).values(**update_values)
+                conn.execute(update_stmt)
+            else:
+                # 创建新配置
+                insert_stmt = models.ai_config_table.insert().values(
+                    id=1,
+                    api_key=request.api_key,
+                    api_base=request.api_base,
+                    model=request.model,
+                    is_enabled=request.is_enabled if request.is_enabled is not None else True,
+                    created_at=now,
+                    updated_at=now
+                )
+                conn.execute(insert_stmt)
+            
+            conn.commit()
+            
+            # 重新加载配置到服务
+            services.ai_chat_service.reload_config()
+            
+            return BaseResponse.success(data={"message": "配置保存成功"})
+    except Exception as e:
+        logger.error(f"保存配置失败: {e}")
+        raise HTTPException(status_code=500, detail="保存配置失败")
+
+
 # 对话管理接口
 
 @router.get("/conversations")
