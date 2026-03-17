@@ -13,6 +13,7 @@ import SSLStore from '../modules/ssl/store/Store.vue'
 import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
+import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
 import HelloWorld from '../modules/helloworld/HelloWorld.vue'
 import {
     AccessibilityOutline as AboutIcon,
@@ -30,6 +31,7 @@ import {
     EyeOutline as SSLMiIcon,
     SettingsOutline as ConfigIcon,
     SparklesOutline as AiIcon,
+    BookOutline as KnowledgeIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -43,6 +45,7 @@ const routes = [
     { path: '/example', component: DialogFormEx },
     { path: '/ai-chat', component: AIChat },
     { path: '/ai-config', component: AIConfig },
+    { path: '/ai-knowledge', component: KnowledgeBase },
     { path: '/hello', component: HelloWorld },
     { path: '/ssl-dns', component: SSLDns },
     {
@@ -102,6 +105,12 @@ const routeLabels = [
                 label: 'AI 配置',
                 icon: ConfigIcon,
                 key: 'ai-config'
+            },
+            {
+                path: '/ai-knowledge',
+                label: '知识库管理',
+                icon: KnowledgeIcon,
+                key: 'ai-knowledge'
             }
         ]
     },

@@ -38,4 +38,53 @@ ai_config_table = Table(
     sqlite_autoincrement=True,
 )
 
-__all__ = ["conversations_table", "messages_table", "ai_config_table"]
+# 知识库表
+knowledge_base_table = Table(
+    "ai_knowledge_base",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("name", String(255), nullable=False, comment="知识库名称"),
+    Column("description", Text, nullable=True, comment="知识库描述"),
+    Column("is_active", Boolean, default=True, comment="是否启用"),
+    Column("created_at", DateTime, nullable=False),
+    Column("updated_at", DateTime, nullable=False),
+    sqlite_autoincrement=True,
+)
+
+# 知识文档表
+knowledge_document_table = Table(
+    "ai_knowledge_document",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("knowledge_base_id", Integer, ForeignKey("ai_knowledge_base.id", ondelete="CASCADE"), nullable=False),
+    Column("title", String(255), nullable=False, comment="文档标题"),
+    Column("content", Text, nullable=False, comment="文档内容"),
+    Column("category", String(100), nullable=True, comment="文档分类"),
+    Column("tags", String(500), nullable=True, comment="文档标签，逗号分隔"),
+    Column("is_active", Boolean, default=True, comment="是否启用"),
+    Column("created_at", DateTime, nullable=False),
+    Column("updated_at", DateTime, nullable=False),
+    sqlite_autoincrement=True,
+)
+
+# 知识分片表（用于向量检索）
+knowledge_chunk_table = Table(
+    "ai_knowledge_chunk",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("document_id", Integer, ForeignKey("ai_knowledge_document.id", ondelete="CASCADE"), nullable=False),
+    Column("chunk_index", Integer, nullable=False, comment="分片索引"),
+    Column("content", Text, nullable=False, comment="分片内容"),
+    Column("metadata", Text, nullable=True, comment="元数据，JSON格式"),
+    Column("created_at", DateTime, nullable=False),
+    sqlite_autoincrement=True,
+)
+
+__all__ = [
+    "conversations_table",
+    "messages_table",
+    "ai_config_table",
+    "knowledge_base_table",
+    "knowledge_document_table",
+    "knowledge_chunk_table"
+]

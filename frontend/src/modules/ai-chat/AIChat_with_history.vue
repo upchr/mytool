@@ -44,23 +44,43 @@
       <div class="chat-main">
         <n-card :title="currentConversationTitle" class="chat-card">
           <template #header-extra>
-            <n-select
-                v-model:value="currentConfigId"
-                :options="configOptions"
-                placeholder="选择配置"
-                size="small"
-                style="width: 200px"
-                @update:value="handleConfigChange"
-                :loading="loadingConfigs"
-            >
-              <template #render-label="{ option }">
-                <div class="config-option">
-                  <n-icon :component="option.is_enabled ? CheckmarkCircleIcon : RadioIcon" :size="14" />
-                  <span>{{ option.label }}</span>
-                  <n-tag v-if="option.is_enabled" type="success" size="tiny" style="margin-left: 4px">当前</n-tag>
-                </div>
-              </template>
-            </n-select>
+            <n-space>
+              <n-select
+                  v-model:value="currentConfigId"
+                  :options="configOptions"
+                  placeholder="选择配置"
+                  size="small"
+                  style="width: 150px"
+                  @update:value="handleConfigChange"
+                  :loading="loadingConfigs"
+              >
+                <template #render-label="{ option }">
+                  <div class="config-option">
+                    <n-icon :component="option.is_enabled ? CheckmarkCircleIcon : RadioIcon" :size="14" />
+                    <span>{{ option.label }}</span>
+                    <n-tag v-if="option.is_enabled" type="success" size="tiny" style="margin-left: 4px">当前</n-tag>
+                  </div>
+                </template>
+              </n-select>
+              <n-switch
+                  v-model:value="useKnowledgeBase"
+                  size="small"
+                  @update:value="handleKnowledgeBaseChange"
+              >
+                <template #checked>知识库开启</template>
+                <template #unchecked>知识库关闭</template>
+              </n-switch>
+              <n-select
+                  v-if="useKnowledgeBase"
+                  v-model:value="selectedKnowledgeBaseId"
+                  :options="knowledgeBaseOptions"
+                  placeholder="选择知识库"
+                  size="small"
+                  style="width: 150px"
+                  @update:value="handleKnowledgeBaseSelect"
+                  :loading="loadingKnowledgeBases"
+              />
+            </n-space>
           </template>
           <div class="chat-messages" ref="messagesContainer">
             <div
@@ -176,12 +196,26 @@ const configList = ref([])
 const currentConfigId = ref(null)
 const loadingConfigs = ref(false)
 
+// 知识库相关
+const useKnowledgeBase = ref(false)
+const selectedKnowledgeBaseId = ref(null)
+const knowledgeBaseList = ref([])
+const loadingKnowledgeBases = ref(false)
+
 const configOptions = computed(() => {
   return configList.value.map(config => ({
     label: `${config.name || '未命名配置'} - ${config.model}`,
     value: config.id,
     is_enabled: config.is_enabled,
     api_base: config.api_base
+  }))
+})
+
+// 知识库选项
+const knowledgeBaseOptions = computed(() => {
+  return knowledgeBaseList.value.map(kb => ({
+    label: kb.name,
+    value: kb.id
   }))
 })
 
@@ -450,17 +484,29 @@ const sendMessage = async () => {
     scrollToBottom()
 
     const token = getAuthToken()
-    const res = await fetch('/api/ai-chat/chat/stream', {
+
+    // 判断是否使用知识库
+    let apiEndpoint = '/api/ai-chat/chat/stream'
+    let requestBody = {
+      message: content,
+      history: messages.value.slice(0, -2), // 排除当前 user + 这个空 assistant
+      conversation_id: currentConversationId.value
+    }
+
+    // 如果开启知识库，使用带知识库的接口
+    if (useKnowledgeBase.value && selectedKnowledgeBaseId.value) {
+      apiEndpoint = '/api/ai-chat/chat-with-knowledge'
+      requestBody.use_knowledge = true
+      requestBody.knowledge_base_id = selectedKnowledgeBaseId.value
+    }
+
+    const res = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        message: content,
-        history: messages.value.slice(0, -2), // 排除当前 user + 这个空 assistant
-        conversation_id: currentConversationId.value
-      }),
+      body: JSON.stringify(requestBody),
       signal: abortController.value.signal
     })
 
@@ -571,6 +617,23 @@ const loadConfigList = async () => {
   }
 }
 
+// 加载知识库列表
+const loadKnowledgeBases = async () => {
+  loadingKnowledgeBases.value = true
+  try {
+    const data = await window.$request.get('/ai-chat/knowledge-base')
+    knowledgeBaseList.value = data || []
+    // 如果有知识库，默认选择第一个
+    if (knowledgeBaseList.value.length > 0 && !selectedKnowledgeBaseId.value) {
+      selectedKnowledgeBaseId.value = knowledgeBaseList.value[0].id
+    }
+  } catch (error) {
+    console.error('加载知识库列表失败:', error)
+  } finally {
+    loadingKnowledgeBases.value = false
+  }
+}
+
 // 切换配置
 const handleConfigChange = async (configId) => {
   try {
@@ -591,6 +654,18 @@ const handleConfigChange = async (configId) => {
   }
 }
 
+// 知识库开关切换
+const handleKnowledgeBaseChange = (enabled) => {
+  if (enabled && !selectedKnowledgeBaseId.value && knowledgeBaseList.value.length > 0) {
+    selectedKnowledgeBaseId.value = knowledgeBaseList.value[0].id
+  }
+}
+
+// 知识库选择
+const handleKnowledgeBaseSelect = (baseId) => {
+  console.log('选择知识库:', baseId)
+}
+
 // 初始化欢迎消息和检查配置
 onMounted(async () => {
   messages.value.push({
@@ -604,6 +679,9 @@ onMounted(async () => {
 
   // 加载历史对话列表
   await loadConversations()
+
+  // 加载知识库列表
+  await loadKnowledgeBases()
 })
 </script>
 
