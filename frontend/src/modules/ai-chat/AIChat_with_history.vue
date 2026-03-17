@@ -84,7 +84,7 @@
                 <br/>
                 📖 获取密钥方法：访问
                 <a href="https://platform.iflow.cn/profile?tab=apiKey" target="_blank" rel="noopener noreferrer">
-                  iFlow 开放平台
+                  iFlow 开放平台（免费）
                 </a>
                 申请 API Key，然后在系统设置中配置。
               </n-alert>
@@ -562,6 +562,8 @@ const loadConfigList = async () => {
     if (activeConfig) {
       currentConfigId.value = activeConfig.id
     }
+
+    isConfigured.value = configList.value.length>0
   } catch (error) {
     console.error('加载配置列表失败:', error)
   } finally {
@@ -596,14 +598,6 @@ onMounted(async () => {
     content: '您好！我是 AI 助手，有什么可以帮助您的吗？',
     timestamp: Date.now()
   })
-
-  // 检查 API Key 配置状态
-  try {
-    const result = await window.$request.get('/ai-chat/config')
-    isConfigured.value = result?.configured ?? false
-  } catch (e) {
-    console.warn('检查 AI 配置失败:', e)
-  }
 
   // 加载配置列表
   await loadConfigList()
