@@ -138,7 +138,7 @@ const loadingConfigs = ref(false)
 
 const configOptions = computed(() => {
   return configList.value.map(config => ({
-    label: `配置 #${config.id} - ${config.model}`,
+    label: `${config.name || '未命名配置'} - ${config.model}`,
     value: config.id,
     is_enabled: config.is_enabled,
     api_base: config.api_base
@@ -420,7 +420,9 @@ const loadConfigList = async () => {
 const handleConfigChange = async (configId) => {
   try {
     await window.$request.post(`/ai-chat/config/${configId}/set-active`)
-    message.success('已切换到配置 #' + configId)
+    const config = configList.value.find(c => c.id === configId)
+    const configName = config ? config.name : configId
+    message.success(`已切换到配置: ${configName}`)
     // 重新加载配置列表以更新状态
     await loadConfigList()
   } catch (error) {

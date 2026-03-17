@@ -13,9 +13,9 @@
               新建配置
             </n-button>
           </div>
-          
+
           <n-empty v-if="configList.length === 0" description="暂无配置" />
-          
+
           <n-list v-else bordered>
             <n-list-item v-for="config in configList" :key="config.id">
               <template #prefix>
@@ -23,7 +23,7 @@
                   <n-icon :size="24" :component="config.is_enabled ? CheckmarkCircleIcon : RadioIcon" />
                 </div>
               </template>
-              
+
               <div class="config-info">
                 <div class="config-name">{{ config.name || '未命名配置' }}</div>
                 <div class="config-details">
@@ -34,7 +34,7 @@
                 <div class="config-time">
                   更新于: {{ formatTime(config.updated_at) }}
                 </div>
-              </div>              
+              </div>
               <template #suffix>
                 <div class="config-actions">
                   <n-button
@@ -46,14 +46,14 @@
                     激活
                   </n-button>
                   <n-tag v-else type="success" size="small">当前使用</n-tag>
-                  
+
                   <n-button
                       size="small"
                       @click="editConfig(config)"
                   >
                     编辑
                   </n-button>
-                  
+
                   <n-popconfirm
                       @positive-click="deleteConfig(config.id)"
                   >
@@ -106,6 +106,13 @@
           />
         </n-form-item>
 
+        <n-form-item label="API Base URL" path="api_base">
+          <n-input
+              v-model:value="formData.api_base"
+              placeholder="https://api.example.com/v1"
+          />
+        </n-form-item>
+
         <n-form-item label="API Key" path="api_key">
           <n-input
               v-model:value="formData.api_key"
@@ -114,18 +121,13 @@
               placeholder="请输入 API Key"
           />
         </n-form-item>
-
-        <n-form-item label="API Base URL" path="api_base">
-          <n-input
-              v-model:value="formData.api_base"
-              placeholder="https://api.example.com/v1"
-          />
-        </n-form-item>
-
         <n-form-item label="模型名称" path="model">
-          <n-input
+          <n-select
               v-model:value="formData.model"
-              placeholder="例如: gpt-4, claude-3"
+              :options="modelOptions"
+              filterable
+              tag
+              placeholder="选择或输入模型名称"
           />
         </n-form-item>
 
@@ -154,7 +156,7 @@ import {ref, onMounted, computed} from 'vue'
 import {
   NCard, NForm, NFormItem, NInput, NButton, NSpin,
   NDivider, NAlert, NList, NListItem, NEmpty,
-  NIcon, NTag, NModal, NPopconfirm, useMessage
+  NIcon, NTag, NModal, NPopconfirm, NSelect, useMessage
 } from 'naive-ui'
 import {
   AddOutline as AddIcon,
@@ -180,6 +182,14 @@ const formData = ref({
   is_enabled: true
 })
 
+// 预设的模型选项
+const modelOptions = [
+  { label: 'iflow-rome-30ba3b', value: 'iflow-rome-30ba3b' },
+  { label: 'qwen3-coder-plus', value: 'qwen3-coder-plus' },
+  { label: 'qwen3-max', value: 'qwen3-max' },
+  { label: 'deepseek-r1', value: 'deepseek-r1' }
+]
+
 const rules = {
   name: {
     required: true,
@@ -200,8 +210,8 @@ const rules = {
   },
   model: {
     required: true,
-    message: '请输入模型名称',
-    trigger: ['blur', 'input']
+    message: '请选择或输入模型名称',
+    trigger: ['blur', 'change']
   }
 }
 
@@ -281,7 +291,7 @@ const saveConfig = async () => {
       await window.$request.post('/ai-chat/config/create', formData.value)
       message.success('配置创建成功')
     }
-    
+
     showDialog.value = false
     await loadConfigList()
   } catch (error) {
@@ -334,7 +344,7 @@ const testConnection = async () => {
   } catch (error) {
     console.error('测试连接失败:', error)
     message.error('测试连接失败，请检查配置和网络')
-    
+
     // 尝试恢复原来的激活状态
     try {
       const currentActive = configList.value.find(c => c.is_enabled)
@@ -365,7 +375,9 @@ const deleteConfig = async (configId) => {
 const setActiveConfig = async (configId) => {
   try {
     await window.$request.post(`/ai-chat/config/${configId}/set-active`)
-    message.success('已切换到配置 #' + configId)
+    const config = configList.value.find(c => c.id === configId)
+    const configName = config ? config.name : configId
+    message.success(`已切换到配置: ${configName}`)
     await loadConfigList()
   } catch (error) {
     console.error('切换配置失败:', error)
