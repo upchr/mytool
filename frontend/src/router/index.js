@@ -14,6 +14,7 @@ import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import HelloWorld from '../modules/helloworld/HelloWorld.vue'
+import TemplateMarket from '../modules/task-template/TemplateMarket.vue'
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon,
@@ -30,12 +31,14 @@ import {
     EyeOutline as SSLMiIcon,
     SettingsOutline as ConfigIcon,
     SparklesOutline as AiIcon,
+    StorefrontOutline as TemplateIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
     { path: '/', component: NoteList },
     { path: '/nodes', component: NodeManager },
     { path: '/jobs', component: JobManager },
+    { path: '/template-market', component: TemplateMarket },
     { path: '/notify', component: NotificationSettings },
     { path: '/database', component: DatabaseManager },
     { path: '/versions', component: VersionManager },
@@ -85,6 +88,12 @@ const routeLabels = [
         label: '任务管理',
         icon: ClockIcon,
         key: 'jobs'
+    },
+    {
+        path: '/template-market',
+        label: '模板市场',
+        icon: TemplateIcon,
+        key: 'template-market'
     },
     {
         label: 'AI 助手',
