@@ -8,6 +8,8 @@
 from fastapi import APIRouter, Depends, Query
 from typing import List, Optional
 
+from sqlalchemy import select
+
 from app.core.pojo.response import BaseResponse
 from app.core.db.database import get_engine
 from app.modules.task_template import schemas
@@ -27,7 +29,7 @@ async def list_templates(
 ):
     """
     获取任务模板列表
-    
+
     Args:
         category: 分类筛选
         is_official: 是否官方筛选
@@ -35,7 +37,7 @@ async def list_templates(
         page: 页码
         page_size: 每页大小
         engine: 数据库引擎
-    
+
     Returns:
         分页模板列表
     """
@@ -53,6 +55,31 @@ async def list_templates(
     except Exception as e:
         return BaseResponse.error(500, str(e))
 
+@router.get("/categories")
+async def get_categories(engine=Depends(get_engine)):
+    """
+    获取模板分类列表
+
+    Args:
+        engine: 数据库引擎
+
+    Returns:
+        分类列表
+    """
+    from sqlalchemy import distinct
+    from app.modules.task_template.models import task_templates_table
+
+    query = select(distinct(task_templates_table.c.category)).where(
+        task_templates_table.c.is_active == True,
+        task_templates_table.c.category.is_not(None)
+    )
+
+    with engine.connect() as conn:
+        result = conn.execute(query)
+        categories = [row[0] for row in result]
+
+    return BaseResponse.success(categories)
+
 
 @router.get("/{template_id}", response_model=BaseResponse[schemas.TaskTemplateRead])
 async def get_template(
@@ -61,11 +88,11 @@ async def get_template(
 ):
     """
     获取模板详情
-    
+
     Args:
         template_id: 模板ID
         engine: 数据库引擎
-    
+
     Returns:
         模板数据
     """
@@ -83,11 +110,11 @@ async def create_template(
 ):
     """
     创建模板
-    
+
     Args:
         data: 创建数据
         engine: 数据库引擎
-    
+
     Returns:
         创建后的模板数据
     """
@@ -96,7 +123,7 @@ async def create_template(
         existing = service.get_by_id(data.template_id)
         if existing:
             return BaseResponse.error(400, f"模板ID已存在: {data.template_id}")
-        
+
         result = service.create(data)
         return BaseResponse.success(result)
     except Exception as e:
@@ -111,12 +138,12 @@ async def update_template(
 ):
     """
     更新模板
-    
+
     Args:
         template_id: 模板ID
         data: 更新数据
         engine: 数据库引擎
-    
+
     Returns:
         更新后的模板数据
     """
@@ -125,7 +152,7 @@ async def update_template(
         existing = service.get_by_id(template_id)
         if not existing:
             return BaseResponse.error(404, f"模板不存在: {template_id}")
-        
+
         result = service.update(template_id, data)
         return BaseResponse.success(result)
     except Exception as e:
@@ -139,11 +166,11 @@ async def delete_template(
 ):
     """
     删除模板（软删除）
-    
+
     Args:
         template_id: 模板ID
         engine: 数据库引擎
-    
+
     Returns:
         操作结果
     """
@@ -152,7 +179,7 @@ async def delete_template(
         existing = service.get_by_id(template_id)
         if not existing:
             return BaseResponse.error(404, f"模板不存在: {template_id}")
-        
+
         # 软删除
         service.update(template_id, schemas.TaskTemplateUpdate(is_active=False))
         return BaseResponse.success(message="删除成功")
@@ -168,12 +195,12 @@ async def apply_template(
 ):
     """
     应用模板 - 从模板创建 cron 任务
-    
+
     Args:
         template_id: 模板ID
         data: 应用请求数据
         engine: 数据库引擎
-    
+
     Returns:
         创建的任务信息
     """
@@ -188,27 +215,4 @@ async def apply_template(
         return BaseResponse.error(500, str(e))
 
 
-@router.get("/categories")
-async def get_categories(engine=Depends(get_engine)):
-    """
-    获取模板分类列表
-    
-    Args:
-        engine: 数据库引擎
-    
-    Returns:
-        分类列表
-    """
-    from sqlalchemy import distinct
-    from app.modules.task_template.models import task_templates_table
-    
-    query = select(distinct(task_templates_table.c.category)).where(
-        task_templates_table.c.is_active == True,
-        task_templates_table.c.category.is_not(None)
-    )
-    
-    with engine.connect() as conn:
-        result = conn.execute(query)
-        categories = [row[0] for row in result]
-    
-    return BaseResponse.success(categories)
+

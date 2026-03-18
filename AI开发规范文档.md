@@ -77,6 +77,8 @@ async def create_resource(
 
 **规范要点：**
 - 路由必须包含 `prefix` 和 `tags`
+- 路由注意顺序，具名路由要放到restful匹配路由（“/{}”）前，防止具名路由失效
+- 可多层级路由，也要注意上一条描述的匹配失效
 - 使用 `BaseResponse.success/error` 包装响应
 - 使用依赖注入 `get_engine`
 - 参数验证使用 `Query`、`Path`、`Body`
