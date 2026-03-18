@@ -53,19 +53,34 @@ class AIChatService:
         logger.info("重新加载 AI 配置")
         self._load_from_db()
 
-    async def chat(self, message: str, history: Optional[List] = None) -> str:
+    async def chat(self, message: str, history: Optional[List] = None, system_prompt: Optional[str] = None) -> str:
         """
         直接按照官方 API 文档调用 iFlow /chat/completions 接口。
         参考: https://platform.iflow.cn/docs/api-reference
+
+        Args:
+            message: 用户消息
+            history: 历史消息
+            system_prompt: 自定义系统提示词
+
+        Returns:
+            AI 响应
         """
         try:
             # 构建 messages（system + history + 当前消息）
-            messages = [
-                {
+            messages = []
+
+            # 使用自定义或默认的 system prompt
+            if system_prompt:
+                messages.append({
+                    "role": "system",
+                    "content": system_prompt,
+                })
+            else:
+                messages.append({
                     "role": "system",
                     "content": "你是一个有帮助的 AI 助手，专注于回答用户的问题和提供帮助。",
-                }
-            ]
+                })
 
             if history:
                 for msg in history:
@@ -239,6 +254,218 @@ class AIChatService:
     def _get_error_response(self) -> str:
         """错误兜底响应"""
         return "抱歉，AI 服务暂时不可用。请稍后重试或检查 iflow API 配置。"
+
+    async def test_connection(self, api_key: str, api_base: str, model: str, message: str = "你好，这是一个测试消息") -> dict:
+        """
+        使用指定的配置测试连接
+
+        Args:
+            api_key: API Key
+            api_base: API Base URL
+            model: 模型名称
+            message: 测试消息
+
+        Returns:
+            测试结果，包含 success 和 content/error 字段
+        """
+        try:
+            url = f"{api_base.rstrip('/')}/chat/completions"
+
+            # 构建测试消息
+            messages = [
+                {
+                    "role": "system",
+                    "content": "你是一个有帮助的 AI 助手，专注于回答用户的问题和提供帮助。",
+                },
+                {"role": "user", "content": message}
+            ]
+
+            # 构建请求负载
+            payload = {
+                "model": model,
+                "messages": messages,
+                "stream": False,
+                "max_tokens": 512,
+                "stop": ["null"],
+                "temperature": 0.7,
+                "top_p": 0.7,
+                "top_k": 50,
+                "frequency_penalty": 0.5,
+                "n": 1,
+                "response_format": {"type": "text"},
+            }
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                )
+
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    error_text = e.response.text
+                    logger.error(f"测试连接失败 HTTP 错误: {e.response.status_code}\n响应内容: {error_text}")
+                    return {
+                        "success": False,
+                        "error": f"HTTP {e.response.status_code}: {error_text}"
+                    }
+
+                data = response.json()
+                content = (
+                    data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+                )
+
+                if not content:
+                    logger.error(f"测试连接返回内容为空: {data}")
+                    return {
+                        "success": False,
+                        "error": "AI 返回内容为空"
+                    }
+
+                return {
+                    "success": True,
+                    "content": content
+                }
+
+        except httpx.HTTPError as e:
+            logger.error(f"测试连接请求失败: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+        except Exception as e:
+            logger.error(f"测试连接异常: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    def search_knowledge(self, query: str, knowledge_base_id: Optional[int] = None, limit: int = 5) -> List[dict]:
+        """
+        搜索知识库（基于关键词匹配）
+
+        Args:
+            query: 查询文本
+            knowledge_base_id: 知识库ID，None表示搜索所有
+            limit: 返回结果数量
+
+        Returns:
+            匹配的知识分片列表
+        """
+        try:
+            from app.core.db.database import get_engine
+            from . import models
+
+            engine = get_engine()
+            with engine.connect() as conn:
+                # 构建查询
+                query_str = query.lower()
+                keywords = query_str.split()
+
+                # 查询启用的文档
+                # 使用 OR 条件匹配任意关键词
+                from sqlalchemy import or_
+
+                conditions = []
+                for keyword in keywords:
+                    if keyword.strip():
+                        conditions.append(models.knowledge_chunk_table.c.content.ilike(f"%{keyword}%"))
+
+                if conditions:
+                    stmt = select(models.knowledge_chunk_table).where(or_(*conditions))
+                else:
+                    stmt = select(models.knowledge_chunk_table)
+
+                # 如果指定了知识库，添加过滤条件
+                if knowledge_base_id:
+                    stmt = stmt.join(
+                        models.knowledge_document_table,
+                        models.knowledge_chunk_table.c.document_id == models.knowledge_document_table.c.id
+                    ).where(
+                        models.knowledge_document_table.c.knowledge_base_id == knowledge_base_id,
+                        models.knowledge_document_table.c.is_active == True
+                    )
+                else:
+                    stmt = stmt.join(
+                        models.knowledge_document_table,
+                        models.knowledge_chunk_table.c.document_id == models.knowledge_document_table.c.id
+                    ).where(
+                        models.knowledge_document_table.c.is_active == True
+                    )
+
+                # 限制结果数量
+                stmt = stmt.limit(limit)
+
+                result = conn.execute(stmt)
+
+                chunks = []
+                for row in result:
+                    # 获取文档信息
+                    doc_stmt = select(models.knowledge_document_table).where(
+                        models.knowledge_document_table.c.id == row.document_id
+                    )
+                    doc_result = conn.execute(doc_stmt).first()
+
+                    if doc_result:
+                        # 计算简单相关性得分（基于关键词出现次数）
+                        score = query_str.count(' ') + 1  # 简单得分
+                        content_lower = row.content.lower()
+                        for keyword in query_str.split():
+                            score += content_lower.count(keyword)
+
+                        chunks.append({
+                            "document_id": row.document_id,
+                            "document_title": doc_result.title,
+                            "chunk_index": row.chunk_index,
+                            "content": row.content,
+                            "category": doc_result.category,
+                            "score": score
+                        })
+
+                # 按得分排序
+                chunks.sort(key=lambda x: x["score"], reverse=True)
+
+                logger.info(f"知识库搜索 '{query}' 找到 {len(chunks)} 个结果")
+                return chunks[:limit]
+
+        except Exception as e:
+            logger.error(f"知识库搜索失败: {e}")
+            return []
+
+    def build_knowledge_context(self, search_results: List[dict], max_tokens: int = 1000) -> str:
+        """
+        根据搜索结果构建知识上下文
+
+        Args:
+            search_results: 搜索结果列表
+            max_tokens: 最大token数
+
+        Returns:
+            知识上下文字符串
+        """
+        if not search_results:
+            return ""
+
+        context_parts = []
+        current_length = 0
+
+        for result in search_results:
+            # 估算token数（1 token ≈ 3.5 字符）
+            chunk_length = len(result["content"])
+            if current_length + chunk_length > max_tokens:
+                break
+
+            context_parts.append(f"【{result['document_title']}】\n{result['content']}")
+            current_length += chunk_length
+
+        return "\n\n".join(context_parts)
 
     async def test_connection(self, api_key: str, api_base: str, model: str, message: str = "你好，这是一个测试消息") -> dict:
         """

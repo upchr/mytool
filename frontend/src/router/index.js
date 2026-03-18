@@ -13,6 +13,7 @@ import SSLStore from '../modules/ssl/store/Store.vue'
 import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
+import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
 import HelloWorld from '../modules/helloworld/HelloWorld.vue'
 import TemplateMarket from '../modules/task-template/TemplateMarket.vue'
 import PluginMarket from '../modules/plugin/PluginMarket.vue'
@@ -35,6 +36,7 @@ import {
     StorefrontOutline as TemplateIcon,
     ExtensionPuzzleOutline as PluginIcon,
     GitBranchOutline as WorkflowIcon,
+    BookOutline as KnowledgeIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -50,6 +52,7 @@ const routes = [
     { path: '/example', component: DialogFormEx },
     { path: '/ai-chat', component: AIChat },
     { path: '/ai-config', component: AIConfig },
+    { path: '/ai-knowledge', component: KnowledgeBase },
     { path: '/hello', component: HelloWorld },
     { path: '/ssl-dns', component: SSLDns },
     {
@@ -57,15 +60,13 @@ const routes = [
         component: SSLApply,
         children: [
             {
-                path: 'cert/:id',  // 实际路径: /ssl-apply/cert/123
+                path: 'cert/:id',
                 component: SSLDetail,
                 props: true
             }
         ]
     },
     { path: '/ssl-store', component: SSLStore },
-    // { path: '/ssl-store/:id', component: SSLDetail, props: true },
-
 ]
 
 const routeLabels = [
@@ -121,6 +122,12 @@ const routeLabels = [
                 label: 'AI 配置',
                 icon: ConfigIcon,
                 key: 'ai-config'
+            },
+            {
+                path: '/ai-knowledge',
+                label: '知识库管理',
+                icon: KnowledgeIcon,
+                key: 'ai-knowledge'
             }
         ]
     },
@@ -153,11 +160,10 @@ const routeLabels = [
                 icon: SSLMiIcon,
                 key: 'ssl-min'
             },
-
         ]
     },
     {
-        label: '系统管理',  // 另一个父菜单
+        label: '系统管理',
         icon: AboutIcon,
         key: 'sys',
         children: [
@@ -182,13 +188,7 @@ const routeLabels = [
         key: 'versions'
     },
     {
-        path: '/hello',
-        label: 'HelloWorld',
-        icon: ExampleIcon,
-        key: 'hello'
-    },
-    {
-        label: '示例菜单',  // 示例多级菜单
+        label: '示例菜单',
         icon: ExampleIcon,
         key: 'example',
         children: [
