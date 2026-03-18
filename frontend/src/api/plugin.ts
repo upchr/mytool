@@ -44,7 +44,7 @@ export const pluginApi = {
   /**
    * 安装插件
    */
-  install(pluginId, config) {
+  install(pluginId, config = {}) {
     return request.post(`${BASE_URL}/${pluginId}/install`, config)
   },
 
@@ -60,6 +60,20 @@ export const pluginApi = {
    */
   getConfigs(pluginId) {
     return request.get(`${BASE_URL}/${pluginId}/configs`)
+  },
+
+  /**
+   * 发送通知（通知类插件）
+   */
+  send(pluginId, title, content) {
+    return request.post(`${BASE_URL}/${pluginId}/send`, { title, content })
+  },
+
+  /**
+   * 执行命令（执行器类插件）
+   */
+  execute(pluginId, command, timeout = 300) {
+    return request.post(`${BASE_URL}/${pluginId}/execute`, { command, timeout })
   }
 }
 

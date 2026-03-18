@@ -211,7 +211,16 @@ class WorkflowService:
             conn.commit()
             execution_id = result.inserted_primary_key[0]
         
-        # TODO: 异步执行工作流
+        # 异步执行工作流
+        from .engine import execute_workflow_sync
+        import threading
+        
+        thread = threading.Thread(
+            target=execute_workflow_sync,
+            args=(self.engine, execution_id)
+        )
+        thread.start()
+        
         logger.info(f"工作流触发: {workflow_id}, execution_id={execution_id}")
         
         return execution_id

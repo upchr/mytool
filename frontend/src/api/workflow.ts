@@ -44,8 +44,8 @@ export const workflowApi = {
   /**
    * 触发工作流执行
    */
-  trigger(data) {
-    return request.post(`${BASE_URL}/trigger`, data)
+  trigger(workflowId, inputs = {}) {
+    return request.post(`${BASE_URL}/trigger`, { workflow_id: workflowId, inputs })
   },
 
   /**
@@ -84,10 +84,20 @@ export const workflowApi = {
   },
 
   /**
+   * 获取版本详情
+   */
+  getVersion(versionId) {
+    return request.get(`${BASE_URL}/versions/${versionId}`)
+  },
+
+  /**
    * 恢复版本
    */
-  restoreVersion(workflowId, data) {
-    return request.post(`${BASE_URL}/${workflowId}/versions/restore`, data)
+  restoreVersion(workflowId, versionId, changeNote) {
+    return request.post(`${BASE_URL}/${workflowId}/versions/restore`, { 
+      version_id: versionId, 
+      change_note: changeNote 
+    })
   }
 }
 

@@ -391,15 +391,8 @@ class TaskTemplateService:
             is_active=data.is_active if data.is_active is not None else False
         )
         
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            result = loop.run_until_complete(
-                create_cron_job(self.engine, cron_data)
-            )
-        finally:
-            loop.close()
+        # 调用 cron 模块创建任务
+        result = create_cron_job(self.engine, cron_data)
         
         return {
             "message": "模板应用成功",
