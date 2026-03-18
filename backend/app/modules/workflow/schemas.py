@@ -116,6 +116,7 @@ class NodeTypes:
     PARALLEL = "parallel"
     WAIT = "wait"
     NOTIFICATION = "notification"
+    SUBWORKFLOW = "subworkflow"  # 子工作流
 
 
 # ============== 工作流版本 ==============
