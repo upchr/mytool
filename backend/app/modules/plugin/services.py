@@ -306,65 +306,6 @@ class PluginService:
             PluginService._plugin_mtimes[plugin_id] = os.path.getmtime(module.__file__)
         except Exception:
             pass
-    
-    # ========== 插件依赖管理 ==========
-    
-    @staticmethod
-    async def install_plugin_dependencies(plugin_id: str) -> Dict[str, Any]:
-        """安装插件依赖（读取 requirements.txt）"""
-        plugin = await PluginService.get_plugin(plugin_id)
-        if not plugin:
-            raise ValueError("插件不存在")
-        
-        if plugin.get("is_official", True):
-            return {"message": "内置插件无需安装依赖", "installed": []}
-        
-        plugin_dir = f"/data/plugins/{plugin_id}"
-        requirements_path = os.path.join(plugin_dir, "requirements.txt")
-        
-        if not os.path.exists(requirements_path):
-            return {"message": "插件没有 requirements.txt", "installed": []}
-        
-        import subprocess
-        import sys
-        
-        try:
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", "-r", requirements_path],
-                capture_output=True,
-                text=True,
-                timeout=300
-            )
-            
-            if result.returncode != 0:
-                raise Exception(f"依赖安装失败: {result.stderr}")
-            
-            installed = [line.strip() for line in result.stdout.split("\n") if line.strip()]
-            
-            await PluginService._log(
-                plugin_id,
-                "dependencies_install",
-                "插件依赖安装成功",
-                metadata={"installed": installed}
-            )
-            
-            return {
-                "message": "依赖安装成功",
-                "installed": installed,
-                "stdout": result.stdout
-            }
-            
-        except subprocess.TimeoutExpired:
-            raise Exception("依赖安装超时（5分钟）")
-        except Exception as e:
-            logger.error(f"插件依赖安装失败: {plugin_id}, error: {e}")
-            await PluginService._log(
-                plugin_id,
-                "error",
-                f"依赖安装失败: {e}",
-                "error"
-            )
-            raise
 
     @staticmethod
     def get_loaded_plugin(plugin_id: str) -> Optional[BasePlugin]:
