@@ -61,11 +61,6 @@ async def lifespan(app: FastAPI):
     from app.modules.task_template.services import init_builtin_templates
     await init_builtin_templates()
     logger.info("✅ 内置任务模板初始化完成")
-
-    # 7 初始化内置插件
-    from app.modules.plugin.services import init_builtin_plugins
-    await init_builtin_plugins()
-    logger.info("✅ 内置插件初始化完成")
     # 运行应用
     yield
 
