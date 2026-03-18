@@ -52,8 +52,26 @@ workflow_node_executions_table = Table(
     sqlite_autoincrement=True,
 )
 
+# 工作流版本历史表
+workflow_versions_table = Table(
+    "workflow_versions",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("workflow_id", String(100), ForeignKey("workflows.workflow_id"), nullable=False),
+    Column("version", Integer, nullable=False),  # 版本号（从1开始递增）
+    Column("name", String(100), nullable=False),  # 当时的名称
+    Column("description", Text),  # 当时的描述
+    Column("nodes", JSON, default=list),  # 当时的节点定义
+    Column("edges", JSON, default=list),  # 当时的边定义
+    Column("change_note", Text),  # 变更说明
+    Column("created_by", String(100)),  # 创建者
+    Column("created_at", DateTime, nullable=False, default=datetime.utcnow),
+    sqlite_autoincrement=True,
+)
+
 __all__ = [
     "workflows_table",
     "workflow_executions_table",
-    "workflow_node_executions_table"
+    "workflow_node_executions_table",
+    "workflow_versions_table"
 ]

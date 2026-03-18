@@ -180,3 +180,17 @@ async def get_plugin_sandbox_log(plugin_id: str, limit: int = Query(100, ge=1, l
         return {"logs": []}
     
     return {"logs": sandbox.get_operation_log(limit)}
+
+
+@router.post("/{plugin_id}/dependencies/install")
+async def install_plugin_dependencies(plugin_id: str):
+    """安装插件依赖"""
+    plugin = await PluginService.get_plugin(plugin_id)
+    if not plugin:
+        raise HTTPException(status_code=404, detail="插件不存在")
+    
+    try:
+        result = await PluginService.install_plugin_dependencies(plugin_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

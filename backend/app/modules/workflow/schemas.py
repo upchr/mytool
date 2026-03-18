@@ -118,6 +118,36 @@ class NodeTypes:
     NOTIFICATION = "notification"
 
 
+# ============== 工作流版本 ==============
+
+class WorkflowVersionBase(BaseModel):
+    workflow_id: str
+    version: int
+    name: str
+    description: Optional[str] = None
+    nodes: List[Dict[str, Any]] = Field(default_factory=list)
+    edges: List[Dict[str, Any]] = Field(default_factory=list)
+    change_note: Optional[str] = None
+    created_by: Optional[str] = None
+
+
+class WorkflowVersionCreate(WorkflowVersionBase):
+    pass
+
+
+class WorkflowVersion(WorkflowVersionBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class WorkflowRestoreRequest(BaseModel):
+    version_id: int = Field(..., description="要恢复的版本ID")
+    change_note: Optional[str] = Field(None, description="恢复说明")
+
+
 # ============== 内置工作流模板 ==============
 
 BUILTIN_WORKFLOWS = [
