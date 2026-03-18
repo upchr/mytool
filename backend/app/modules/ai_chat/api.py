@@ -1093,54 +1093,137 @@ async def search_knowledge(request: schemas.KnowledgeSearchRequest):
 @router.post("/chat-with-knowledge")
 async def chat_with_knowledge(request: schemas.ChatRequestWithKnowledge):
     """
-    带知识库检索的聊天
+    带知识库检索的聊天（流式 SSE）
 
     Args:
         request: 聊天请求（包含知识库配置）
 
     Returns:
-        AI响应
+        AI 响应（流式）
     """
-    try:
-        knowledge_context = ""
+    async def event_gen():
+        try:
+            knowledge_context = ""
+            knowledge_used = False
+            knowledge_sources = 0
 
-        # 如果启用了知识库搜索
-        if request.use_knowledge:
-            search_results = services.ai_chat_service.search_knowledge(
-                query=request.message,
-                knowledge_base_id=request.knowledge_base_id,
-                limit=3
-            )
+            logger.info(f"开始带知识库的聊天，use_knowledge={request.use_knowledge}, knowledge_base_id={request.knowledge_base_id}")
 
-            if search_results:
-                knowledge_context = services.ai_chat_service.build_knowledge_context(
-                    search_results,
-                    max_tokens=800
-                )
-                logger.info(f"使用知识库上下文，找到 {len(search_results)} 个相关片段")
+            # 如果启用了知识库搜索
+            if request.use_knowledge:
+                try:
+                    search_results = services.ai_chat_service.search_knowledge(
+                        query=request.message,
+                        knowledge_base_id=request.knowledge_base_id,
+                        limit=3
+                    )
+                    logger.info(f"知识库搜索结果数量: {len(search_results)}")
+                except Exception as search_error:
+                    logger.error(f"知识库搜索失败: {search_error}")
+                    search_results = []
 
-        # 构建系统提示
-        system_prompt = "你是一个有帮助的 AI 助手，专注于回答用户的问题和提供帮助。"
+                if search_results:
+                    knowledge_context = services.ai_chat_service.build_knowledge_context(
+                        search_results,
+                        max_tokens=800
+                    )
+                    knowledge_used = True
+                    knowledge_sources = len(search_results)
+                    logger.info(f"使用知识库上下文，找到 {len(search_results)} 个相关片段")
 
-        if knowledge_context:
-            system_prompt += f"\n\n请参考以下知识内容来回答用户的问题：\n\n{knowledge_context}"
-            system_prompt += "\n\n如果知识内容中没有相关信息，请基于你的通用知识回答，并说明未在知识库中找到相关信息。"
+            # 构建系统提示
+            system_prompt = "你是一个有帮助的 AI 助手，专注于回答用户的问题和提供帮助。"
 
-        # 调用聊天服务（需要修改 chat 方法支持自定义 system prompt）
-        content = await services.ai_chat_service.chat(
-            message=request.message,
-            history=request.history,
-            system_prompt=system_prompt
-        )
+            if knowledge_context:
+                system_prompt += f"\n\n请参考以下知识内容来回答用户的问题：\n\n{knowledge_context}"
+                system_prompt += "\n\n如果知识内容中没有相关信息，请基于你的通用知识回答，并说明未在知识库中找到相关信息。"
 
-        return BaseResponse.success(
-            data={
-                "content": content,
-                "role": "assistant",
-                "knowledge_used": bool(knowledge_context),
-                "knowledge_sources": len(knowledge_context.split("【")) if knowledge_context else 0
+            # 构建 messages
+            messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                }
+            ]
+
+            # 添加历史消息
+            if request.history:
+                for msg in request.history:
+                    role = getattr(msg, "role", None) or (msg.get("role") if isinstance(msg, dict) else None) or "user"
+                    content = getattr(msg, "content", None) or (msg.get("content") if isinstance(msg, dict) else None) or ""
+                    messages.append({"role": role, "content": content})
+
+            # 添加当前用户消息
+            messages.append({"role": "user", "content": request.message})
+
+            logger.info(f"准备调用 AI API，消息数量: {len(messages)}")
+
+            # 构建 payload
+            payload = {
+                "model": services.ai_chat_service.model,
+                "messages": messages,
+                "stream": True,
+                "max_tokens": 512,
+                "stop": ["null"],
+                "temperature": 0.7,
+                "top_p": 0.7,
+                "top_k": 50,
+                "frequency_penalty": 0.5,
+                "n": 1,
+                "response_format": {"type": "text"},
             }
-        )
-    except Exception as e:
-        logger.error(f"带知识库的聊天失败: {e}")
-        raise HTTPException(status_code=500, detail="AI 服务暂时不可用")
+
+            url = f"{services.ai_chat_service.api_base.rstrip('/')}/chat/completions"
+            logger.info(f"API URL: {url}")
+
+            import httpx
+            async with httpx.AsyncClient(timeout=services.ai_chat_service.timeout) as client:
+                async with client.stream(
+                    "POST",
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {services.ai_chat_service.api_key}",
+                        "Content-Type": "application/json",
+                        "Accept": "text/event-stream",
+                    },
+                    json=payload,
+                ) as resp:
+                    try:
+                        resp.raise_for_status()
+                        logger.info(f"API 响应状态码: {resp.status_code}")
+                    except httpx.HTTPStatusError as e:
+                        text = await e.response.aread()
+                        logger.error(f"iflow stream http error {e.response.status_code}: {text}")
+                        raise RuntimeError(f"iflow stream http error {e.response.status_code}: {text!r}") from e
+
+                    async for line in resp.aiter_lines():
+                        if not line:
+                            continue
+                        if line.startswith("data:"):
+                            data_str = line[len("data:"):].strip()
+                            if data_str == "[DONE]":
+                                logger.info("收到 [DONE] 标记")
+                                break
+                            try:
+                                chunk = json.loads(data_str)
+                                delta = (
+                                    chunk.get("choices", [{}])[0]
+                                    .get("delta", {})
+                                    .get("content", "")
+                                )
+                                if delta:
+                                    logger.debug(f"收到数据块: {delta[:50]}...")
+                                    yield f"data: {json.dumps({'delta': delta}, ensure_ascii=False)}\n\n"
+                            except Exception as parse_error:
+                                logger.warning(f"解析 SSE 数据失败: {data_str}, 错误: {parse_error}")
+                                continue
+
+            # 流式完成后发送知识库使用信息
+            logger.info("流式响应完成，发送知识库使用信息")
+            yield f"data: {json.dumps({'knowledge_used': knowledge_used, 'knowledge_sources': knowledge_sources, 'done': True}, ensure_ascii=False)}\n\n"
+
+        except Exception as e:
+            logger.error(f"带知识库的聊天失败: {e}", exc_info=True)
+            yield f"data: {json.dumps({'error': 'AI 服务暂时不可用'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")

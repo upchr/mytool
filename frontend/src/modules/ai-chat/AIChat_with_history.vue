@@ -483,8 +483,6 @@ const sendMessage = async () => {
     currentAssistantMsg.value = assistantMsg
     scrollToBottom()
 
-    const token = getAuthToken()
-
     // 判断是否使用知识库
     let apiEndpoint = '/api/ai-chat/chat/stream'
     let requestBody = {
@@ -498,8 +496,19 @@ const sendMessage = async () => {
       apiEndpoint = '/api/ai-chat/chat-with-knowledge'
       requestBody.use_knowledge = true
       requestBody.knowledge_base_id = selectedKnowledgeBaseId.value
+      console.log('启用知识库功能:', {
+        use_knowledge: true,
+        knowledge_base_id: selectedKnowledgeBaseId.value,
+        message: content
+      })
     }
 
+    console.log('请求参数:', {
+      apiEndpoint,
+      requestBody
+    })
+
+    const token = getAuthToken()
     const res = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
@@ -521,40 +530,57 @@ const sendMessage = async () => {
 
     try {
       while (true) {
-        const {value, done} = await reader.read()
-        if (done) break
-
-        const text = decoder.decode(value, {stream: true})
-        buffer += text
-        receivedCount++
-
-        // SSE 以 \n\n 分隔事件
-        const parts = buffer.split('\n\n')
-        buffer = parts.pop() || ''
-
-        for (const part of parts) {
-          const lines = part.split('\n')
-          for (const line of lines) {
-            if (!line.startsWith('data:')) continue
-            const jsonStr = line.slice(5).trim()
-            try {
-              const data = JSON.parse(jsonStr)
-              if (data.delta) {
-                appendAssistantDelta(assistantMsg, data.delta)
-                // 每次更新后强制刷新视图
-                await nextTick()
+            const {value, done} = await reader.read()
+            if (done) break
+      
+            const text = decoder.decode(value, {stream: true})
+            buffer += text
+            receivedCount++
+      
+            // SSE 以 \n\n 分隔事件
+            const parts = buffer.split('\n\n')
+            buffer = parts.pop() || ''
+      
+            for (const part of parts) {
+              const lines = part.split('\n')
+              for (const line of lines) {
+                if (!line.startsWith('data:')) continue
+                const jsonStr = line.slice(5).trim()
+                try {
+                  const data = JSON.parse(jsonStr)
+                  if (data.delta) {
+                    appendAssistantDelta(assistantMsg, data.delta)
+                    // 每次更新后强制刷新视图
+                    await nextTick()
+                  }
+                  if (data.knowledge_used !== undefined) {
+                    // 保存知识库使用信息
+                    assistantMsg.knowledge_used = data.knowledge_used
+                    assistantMsg.knowledge_sources = data.knowledge_sources
+                    if (data.knowledge_used) {
+                      message.info(`使用了知识库，共 ${data.knowledge_sources} 个来源`)
+                    }
+                  }
+                  if (data.error) {
+                  console.error('AI 服务错误:', data.error)
+                  // 设置错误信息到消息内容
+                  assistantMsg.content = `错误：${data.error}`
+                  await saveMessageToDB('assistant', assistantMsg.content)
+                  message.error(data.error)
+                  return
+                }
+                } catch (e) {
+                  // JSON 解析失败直接跳过
+                  console.warn('JSON 解析失败:', jsonStr, e)
+                  continue
+                }
               }
-              if (data.error) throw new Error(data.error)
-            } catch (e) {
-              // JSON 解析失败直接跳过
-              console.warn('JSON 解析失败:', jsonStr, e)
-              continue
             }
-          }
-        }
-      }
-    } catch (readError) {
-      // 如果是主动中断，不显示错误消息
+          }    } catch (readError) {
+      // 处理各种类型的错误
+      console.error('AI chat 错误:', readError)
+      
+      // 如果是主动中断，不显示额外错误消息
       if (readError.name === 'AbortError') {
         console.log('用户中断了回答')
         // 保存已接收的部分内容
@@ -562,14 +588,28 @@ const sendMessage = async () => {
           assistantMsg.content += '\n\n[回答已被中断]'
           await saveMessageToDB('assistant', assistantMsg.content)
         }
-        return
+      } else {
+        // 其他错误：检查是否有部分内容，如果有就保存
+        if (assistantMsg.content) {
+          message.error('AI 回复过程中出现错误，但已保存部分内容')
+          await saveMessageToDB('assistant', assistantMsg.content)
+        } else {
+          message.error('发送消息失败，请重试')
+        }
       }
-      throw readError
     }
 
     // 流式完成后，保存完整的 AI 回复到数据库
     if (assistantMsg.content) {
-      await saveMessageToDB('assistant', assistantMsg.content)
+      try {
+        await saveMessageToDB('assistant', assistantMsg.content)
+        console.log('AI 回复已保存到数据库')
+      } catch (saveError) {
+        console.error('保存 AI 回复失败:', saveError)
+        message.warning('AI 回复已生成，但保存到数据库失败')
+      }
+    } else {
+      console.warn('AI 回复内容为空，不保存')
     }
 
   } catch (error) {
