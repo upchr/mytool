@@ -82,6 +82,7 @@ async def create_resource(
 - 使用 `BaseResponse.success/error` 包装响应
 - 使用依赖注入 `get_engine`
 - 参数验证使用 `Query`、`Path`、`Body`
+- **前后端路由对应**：后端路由 `prefix="/resource"` 对应前端调用 `window.$request.get('/resource')`，Nginx 会自动处理 `/api/` 前缀
 
 ### 1.3 数据模型（models.py）
 
@@ -454,10 +455,43 @@ onMounted(() => loadResources())
 
 ### 2.3 全局方法
 
+#### 2.3.1 API 请求路由机制
+
+**重要：路由转发流程**
+
+项目使用 Nginx 反向代理，通过 `/api/` 前缀将请求转发到后端：
+
+```
+前端调用        → request.js 处理      → Nginx 转发           → 后端接收
+/resource      → baseURL: '/api'     → /api/ → 8000/      → /resource
+               → 实际: /api/resource → 抹除 /api/ 前缀
+```
+
+**Nginx 配置：**
+```nginx
+location /api/ {
+    proxy_pass http://127.0.0.1:8000/;  # /api/ 会被抹除
+}
+```
+
+**正确用法：**
+```javascript
+// ✅ 正确：直接使用后端路由路径
+const data = await window.$request.get('/resource')
+const data = await window.$request.post('/resource', formData)
+const data = await window.$request.delete('/resource/1')
+const data = await window.$request.put('/resource/1', formData)
+
+// ❌ 错误：不要重复添加 /api/ 前缀
+const data = await window.$request.get('/api/resource')  // 会导致 /api/api/resource
+```
+
+#### 2.3.2 全局方法示例
+
 ```javascript
 // 请求
-const data = await window.$request.get('/api/resource')
-await window.$request.post('/api/resource', formData)
+const data = await window.$request.get('/resource')
+await window.$request.post('/resource', formData)
 
 // 消息
 window.$message.success('操作成功')
