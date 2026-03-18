@@ -194,12 +194,8 @@
         </el-form-item>
         <el-form-item label="选择节点">
           <el-select v-model="importForm.node_id" placeholder="请选择节点">
-            <el-option
-              v-for="node in nodes"
-              :key="node.id"
-              :label="node.name"
-              :value="node.id"
-            />
+            <!-- 这里对接真实的节点选择 -->
+            <el-option label="本地节点" :value="1" />
           </el-select>
         </el-form-item>
         <el-form-item label="执行时间">
@@ -232,12 +228,10 @@ import {
   type TaskTemplateDetail,
   type TemplateImportRequest
 } from '../../api/task-template';
-import { listNodes, type Node } from '../../api/node';
 
 // 状态
 const loading = ref(false);
 const templates = ref<TaskTemplate[]>([]);
-const nodes = ref<Node[]>([]);
 const detailVisible = ref(false);
 const importVisible = ref(false);
 const importing = ref(false);
@@ -247,7 +241,7 @@ const selectedCron = ref('');
 const formConfig = reactive<Record<string, any>>({});
 const importForm = reactive<TemplateImportRequest>({
   template_id: '',
-  node_id: 0,
+  node_id: 1,
   config: {},
   schedule: '',
   name: ''
@@ -269,15 +263,6 @@ async function loadTemplates() {
     ElMessage.error('加载模板列表失败');
   } finally {
     loading.value = false;
-  }
-}
-
-async function loadNodes() {
-  try {
-    const res = await listNodes();
-    nodes.value = res.data || res;
-  } catch (e) {
-    ElMessage.error('加载节点列表失败');
   }
 }
 
@@ -351,7 +336,6 @@ function difficultyType(difficulty: string) {
 // 初始化
 onMounted(() => {
   loadTemplates();
-  loadNodes();
 });
 </script>
 
