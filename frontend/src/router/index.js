@@ -14,6 +14,8 @@ import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
+import WorkflowManager from '../modules/workflow/WorkflowManager.vue'
+import PluginManager from '../modules/plugin/PluginManager.vue'
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon,
@@ -40,6 +42,8 @@ const routes = [
     { path: '/', component: NoteList },
     { path: '/nodes', component: NodeManager },
     { path: '/jobs', component: JobManager },
+    { path: '/workflows', component: WorkflowManager },
+    { path: '/plugins', component: PluginManager },
     { path: '/notify', component: NotificationSettings },
     { path: '/database', component: DatabaseManager },
     { path: '/versions', component: VersionManager },
@@ -61,8 +65,6 @@ const routes = [
         ]
     },
     { path: '/ssl-store', component: SSLStore },
-    // { path: '/ssl-store/:id', component: SSLDetail, props: true },
-
 ]
 
 const routeLabels = [
@@ -89,6 +91,18 @@ const routeLabels = [
         label: '任务管理',
         icon: ClockIcon,
         key: 'jobs'
+    },
+    {
+        path: '/workflows',
+        label: '工作流',
+        icon: WorkflowIcon,
+        key: 'workflows'
+    },
+    {
+        path: '/plugins',
+        label: '插件市场',
+        icon: PluginIcon,
+        key: 'plugins'
     },
     {
         label: 'AI 助手',
