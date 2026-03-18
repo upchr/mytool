@@ -219,3 +219,29 @@ async def delete_plugin(
         return BaseResponse.success(message="删除成功")
     except Exception as e:
         return BaseResponse.error(500, str(e))
+
+
+@router.post("/init")
+async def init_plugins(engine=Depends(get_engine)):
+    """
+    初始化内置插件
+    
+    将官方预置的插件写入数据库，包括：
+    - 飞书通知：通过飞书群机器人发送消息
+    - 钉钉通知：通过钉钉群机器人发送消息（支持加签）
+    - 企业微信通知：通过企业微信机器人发送消息
+    - Bark通知：发送 iOS 推送通知
+    - 本地执行器：在本地执行 Shell 命令
+    
+    Args:
+        engine: 数据库引擎
+    
+    Returns:
+        初始化结果
+    """
+    try:
+        service = PluginService(engine)
+        service.init_builtin_plugins()
+        return BaseResponse.success(message="内置插件初始化成功")
+    except Exception as e:
+        return BaseResponse.error(500, str(e))

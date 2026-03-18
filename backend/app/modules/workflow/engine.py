@@ -219,9 +219,13 @@ class WorkflowEngine:
         
         try:
             # 调用 cron 模块执行任务
-            from app.modules.cron.services import execute_job_sync
+            from app.modules.cron.services import execute_job
             
-            result = execute_job_sync(self.engine, int(job_id), "workflow")
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: execute_job(self.engine, int(job_id), "workflow")
+            )
             
             return {
                 "status": "success" if result.get("status") == "success" else "failed",

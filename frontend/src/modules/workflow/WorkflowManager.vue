@@ -1,295 +1,174 @@
 <template>
-  <n-card title="工作流管理">
-    <!-- 顶部工具栏 -->
-    <n-space justify="space-between" style="margin-bottom: 16px">
-      <n-space>
-        <n-input
-            v-model:value="searchKeyword"
-            placeholder="搜索工作流"
-            clearable
-            style="width: 200px"
-            @keyup.enter="loadWorkflows"
-        />
-        <n-button @click="loadWorkflows">搜索</n-button>
-      </n-space>
-      <n-space>
-        <n-button type="primary" @click="handleAdd">
-          <template #icon>
-            <n-icon><AddOutline /></n-icon>
+  <div class="workflow-page">
+    <!-- 列表视图 -->
+    <div v-if="!showEditor" class="list-view">
+      <n-card>
+        <template #header>
+          <n-space justify="space-between" align="center">
+            <n-space align="center">
+              <n-text strong style="font-size: 18px">🔄 工作流管理</n-text>
+              <n-tag type="info" size="small">可视化任务编排</n-tag>
+            </n-space>
+            <n-space>
+              <n-button type="primary" @click="handleCreate">
+                <template #icon><n-icon><AddOutline /></n-icon></template>
+                新建工作流
+              </n-button>
+            </n-space>
+          </n-space>
+        </template>
+
+        <n-alert type="info" style="margin-bottom: 16px">
+          <template #header>💡 什么是工作流？</template>
+          工作流可以将多个任务按顺序、条件、并行等方式串联执行。支持可视化拖拽编辑！
+          <br>
+          <n-text strong>节点类型：</n-text>
+          ⚙️ 任务（执行定时任务） → 🔷 条件（条件分支） → ⏱️ 等待 → 📢 通知
+        </n-alert>
+
+        <n-space style="margin-bottom: 16px">
+          <n-input v-model:value="searchKeyword" placeholder="搜索" clearable style="width: 200px" @keyup.enter="loadWorkflows" />
+          <n-button @click="loadWorkflows">搜索</n-button>
+        </n-space>
+
+        <n-empty v-if="!loading && data.length === 0" description="暂无工作流">
+          <template #extra>
+            <n-button type="primary" @click="handleCreate">新建工作流</n-button>
           </template>
-          新建工作流
+        </n-empty>
+
+        <n-list v-else bordered>
+          <n-list-item v-for="wf in data" :key="wf.id">
+            <n-thing>
+              <template #header>
+                <n-space align="center">
+                  <n-text strong>{{ wf.name }}</n-text>
+                  <n-tag :type="wf.is_active ? 'success' : 'default'" size="small">{{ wf.is_active ? '启用' : '禁用' }}</n-tag>
+                  <n-tag v-if="wf.schedule" type="info" size="small">⏰ {{ wf.schedule }}</n-tag>
+                </n-space>
+              </template>
+              <template #header-extra>
+                <n-space>
+                  <n-button size="small" type="primary" @click="handleEdit(wf)">
+                    <template #icon><n-icon><CreateOutline /></n-icon></template>
+                    编辑
+                  </n-button>
+                  <n-button size="small" @click="handleTrigger(wf)">执行</n-button>
+                  <n-button size="small" @click="showExecutions(wf)">记录</n-button>
+                  <n-button size="small" @click="showVersions(wf)">版本</n-button>
+                  <n-button size="small" type="error" @click="handleDelete(wf)">删除</n-button>
+                </n-space>
+              </template>
+              <template #description>
+                <n-text depth="3">{{ wf.description || '暂无描述' }}</n-text>
+                <br>
+                <n-text depth="3" style="font-size: 12px">
+                  ID: {{ wf.workflow_id }} · 节点: {{ wf.nodes?.length || 0 }} 个
+                </n-text>
+              </template>
+            </n-thing>
+          </n-list-item>
+        </n-list>
+
+        <n-space v-if="data.length > 0" justify="center" style="margin-top: 16px">
+          <n-pagination v-model:page="pagination.page" :page-count="Math.ceil(pagination.itemCount / pagination.pageSize)" @update:page="loadWorkflows" />
+        </n-space>
+      </n-card>
+    </div>
+
+    <!-- 编辑器视图 -->
+    <div v-else class="editor-view">
+      <WorkflowEditor
+        ref="editorRef"
+        :workflow-id="currentWorkflow?.workflow_id"
+        :initial-data="{ nodes: currentWorkflow?.nodes || [], edges: currentWorkflow?.edges || [] }"
+        @save="handleSave"
+        @trigger="handleTriggerSave"
+      />
+      <div class="editor-back">
+        <n-button @click="showEditor = false">
+          <template #icon><n-icon><ArrowBackOutline /></n-icon></template>
+          返回列表
         </n-button>
-      </n-space>
-    </n-space>
-
-    <!-- 数据表格 -->
-    <n-data-table
-        :columns="columns"
-        :data="data"
-        :loading="loading"
-        :pagination="pagination"
-        :bordered="false"
-        :row-key="row => row.id"
-        remote
-    />
-
-    <!-- 新增/编辑对话框 -->
-    <DialogForm
-        ref="dialogRef"
-        dialogPreset="card"
-        v-model:visible="showDialog"
-        v-model:formData="formData"
-        :use-field-groups="true"
-        :field-groups="fieldGroups"
-        :rules="formRules"
-        :title="dialogTitle"
-        :positive-text="dialogType === 'add' ? '创建' : '更新'"
-        :validate-on-submit="true"
-        @submit="handleSubmit"
-    />
+      </div>
+    </div>
 
     <!-- 执行记录抽屉 -->
-    <n-drawer v-model:show="showExecutionsDrawer" width="600px">
+    <n-drawer v-model:show="showExecDrawer" width="600px">
       <n-drawer-content title="执行记录">
-        <n-space vertical>
-          <n-button @click="loadExecutions" size="small">刷新</n-button>
-          <n-data-table
-              :columns="executionColumns"
-              :data="executions"
-              :loading="executionsLoading"
-              :bordered="false"
-              size="small"
-          />
-        </n-space>
+        <n-button size="small" @click="loadExecutions" style="margin-bottom: 12px">刷新</n-button>
+        <n-empty v-if="executions.length === 0" description="暂无执行记录" />
+        <n-list v-else bordered>
+          <n-list-item v-for="exec in executions" :key="exec.id">
+            <n-thing>
+              <template #header>
+                <n-tag :type="statusType(exec.status)" size="small">{{ exec.status }}</n-tag>
+              </template>
+              <template #description>
+                <n-text depth="3">{{ exec.start_time }}</n-text>
+              </template>
+            </n-thing>
+          </n-list-item>
+        </n-list>
       </n-drawer-content>
     </n-drawer>
 
     <!-- 版本管理抽屉 -->
-    <n-drawer v-model:show="showVersionsDrawer" width="600px">
+    <n-drawer v-model:show="showVerDrawer" width="500px">
       <n-drawer-content title="版本管理">
-        <n-space vertical>
-          <n-button type="primary" @click="handleCreateVersion" size="small">
-            保存当前版本
-          </n-button>
-          <n-data-table
-              :columns="versionColumns"
-              :data="versions"
-              :loading="versionsLoading"
-              :bordered="false"
-              size="small"
-          />
-        </n-space>
+        <n-button type="primary" size="small" @click="createVersion" style="margin-bottom: 12px">保存当前版本</n-button>
+        <n-empty v-if="versions.length === 0" description="暂无版本" />
+        <n-list v-else bordered>
+          <n-list-item v-for="ver in versions" :key="ver.id">
+            <n-thing>
+              <template #header>
+                <n-tag type="info" size="small">v{{ ver.version }}</n-tag>
+                {{ ver.change_note || '无说明' }}
+              </template>
+              <template #header-extra>
+                <n-button size="small" type="warning" @click="restoreVersion(ver.id)">恢复</n-button>
+              </template>
+            </n-thing>
+          </n-list-item>
+        </n-list>
       </n-drawer-content>
     </n-drawer>
-
-    <!-- 节点执行详情抽屉 -->
-    <n-drawer v-model:show="showNodesDrawer" width="700px">
-      <n-drawer-content title="节点执行详情">
-        <n-data-table
-            :columns="nodeExecutionColumns"
-            :data="nodeExecutions"
-            :loading="nodesLoading"
-            :bordered="false"
-            size="small"
-        />
-      </n-drawer-content>
-    </n-drawer>
-  </n-card>
+  </div>
 </template>
 
 <script setup>
-import {h, onMounted, ref, reactive, computed} from "vue"
-import {NButton, NTag, NSpace, NIcon} from "naive-ui"
-import {AddOutline, PlayOutline, TimeOutline, GitBranchOutline, EyeOutline, TrashOutline} from "@vicons/ionicons5"
-import DialogForm from "@/components/DialogForm.vue"
+import { onMounted, ref, reactive } from 'vue'
+import { AddOutline, CreateOutline, ArrowBackOutline } from '@vicons/ionicons5'
+import WorkflowEditor from './WorkflowEditor.vue'
 
-// ========== 状态定义 ==========
 const loading = ref(false)
-const submitting = ref(false)
 const data = ref([])
 const searchKeyword = ref('')
-const showDialog = ref(false)
-const dialogType = ref('add')
-const dialogRef = ref(null)
+const showEditor = ref(false)
+const editorRef = ref(null)
+const currentWorkflow = ref(null)
 
-// 执行记录
-const showExecutionsDrawer = ref(false)
-const executionsLoading = ref(false)
+const showExecDrawer = ref(false)
 const executions = ref([])
-const currentWorkflowId = ref('')
+const currentWfId = ref('')
 
-// 版本管理
-const showVersionsDrawer = ref(false)
-const versionsLoading = ref(false)
+const showVerDrawer = ref(false)
 const versions = ref([])
 
-// 节点执行详情
-const showNodesDrawer = ref(false)
-const nodesLoading = ref(false)
-const nodeExecutions = ref([])
+const pagination = reactive({ page: 1, pageSize: 10, itemCount: 0 })
 
-// 分页配置
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 30, 50],
-  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
-  onChange: (page) => { pagination.page = page; loadWorkflows() },
-  onUpdatePageSize: (pageSize) => { pagination.pageSize = pageSize; loadWorkflows() }
-})
-
-// 表单数据
-const formData = ref({})
-const defaultFormData = {
-  workflow_id: '',
-  name: '',
-  description: '',
-  node_id: 1,
-  schedule: '',
-  nodes: [],
-  edges: [],
-  is_active: true
+const statusType = (status) => {
+  const map = { success: 'success', failed: 'error', running: 'warning' }
+  return map[status] || 'default'
 }
 
-// ========== 表格列定义 ==========
-const columns = [
-  { title: "ID", key: "id", width: 80 },
-  { title: "工作流ID", key: "workflow_id", width: 150 },
-  { title: "名称", key: "name", width: 180 },
-  { title: "调度", key: "schedule", width: 120, render: row => row.schedule || '-' },
-  {
-    title: "状态",
-    key: "is_active",
-    width: 80,
-    render(row) {
-      return h(NTag, {
-        type: row.is_active ? 'success' : 'default',
-        size: 'small'
-      }, { default: () => row.is_active ? '启用' : '禁用' })
-    }
-  },
-  {
-    title: "操作",
-    key: "actions",
-    width: 280,
-    render(row) {
-      return h(NSpace, { size: 'small' }, {
-        default: () => [
-          h(NButton, { size: 'small', type: 'primary', onClick: () => handleTrigger(row) }, {
-            default: () => '执行',
-            icon: () => h(NIcon, null, { default: () => h(PlayOutline) })
-          }),
-          h(NButton, { size: 'small', onClick: () => handleViewExecutions(row) }, {
-            default: () => '记录',
-            icon: () => h(NIcon, null, { default: () => h(TimeOutline) })
-          }),
-          h(NButton, { size: 'small', onClick: () => handleViewVersions(row) }, {
-            default: () => '版本',
-            icon: () => h(NIcon, null, { default: () => h(GitBranchOutline) })
-          }),
-          h(NButton, { size: 'small', onClick: () => handleEdit(row) }, { default: () => '编辑' }),
-          h(NButton, { size: 'small', type: 'error', onClick: () => handleDelete(row) }, { default: () => '删除' })
-        ]
-      })
-    }
-  }
-]
-
-// 执行记录列
-const executionColumns = [
-  { title: "ID", key: "id", width: 60 },
-  {
-    title: "状态",
-    key: "status",
-    width: 80,
-    render(row) {
-      const typeMap = { success: 'success', failed: 'error', running: 'warning' }
-      return h(NTag, { type: typeMap[row.status] || 'default', size: 'small' }, { default: () => row.status })
-    }
-  },
-  { title: "触发方式", key: "triggered_by", width: 80 },
-  { title: "开始时间", key: "start_time", width: 160 },
-  {
-    title: "操作",
-    key: "actions",
-    width: 80,
-    render(row) {
-      return h(NButton, { size: 'small', onClick: () => handleViewNodes(row.id) }, {
-        default: () => '详情',
-        icon: () => h(NIcon, null, { default: () => h(EyeOutline) })
-      })
-    }
-  }
-]
-
-// 版本列表列
-const versionColumns = [
-  { title: "版本", key: "version", width: 60 },
-  { title: "名称", key: "name", width: 150 },
-  { title: "变更说明", key: "change_note", ellipsis: { tooltip: true } },
-  { title: "创建时间", key: "created_at", width: 160 },
-  {
-    title: "操作",
-    key: "actions",
-    width: 80,
-    render(row) {
-      return h(NButton, { size: 'small', type: 'warning', onClick: () => handleRestoreVersion(row.id) }, 
-        { default: () => '恢复' })
-    }
-  }
-]
-
-// 节点执行列
-const nodeExecutionColumns = [
-  { title: "节点ID", key: "node_id", width: 100 },
-  { title: "节点名称", key: "node_name", width: 120 },
-  { title: "类型", key: "node_type", width: 80 },
-  {
-    title: "状态",
-    key: "status",
-    width: 80,
-    render(row) {
-      const typeMap = { success: 'success', failed: 'error', running: 'warning' }
-      return h(NTag, { type: typeMap[row.status] || 'default', size: 'small' }, { default: () => row.status })
-    }
-  },
-  { title: "输出", key: "output", ellipsis: { tooltip: true } },
-  { title: "错误", key: "error", ellipsis: { tooltip: true } }
-]
-
-// ========== 表单配置 ==========
-const fieldGroups = computed(() => [
-  {
-    title: '基本信息',
-    fields: [
-      { name: 'workflow_id', label: '工作流ID', type: 'input', required: true, maxlength: 100, disabled: dialogType.value === 'edit' },
-      { name: 'name', label: '名称', type: 'input', required: true, maxlength: 100 },
-      { name: 'description', label: '描述', type: 'textarea', autosize: { minRows: 2, maxRows: 4 } },
-      { name: 'node_id', label: '节点ID', type: 'number', required: true, min: 1 },
-      { name: 'schedule', label: 'Cron表达式', type: 'input', placeholder: '可选，用于定时触发' },
-      { name: 'is_active', label: '启用', type: 'switch', checkedValue: true, uncheckedValue: false }
-    ]
-  }
-])
-
-const formRules = (model) => ({
-  workflow_id: [{ required: true, message: '请输入工作流ID', trigger: ['blur', 'input'] }],
-  name: [{ required: true, message: '请输入名称', trigger: ['blur', 'input'] }]
-})
-
-// ========== 方法定义 ==========
+onMounted(() => { loadWorkflows() })
 
 const loadWorkflows = async () => {
   loading.value = true
   try {
     const result = await window.$request.get('/workflows', {
-      params: {
-        page: pagination.page,
-        page_size: pagination.pageSize,
-        keyword: searchKeyword.value
-      }
+      params: { page: pagination.page, page_size: pagination.pageSize, keyword: searchKeyword.value }
     })
     data.value = result.items || []
     pagination.itemCount = result.total || 0
@@ -298,128 +177,135 @@ const loadWorkflows = async () => {
   }
 }
 
-const handleAdd = () => {
-  dialogType.value = 'add'
-  formData.value = { ...defaultFormData }
-  showDialog.value = true
+const handleCreate = () => {
+  currentWorkflow.value = { workflow_id: '', name: '', nodes: [], edges: [] }
+  showEditor.value = true
 }
 
-const handleEdit = (row) => {
-  dialogType.value = 'edit'
-  formData.value = { ...row }
-  showDialog.value = true
+const handleEdit = (wf) => {
+  currentWorkflow.value = wf
+  showEditor.value = true
 }
 
-const handleDelete = (row) => {
+const handleDelete = (wf) => {
   window.$dialog.warning({
     title: '确认删除',
-    content: `确定要删除工作流 "${row.name}" 吗？`,
+    content: `删除 "${wf.name}"？`,
     positiveText: '确定',
     negativeText: '取消',
     onPositiveClick: async () => {
-      await window.$request.delete(`/workflows/${row.workflow_id}`)
-      window.$message.success('删除成功')
+      await window.$request.delete(`/workflows/${wf.workflow_id}`)
+      window.$message.success('已删除')
       loadWorkflows()
     }
   })
 }
 
-const handleTrigger = async (row) => {
+const handleTrigger = async (wf) => {
   try {
-    const result = await window.$request.post('/workflows/trigger', { workflow_id: row.workflow_id })
-    window.$message.success(`工作流已触发，执行ID: ${result.execution_id}`)
+    await window.$request.post('/workflows/trigger', { workflow_id: wf.workflow_id })
+    window.$message.success('已触发执行')
   } catch (e) {}
 }
 
-const handleSubmit = async (data) => {
-  submitting.value = true
+const handleSave = async (workflowData) => {
   try {
-    if (dialogType.value === 'add') {
-      await window.$request.post('/workflows', data)
-    } else {
-      await window.$request.put(`/workflows/${data.workflow_id}`, data)
+    const payload = {
+      workflow_id: currentWorkflow.value.workflow_id || `wf-${Date.now()}`,
+      name: currentWorkflow.value.name || '新工作流',
+      description: currentWorkflow.value.description || '',
+      node_id: currentWorkflow.value.node_id || 1,
+      schedule: currentWorkflow.value.schedule || '',
+      is_active: currentWorkflow.value.is_active ?? true,
+      ...workflowData
     }
+    
+    if (currentWorkflow.value.workflow_id) {
+      await window.$request.put(`/workflows/${currentWorkflow.value.workflow_id}`, payload)
+    } else {
+      await window.$request.post('/workflows', payload)
+    }
+    
     window.$message.success('保存成功')
-    showDialog.value = false
+    showEditor.value = false
     loadWorkflows()
-  } finally {
-    submitting.value = false
+  } catch (e) {}
+}
+
+const handleTriggerSave = async () => {
+  if (currentWorkflow.value.workflow_id) {
+    await window.$request.post('/workflows/trigger', { workflow_id: currentWorkflow.value.workflow_id })
+    window.$message.success('已触发执行')
   }
 }
 
-// 执行记录
-const handleViewExecutions = (row) => {
-  currentWorkflowId.value = row.workflow_id
-  showExecutionsDrawer.value = true
+const showExecutions = async (wf) => {
+  currentWfId.value = wf.workflow_id
+  showExecDrawer.value = true
   loadExecutions()
 }
 
 const loadExecutions = async () => {
-  executionsLoading.value = true
   try {
-    const result = await window.$request.get(`/workflows/${currentWorkflowId.value}/executions`)
+    const result = await window.$request.get(`/workflows/${currentWfId.value}/executions`)
     executions.value = result || []
-  } finally {
-    executionsLoading.value = false
-  }
+  } catch (e) {}
 }
 
-const handleViewNodes = async (executionId) => {
-  showNodesDrawer.value = true
-  nodesLoading.value = true
-  try {
-    const result = await window.$request.get(`/workflows/executions/${executionId}/nodes`)
-    nodeExecutions.value = result || []
-  } finally {
-    nodesLoading.value = false
-  }
-}
-
-// 版本管理
-const handleViewVersions = (row) => {
-  currentWorkflowId.value = row.workflow_id
-  showVersionsDrawer.value = true
+const showVersions = async (wf) => {
+  currentWfId.value = wf.workflow_id
+  showVerDrawer.value = true
   loadVersions()
 }
 
 const loadVersions = async () => {
-  versionsLoading.value = true
   try {
-    const result = await window.$request.get(`/workflows/${currentWorkflowId.value}/versions`)
+    const result = await window.$request.get(`/workflows/${currentWfId.value}/versions`)
     versions.value = result || []
-  } finally {
-    versionsLoading.value = false
-  }
+  } catch (e) {}
 }
 
-const handleCreateVersion = async () => {
+const createVersion = async () => {
   try {
-    await window.$request.post(`/workflows/${currentWorkflowId.value}/versions`)
-    window.$message.success('版本保存成功')
+    await window.$request.post(`/workflows/${currentWfId.value}/versions`)
+    window.$message.success('版本已保存')
     loadVersions()
   } catch (e) {}
 }
 
-const handleRestoreVersion = async (versionId) => {
+const restoreVersion = async (versionId) => {
   window.$dialog.warning({
     title: '确认恢复',
-    content: '确定要恢复到此版本吗？当前状态会先保存为新版本。',
+    content: '恢复到此版本？当前状态会先保存。',
     positiveText: '确定',
     negativeText: '取消',
     onPositiveClick: async () => {
-      await window.$request.post(`/workflows/${currentWorkflowId.value}/versions/restore`, { version_id: versionId })
-      window.$message.success('版本恢复成功')
+      await window.$request.post(`/workflows/${currentWfId.value}/versions/restore`, { version_id: versionId })
+      window.$message.success('已恢复')
       loadVersions()
       loadWorkflows()
     }
   })
 }
-
-// ========== 生命周期 ==========
-onMounted(() => {
-  loadWorkflows()
-})
 </script>
 
 <style scoped>
+.workflow-page {
+  height: 100%;
+}
+
+.list-view, .editor-view {
+  height: 100%;
+}
+
+.editor-view {
+  position: relative;
+}
+
+.editor-back {
+  position: absolute;
+  top: 16px;
+  left: 250px;
+  z-index: 10;
+}
 </style>

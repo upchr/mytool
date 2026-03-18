@@ -1,102 +1,169 @@
 <template>
-  <n-card title="插件市场">
-    <!-- 顶部工具栏 -->
-    <n-space justify="space-between" style="margin-bottom: 16px">
-      <n-space>
-        <n-input
-            v-model:value="searchKeyword"
-            placeholder="搜索插件"
-            clearable
-            style="width: 200px"
-            @keyup.enter="loadPlugins"
-        />
-        <n-select
-            v-model:value="filterType"
-            placeholder="类型筛选"
-            clearable
-            style="width: 120px"
-            :options="typeOptions"
-            @update:value="loadPlugins"
-        />
+  <div class="plugin-market">
+    <n-card>
+      <template #header>
+        <n-space justify="space-between" align="center">
+          <n-space align="center">
+            <n-text strong style="font-size: 18px">🔌 插件市场</n-text>
+            <n-tag type="info" size="small">扩展系统能力</n-tag>
+          </n-space>
+          <n-space>
+            <n-button @click="initPlugins" :loading="initing" type="primary" ghost>
+              初始化官方插件
+            </n-button>
+          </n-space>
+        </n-space>
+      </template>
+
+      <!-- 使用说明 -->
+      <n-alert type="info" style="margin-bottom: 16px">
+        <template #header>💡 使用说明</template>
+        点击「初始化官方插件」→ 安装需要的插件 → 配置参数 → 在任务/工作流中使用
+      </n-alert>
+
+      <!-- 筛选栏 -->
+      <n-space style="margin-bottom: 16px">
+        <n-input v-model:value="searchKeyword" placeholder="搜索插件" clearable style="width: 200px" @keyup.enter="loadPlugins" />
+        <n-select v-model:value="filterType" placeholder="类型筛选" clearable style="width: 120px" :options="typeOptions" @update:value="loadPlugins" />
         <n-button @click="loadPlugins">搜索</n-button>
       </n-space>
-      <n-space>
-        <n-button type="primary" @click="handleAdd">
-          <template #icon>
-            <n-icon><AddOutline /></n-icon>
-          </template>
-          添加插件
-        </n-button>
+
+      <!-- 空状态 -->
+      <n-empty v-if="!loading && data.length === 0" description="暂无插件，请点击「初始化官方插件」加载预置插件">
+        <template #extra>
+          <n-button type="primary" @click="initPlugins" :loading="initing">
+            初始化官方插件
+          </n-button>
+        </template>
+      </n-empty>
+
+      <!-- 插件卡片 -->
+      <n-grid v-else :cols="2" :x-gap="16" :y-gap="16" responsive="screen">
+        <n-grid-item v-for="plugin in data" :key="plugin.id">
+          <n-card size="small">
+            <template #header>
+              <n-space align="center">
+                <n-text strong style="font-size: 24px">{{ plugin.icon || '📦' }}</n-text>
+                <div>
+                  <n-text strong>{{ plugin.name }}</n-text>
+                  <br>
+                  <n-text depth="3" style="font-size: 12px">v{{ plugin.version }} · {{ plugin.author }}</n-text>
+                </div>
+              </n-space>
+            </template>
+            <template #header-extra>
+              <n-tag :type="plugin.is_installed ? 'success' : 'default'" size="small">
+                {{ plugin.is_installed ? '已安装' : '未安装' }}
+              </n-tag>
+            </template>
+            
+            <p style="color: #666; min-height: 40px">{{ plugin.description || '暂无描述' }}</p>
+            
+            <n-descriptions :column="2" size="small">
+              <n-descriptions-item label="类型">
+                {{ { notification: '通知', executor: '执行器', datasource: '数据源' }[plugin.plugin_type] || plugin.plugin_type }}
+              </n-descriptions-item>
+              <n-descriptions-item label="插件ID">
+                <n-text code>{{ plugin.plugin_id }}</n-text>
+              </n-descriptions-item>
+            </n-descriptions>
+            
+            <template #footer>
+              <n-space justify="end">
+                <n-button v-if="!plugin.is_installed" type="primary" size="small" @click="handleInstall(plugin)">
+                  安装
+                </n-button>
+                <template v-else>
+                  <n-button size="small" @click="handleConfig(plugin)">配置</n-button>
+                  <n-button v-if="plugin.plugin_type === 'notification'" type="success" size="small" @click="handleTestSend(plugin)">
+                    发送测试
+                  </n-button>
+                  <n-button v-if="plugin.plugin_type === 'executor'" type="info" size="small" @click="handleTestExecute(plugin)">
+                    执行测试
+                  </n-button>
+                  <n-button type="warning" size="small" @click="handleUninstall(plugin)">
+                    卸载
+                  </n-button>
+                </template>
+              </n-space>
+            </template>
+          </n-card>
+        </n-grid-item>
+      </n-grid>
+
+      <!-- 分页 -->
+      <n-space v-if="data.length > 0" justify="center" style="margin-top: 16px">
+        <n-pagination v-model:page="pagination.page" :page-count="Math.ceil(pagination.itemCount / pagination.pageSize)" @update:page="loadPlugins" />
       </n-space>
-    </n-space>
+    </n-card>
 
-    <!-- 数据表格 -->
-    <n-data-table
-        :columns="columns"
-        :data="data"
-        :loading="loading"
-        :pagination="pagination"
-        :bordered="false"
-        :row-key="row => row.id"
-        remote
-    />
-
-    <!-- 新增/编辑对话框 -->
-    <DialogForm
-        ref="dialogRef"
-        dialogPreset="card"
-        v-model:visible="showDialog"
-        v-model:formData="formData"
-        :use-field-groups="true"
-        :field-groups="fieldGroups"
-        :rules="formRules"
-        :title="dialogTitle"
-        :positive-text="dialogType === 'add' ? '添加' : '更新'"
-        :validate-on-submit="true"
-        @submit="handleSubmit"
-    />
-
-    <!-- 插件配置对话框 -->
+    <!-- 配置对话框 -->
     <n-modal v-model:show="showConfigModal" preset="card" title="插件配置" style="width: 500px">
-      <n-form label-placement="left" label-width="100">
+      <n-alert type="info" style="margin-bottom: 16px">
+        <template #header>配置说明</template>
+        <template v-if="currentPlugin?.plugin_id === 'notification-feishu'">
+          在飞书群中添加机器人，获取 Webhook 地址
+        </template>
+        <template v-else-if="currentPlugin?.plugin_id === 'notification-dingtalk'">
+          在钉钉群中添加机器人，获取 Webhook 地址和加签密钥
+        </template>
+        <template v-else-if="currentPlugin?.plugin_id === 'notification-wecom'">
+          在企业微信群中添加机器人，获取 Webhook 地址
+        </template>
+        <template v-else-if="currentPlugin?.plugin_id === 'notification-bark'">
+          下载 Bark App，获取服务器地址和 Key
+        </template>
+        <template v-else>
+          请填写下方配置项
+        </template>
+      </n-alert>
+      
+      <n-form label-placement="left" label-width="120px">
         <n-form-item label="Webhook地址">
-          <n-input v-model:value="configForm.webhook_url" placeholder="输入Webhook地址" />
+          <n-input v-model:value="configForm.webhook_url" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/xxx" />
         </n-form-item>
-        <n-form-item label="Secret（可选）" v-if="currentPlugin?.plugin_id === 'notification-dingtalk'">
-          <n-input v-model:value="configForm.secret" placeholder="钉钉加签密钥" />
+        <n-form-item v-if="currentPlugin?.plugin_id === 'notification-dingtalk'" label="加签密钥">
+          <n-input v-model:value="configForm.secret" placeholder="SECxxx" />
+        </n-form-item>
+        <n-form-item v-if="currentPlugin?.plugin_id === 'notification-bark'" label="服务器地址">
+          <n-input v-model:value="configForm.server" placeholder="https://api.day.app" />
+        </n-form-item>
+        <n-form-item v-if="currentPlugin?.plugin_id === 'notification-bark'" label="Key">
+          <n-input v-model:value="configForm.key" placeholder="Bark Key" />
         </n-form-item>
       </n-form>
+      
       <template #footer>
         <n-space justify="end">
           <n-button @click="showConfigModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSaveConfig">保存配置</n-button>
+          <n-button type="primary" @click="saveConfig" :loading="saving">保存配置</n-button>
         </n-space>
       </template>
     </n-modal>
 
-    <!-- 发送通知测试对话框 -->
+    <!-- 发送测试对话框 -->
     <n-modal v-model:show="showSendModal" preset="card" title="发送通知测试" style="width: 500px">
-      <n-form label-placement="left" label-width="80">
+      <n-form label-placement="left" label-width="80px">
         <n-form-item label="标题">
           <n-input v-model:value="sendForm.title" placeholder="通知标题" />
         </n-form-item>
         <n-form-item label="内容">
-          <n-input v-model:value="sendForm.content" type="textarea" placeholder="通知内容" :autosize="{ minRows: 3 }" />
+          <n-input v-model:value="sendForm.content" type="textarea" :autosize="{ minRows: 3 }" placeholder="通知内容" />
         </n-form-item>
       </n-form>
       <template #footer>
         <n-space justify="end">
           <n-button @click="showSendModal = false">取消</n-button>
-          <n-button type="primary" @click="handleSendNotification" :loading="sending">发送</n-button>
+          <n-button type="primary" @click="doSend" :loading="sending">发送</n-button>
         </n-space>
       </template>
     </n-modal>
 
-    <!-- 执行命令测试对话框 -->
-    <n-modal v-model:show="showExecuteModal" preset="card" title="执行命令测试" style="width: 600px">
-      <n-form label-placement="left" label-width="80">
+    <!-- 执行测试对话框 -->
+    <n-modal v-model:show="showExecuteModal" preset="card" title="执行命令测试" style="width: 650px">
+      <n-form label-placement="left" label-width="80px">
         <n-form-item label="命令">
-          <n-input v-model:value="executeForm.command" type="textarea" placeholder="要执行的命令" :autosize="{ minRows: 3 }" />
+          <n-input v-model:value="executeForm.command" type="textarea" :autosize="{ minRows: 3 }" placeholder="ls -la" />
         </n-form-item>
         <n-form-item label="超时(秒)">
           <n-input-number v-model:value="executeForm.timeout" :min="10" :max="3600" />
@@ -105,183 +172,45 @@
       <template #footer>
         <n-space justify="end">
           <n-button @click="showExecuteModal = false">取消</n-button>
-          <n-button type="primary" @click="handleExecuteCommand" :loading="executing">执行</n-button>
+          <n-button type="primary" @click="doExecute" :loading="executing">执行</n-button>
         </n-space>
       </template>
       <n-divider>执行结果</n-divider>
       <n-code v-if="executeResult" :code="executeResult" language="text" />
     </n-modal>
-  </n-card>
+  </div>
 </template>
 
 <script setup>
-import {h, onMounted, ref, reactive, computed} from "vue"
-import {NButton, NTag, NSpace, NIcon} from "naive-ui"
-import {AddOutline, ExtensionPuzzleOutline, SettingsOutline, SendOutline, TerminalOutline, TrashOutline} from "@vicons/ionicons5"
-import DialogForm from "@/components/DialogForm.vue"
+import { onMounted, ref, reactive } from 'vue'
 
-// ========== 状态定义 ==========
 const loading = ref(false)
-const submitting = ref(false)
+const initing = ref(false)
+const saving = ref(false)
+const sending = ref(false)
+const executing = ref(false)
 const data = ref([])
 const searchKeyword = ref('')
 const filterType = ref(null)
-const showDialog = ref(false)
-const dialogType = ref('add')
-const dialogRef = ref(null)
 const currentPlugin = ref(null)
-
-// 配置
-const showConfigModal = ref(false)
-const configForm = ref({ webhook_url: '', secret: '' })
-
-// 发送通知
-const showSendModal = ref(false)
-const sending = ref(false)
-const sendForm = ref({ title: '测试通知', content: '这是一条测试消息' })
-
-// 执行命令
-const showExecuteModal = ref(false)
-const executing = ref(false)
-const executeForm = ref({ command: 'echo "Hello World"', timeout: 300 })
 const executeResult = ref('')
 
-// 分页配置
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 30, 50],
-  prefix: ({ itemCount }) => `总共 ${itemCount} 条`,
-  onChange: (page) => { pagination.page = page; loadPlugins() },
-  onUpdatePageSize: (pageSize) => { pagination.pageSize = pageSize; loadPlugins() }
-})
+const showConfigModal = ref(false)
+const configForm = ref({ webhook_url: '', secret: '', server: '', key: '' })
 
-// 类型选项
+const showSendModal = ref(false)
+const sendForm = ref({ title: '测试通知', content: '这是一条来自 ToolsPlus 的测试消息' })
+
+const showExecuteModal = ref(false)
+const executeForm = ref({ command: 'echo "Hello ToolsPlus"', timeout: 300 })
+
+const pagination = reactive({ page: 1, pageSize: 10, itemCount: 0 })
+
 const typeOptions = [
   { label: '通知', value: 'notification' },
   { label: '执行器', value: 'executor' },
   { label: '数据源', value: 'datasource' }
 ]
-
-// 表单数据
-const formData = ref({})
-const defaultFormData = {
-  plugin_id: '',
-  name: '',
-  version: '1.0.0',
-  author: 'MyTool Team',
-  description: '',
-  plugin_type: 'notification',
-  category: '',
-  icon: '📦',
-  entry_point: '',
-  is_official: false,
-  is_active: true
-}
-
-// ========== 表格列定义 ==========
-const columns = [
-  { title: "ID", key: "id", width: 80 },
-  { title: "图标", key: "icon", width: 60, render: row => row.icon || '📦' },
-  { title: "插件ID", key: "plugin_id", width: 180 },
-  { title: "名称", key: "name", width: 150 },
-  { title: "版本", key: "version", width: 80 },
-  {
-    title: "类型",
-    key: "plugin_type",
-    width: 100,
-    render(row) {
-      const typeMap = { 'notification': '通知', 'executor': '执行器', 'datasource': '数据源' }
-      return typeMap[row.plugin_type] || row.plugin_type
-    }
-  },
-  {
-    title: "状态",
-    key: "is_installed",
-    width: 80,
-    render(row) {
-      return h(NTag, {
-        type: row.is_installed ? 'success' : 'default',
-        size: 'small'
-      }, { default: () => row.is_installed ? '已安装' : '未安装' })
-    }
-  },
-  {
-    title: "操作",
-    key: "actions",
-    width: 280,
-    render(row) {
-      const buttons = [
-        h(NButton, {
-          size: 'small',
-          type: row.is_installed ? 'warning' : 'primary',
-          onClick: () => handleInstall(row)
-        }, { default: () => row.is_installed ? '卸载' : '安装' })
-      ]
-      
-      if (row.is_installed) {
-        buttons.push(
-          h(NButton, { size: 'small', onClick: () => handleConfig(row) }, {
-            default: () => '配置',
-            icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
-          })
-        )
-        
-        if (row.plugin_type === 'notification') {
-          buttons.push(
-            h(NButton, { size: 'small', type: 'success', onClick: () => handleOpenSend(row) }, {
-              default: () => '发送',
-              icon: () => h(NIcon, null, { default: () => h(SendOutline) })
-            })
-          )
-        }
-        
-        if (row.plugin_type === 'executor') {
-          buttons.push(
-            h(NButton, { size: 'small', type: 'info', onClick: () => handleOpenExecute(row) }, {
-              default: () => '执行',
-              icon: () => h(NIcon, null, { default: () => h(TerminalOutline) })
-            })
-          )
-        }
-      }
-      
-      buttons.push(
-        h(NButton, { size: 'small', onClick: () => handleEdit(row) }, { default: () => '编辑' }),
-        h(NButton, { size: 'small', type: 'error', onClick: () => handleDelete(row) }, { default: () => '删除' })
-      )
-      
-      return h(NSpace, { size: 'small' }, { default: () => buttons })
-    }
-  }
-]
-
-// ========== 表单配置 ==========
-const fieldGroups = computed(() => [
-  {
-    title: '基本信息',
-    fields: [
-      { name: 'plugin_id', label: '插件ID', type: 'input', required: true, maxlength: 100, disabled: dialogType.value === 'edit' },
-      { name: 'name', label: '名称', type: 'input', required: true, maxlength: 100 },
-      { name: 'version', label: '版本', type: 'input', maxlength: 20 },
-      { name: 'author', label: '作者', type: 'input', maxlength: 100 },
-      { name: 'description', label: '描述', type: 'textarea', autosize: { minRows: 2, maxRows: 4 } },
-      { name: 'plugin_type', label: '类型', type: 'select', options: typeOptions },
-      { name: 'icon', label: '图标', type: 'input', maxlength: 10 },
-      { name: 'is_official', label: '官方插件', type: 'switch', checkedValue: true, uncheckedValue: false },
-      { name: 'is_active', label: '启用', type: 'switch', checkedValue: true, uncheckedValue: false }
-    ]
-  }
-])
-
-const formRules = (model) => ({
-  plugin_id: [{ required: true, message: '请输入插件ID', trigger: ['blur', 'input'] }],
-  name: [{ required: true, message: '请输入名称', trigger: ['blur', 'input'] }]
-})
-
-// ========== 方法定义 ==========
 
 const loadPlugins = async () => {
   loading.value = true
@@ -301,74 +230,68 @@ const loadPlugins = async () => {
   }
 }
 
-const handleAdd = () => {
-  dialogType.value = 'add'
-  formData.value = { ...defaultFormData }
-  showDialog.value = true
+const initPlugins = async () => {
+  initing.value = true
+  try {
+    await window.$request.post('/plugins/init')
+    window.$message.success('官方插件初始化成功')
+    loadPlugins()
+  } finally {
+    initing.value = false
+  }
 }
 
-const handleEdit = (row) => {
-  dialogType.value = 'edit'
-  formData.value = { ...row }
-  showDialog.value = true
+const handleInstall = async (plugin) => {
+  try {
+    await window.$request.post(`/plugins/${plugin.plugin_id}/install`)
+    window.$message.success('插件安装成功')
+    loadPlugins()
+  } catch (e) {}
 }
 
-const handleDelete = (row) => {
+const handleUninstall = async (plugin) => {
   window.$dialog.warning({
-    title: '确认删除',
-    content: `确定要删除插件 "${row.name}" 吗？`,
+    title: '确认卸载',
+    content: `确定要卸载 ${plugin.name} 吗？`,
     positiveText: '确定',
     negativeText: '取消',
     onPositiveClick: async () => {
-      await window.$request.delete(`/plugins/${row.plugin_id}`)
-      window.$message.success('删除成功')
+      await window.$request.post(`/plugins/${plugin.plugin_id}/uninstall`)
+      window.$message.success('插件已卸载')
       loadPlugins()
     }
   })
 }
 
-const handleInstall = async (row) => {
+const handleConfig = async (plugin) => {
+  currentPlugin.value = plugin
+  configForm.value = { webhook_url: '', secret: '', server: 'https://api.day.app', key: '' }
   try {
-    if (row.is_installed) {
-      await window.$request.post(`/plugins/${row.plugin_id}/uninstall`)
-      window.$message.success('插件已卸载')
-    } else {
-      await window.$request.post(`/plugins/${row.plugin_id}/install`)
-      window.$message.success('插件已安装')
-    }
-    loadPlugins()
-  } catch (e) {}
-}
-
-const handleConfig = async (row) => {
-  currentPlugin.value = row
-  // 加载现有配置
-  try {
-    const configs = await window.$request.get(`/plugins/${row.plugin_id}/configs`)
-    configForm.value = { webhook_url: '', secret: '' }
+    const configs = await window.$request.get(`/plugins/${plugin.plugin_id}/configs`)
     for (const c of (configs || [])) {
       configForm.value[c.config_key] = c.config_value
     }
-  } catch (e) {
-    configForm.value = { webhook_url: '', secret: '' }
-  }
+  } catch (e) {}
   showConfigModal.value = true
 }
 
-const handleSaveConfig = async () => {
+const saveConfig = async () => {
+  saving.value = true
   try {
     await window.$request.post(`/plugins/${currentPlugin.value.plugin_id}/install`, configForm.value)
     window.$message.success('配置保存成功')
     showConfigModal.value = false
-  } catch (e) {}
+  } finally {
+    saving.value = false
+  }
 }
 
-const handleOpenSend = (row) => {
-  currentPlugin.value = row
+const handleTestSend = (plugin) => {
+  currentPlugin.value = plugin
   showSendModal.value = true
 }
 
-const handleSendNotification = async () => {
+const doSend = async () => {
   sending.value = true
   try {
     await window.$request.post(`/plugins/${currentPlugin.value.plugin_id}/send`, sendForm.value)
@@ -379,13 +302,13 @@ const handleSendNotification = async () => {
   }
 }
 
-const handleOpenExecute = (row) => {
-  currentPlugin.value = row
+const handleTestExecute = (plugin) => {
+  currentPlugin.value = plugin
   executeResult.value = ''
   showExecuteModal.value = true
 }
 
-const handleExecuteCommand = async () => {
+const doExecute = async () => {
   executing.value = true
   try {
     const result = await window.$request.post(`/plugins/${currentPlugin.value.plugin_id}/execute`, executeForm.value)
@@ -397,27 +320,13 @@ const handleExecuteCommand = async () => {
   }
 }
 
-const handleSubmit = async (data) => {
-  submitting.value = true
-  try {
-    if (dialogType.value === 'add') {
-      await window.$request.post('/plugins', data)
-    } else {
-      await window.$request.put(`/plugins/${data.plugin_id}`, data)
-    }
-    window.$message.success('保存成功')
-    showDialog.value = false
-    loadPlugins()
-  } finally {
-    submitting.value = false
-  }
-}
-
-// ========== 生命周期 ==========
 onMounted(() => {
   loadPlugins()
 })
 </script>
 
 <style scoped>
+.plugin-market {
+  padding: 0;
+}
 </style>

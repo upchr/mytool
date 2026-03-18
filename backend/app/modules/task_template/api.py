@@ -215,4 +215,28 @@ async def apply_template(
         return BaseResponse.error(500, str(e))
 
 
+@router.post("/init")
+async def init_templates(engine=Depends(get_engine)):
+    """
+    初始化内置模板
+    
+    将官方预置的任务模板写入数据库，包括：
+    - 天气推送：定时获取天气并发送到飞书/钉钉/企业微信
+    - 系统监控：监控CPU/内存/磁盘使用率并告警
+    - 数据库备份：定时备份数据库文件
+    
+    Args:
+        engine: 数据库引擎
+    
+    Returns:
+        初始化结果
+    """
+    try:
+        service = TaskTemplateService(engine)
+        service.init_builtin_templates()
+        return BaseResponse.success(message="内置模板初始化成功")
+    except Exception as e:
+        return BaseResponse.error(500, str(e))
+
+
 
