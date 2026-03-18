@@ -3,40 +3,45 @@
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <n-space>
-        <n-button @click="handleSave" type="primary" :loading="saving">保存</n-button>
+        <n-button @click="goBack">← 返回列表</n-button>
+        <n-button type="primary" @click="handleSave" :loading="saving">保存</n-button>
         <n-button @click="handleTrigger" v-if="workflowId">执行</n-button>
         <n-divider vertical />
-        <n-button-group>
-          <n-button @click="zoomIn">+</n-button>
-          <n-button @click="zoomOut">-</n-button>
-          <n-button @click="fitView">适应</n-button>
-        </n-button-group>
-        <n-tag type="info">拖拽左侧节点到画布</n-tag>
+        <n-button @click="zoomIn">放大</n-button>
+        <n-button @click="zoomOut">缩小</n-button>
+        <n-button @click="fitView">适应</n-button>
       </n-space>
     </div>
 
-    <div class="editor-container">
+    <div class="editor-body">
       <!-- 左侧节点面板 -->
-      <div class="node-panel">
+      <div class="left-panel">
         <n-card title="节点类型" size="small">
-          <div
-            v-for="nodeType in nodeTypes"
-            :key="nodeType.type"
-            class="node-item"
-            draggable="true"
-            @dragstart="onDragStart($event, nodeType)"
-          >
-            <span class="node-icon">{{ nodeType.icon }}</span>
-            <div class="node-info">
-              <span class="node-name">{{ nodeType.label }}</span>
-              <span class="node-desc">{{ nodeType.desc }}</span>
+          <div class="node-list">
+            <div
+              v-for="item in nodeTypes"
+              :key="item.type"
+              class="draggable-node"
+              draggable="true"
+              @dragstart="onDragStart($event, item)"
+            >
+              <span class="icon">{{ item.icon }}</span>
+              <div class="info">
+                <div class="name">{{ item.label }}</div>
+                <div class="desc">{{ item.desc }}</div>
+              </div>
             </div>
           </div>
         </n-card>
+        <n-card size="small" style="margin-top: 8px">
+          <n-text depth="3" style="font-size: 12px">
+            操作：拖拽节点到画布 → 点击选中 → 右侧编辑属性 → 拖拽端口连线
+          </n-text>
+        </n-card>
       </div>
 
-      <!-- 中间画布 -->
-      <div class="canvas-area" ref="vueFlowWrapper">
+      <!-- 画布 -->
+      <div class="canvas" ref="canvasRef">
         <VueFlow
           v-model:nodes="nodes"
           v-model:edges="edges"
@@ -50,48 +55,35 @@
         >
           <Background />
           <Controls />
-          <MiniMap />
 
           <template #node-task="props">
-            <div class="wf-node node-task" :class="{ selected: selectedNode === props.id }">
+            <div class="wf-node task" :class="{ active: selectedId === props.id }">
               <Handle type="target" :position="Position.Left" />
-              <div class="node-content">
-                <span class="icon">⚙️</span>
-                <span>{{ props.data.label }}</span>
-              </div>
+              <div class="content">⚙️ {{ props.data.label }}</div>
               <Handle type="source" :position="Position.Right" />
             </div>
           </template>
 
           <template #node-condition="props">
-            <div class="wf-node node-condition" :class="{ selected: selectedNode === props.id }">
+            <div class="wf-node condition" :class="{ active: selectedId === props.id }">
               <Handle type="target" :position="Position.Left" />
-              <div class="node-content">
-                <span class="icon">🔷</span>
-                <span>{{ props.data.label }}</span>
-              </div>
+              <div class="content">🔷 {{ props.data.label }}</div>
               <Handle type="source" :position="Position.Right" />
             </div>
           </template>
 
           <template #node-wait="props">
-            <div class="wf-node node-wait" :class="{ selected: selectedNode === props.id }">
+            <div class="wf-node wait" :class="{ active: selectedId === props.id }">
               <Handle type="target" :position="Position.Left" />
-              <div class="node-content">
-                <span class="icon">⏱️</span>
-                <span>{{ props.data.label }}</span>
-              </div>
+              <div class="content">⏱️ {{ props.data.label }}</div>
               <Handle type="source" :position="Position.Right" />
             </div>
           </template>
 
           <template #node-notification="props">
-            <div class="wf-node node-notification" :class="{ selected: selectedNode === props.id }">
+            <div class="wf-node notification" :class="{ active: selectedId === props.id }">
               <Handle type="target" :position="Position.Left" />
-              <div class="node-content">
-                <span class="icon">📢</span>
-                <span>{{ props.data.label }}</span>
-              </div>
+              <div class="content">📢 {{ props.data.label }}</div>
               <Handle type="source" :position="Position.Right" />
             </div>
           </template>
@@ -99,19 +91,51 @@
       </div>
 
       <!-- 右侧属性面板 -->
-      <div class="property-panel">
+      <div class="right-panel">
         <n-card title="节点属性" size="small" v-if="selectedNode">
           <n-form label-placement="top" size="small">
             <n-form-item label="名称">
-              <n-input v-model:value="selectedNodeData.label" />
+              <n-input v-model:value="editLabel" @blur="applyEdit" />
             </n-form-item>
+            <n-form-item label="类型">
+              <n-tag>{{ selectedNode.type }}</n-tag>
+            </n-form-item>
+            
+            <!-- 任务节点配置 -->
+            <template v-if="selectedNode.type === 'task'">
+              <n-form-item label="任务ID">
+                <n-input-number v-model:value="editConfig.job_id" style="width: 100%" @blur="applyEdit" />
+              </n-form-item>
+            </template>
+            
+            <!-- 条件节点配置 -->
+            <template v-if="selectedNode.type === 'condition'">
+              <n-form-item label="条件表达式">
+                <n-input v-model:value="editConfig.expression" @blur="applyEdit" />
+              </n-form-item>
+            </template>
+            
+            <!-- 等待节点配置 -->
+            <template v-if="selectedNode.type === 'wait'">
+              <n-form-item label="等待秒数">
+                <n-input-number v-model:value="editConfig.seconds" style="width: 100%" @blur="applyEdit" />
+              </n-form-item>
+            </template>
+            
+            <!-- 通知节点配置 -->
+            <template v-if="selectedNode.type === 'notification'">
+              <n-form-item label="标题">
+                <n-input v-model:value="editConfig.title" @blur="applyEdit" />
+              </n-form-item>
+              <n-form-item label="内容">
+                <n-input v-model:value="editConfig.content" type="textarea" @blur="applyEdit" />
+              </n-form-item>
+            </template>
           </n-form>
-          <n-space>
-            <n-button size="small" type="error" @click="deleteSelectedNode">删除节点</n-button>
-          </n-space>
+          <n-button type="error" size="small" block @click="deleteNode">删除此节点</n-button>
         </n-card>
         <n-card v-else title="节点属性" size="small">
-          <n-empty description="点击节点编辑" />
+          <n-empty description="点击节点编辑属性" />
         </n-card>
       </div>
     </div>
@@ -119,43 +143,37 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { VueFlow, useVueFlow, Position, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { MiniMap } from '@vue-flow/minimap'
 
 const props = defineProps({
-  workflowId: { type: String, default: '' },
+  workflowId: String,
   initialData: { type: Object, default: () => ({ nodes: [], edges: [] }) }
 })
 
-const emit = defineEmits(['save', 'trigger'])
+const emit = defineEmits(['save', 'trigger', 'back'])
 
-const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes, updateNode } = useVueFlow()
+const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes } = useVueFlow()
 
-const vueFlowWrapper = ref(null)
+const canvasRef = ref(null)
 const saving = ref(false)
-const selectedNode = ref(null)
-
 const nodes = ref([])
 const edges = ref([])
+const selectedId = ref(null)
+const editLabel = ref('')
+const editConfig = ref({})
+const nodeCounter = ref(1)
 
 const nodeTypes = [
   { type: 'task', label: '任务', icon: '⚙️', desc: '执行定时任务' },
   { type: 'condition', label: '条件', icon: '🔷', desc: '条件判断' },
   { type: 'wait', label: '等待', icon: '⏱️', desc: '等待时间' },
-  { type: 'notification', label: '通知', icon: '📢', desc: '发送通知' }
+  { type: 'notification', label: '通知', icon: '📢', desc: '发送消息' }
 ]
 
-const selectedNodeData = computed(() => {
-  if (!selectedNode.value) return { label: '' }
-  const node = nodes.value.find(n => n.id === selectedNode.value)
-  return node?.data || { label: '' }
-})
-
-let nodeIdCounter = 1
-let draggedType = null
+const selectedNode = ref(null)
 
 onMounted(() => {
   if (props.initialData?.nodes?.length > 0) {
@@ -163,13 +181,13 @@ onMounted(() => {
       id: n.id,
       type: n.type,
       position: n.position || { x: 100, y: 100 },
-      data: { label: n.name || n.id, config: n.config || {} }
+      data: { label: n.name || '节点', config: n.config || {} }
     }))
-    nodeIdCounter = props.initialData.nodes.length + 1
+    nodeCounter.value = props.initialData.nodes.length + 1
   }
   if (props.initialData?.edges?.length > 0) {
     edges.value = props.initialData.edges.map((e, i) => ({
-      id: `edge-${i}`,
+      id: `e${i}`,
       source: e.source,
       target: e.target,
       animated: true
@@ -177,88 +195,87 @@ onMounted(() => {
   }
 })
 
-const onDragStart = (event, nodeType) => {
-  draggedType = nodeType
-  event.dataTransfer.effectAllowed = 'move'
+// 拖拽
+let dragType = null
+const onDragStart = (e, item) => {
+  dragType = item
+  e.dataTransfer.effectAllowed = 'move'
 }
 
-const onDrop = (event) => {
-  if (!draggedType) return
-  
-  const bounds = vueFlowWrapper.value.getBoundingClientRect()
-  const position = {
-    x: event.clientX - bounds.left - 80,
-    y: event.clientY - bounds.top - 30
-  }
-  
-  const newNode = {
-    id: `node-${nodeIdCounter++}`,
-    type: draggedType.type,
-    position,
-    data: { label: `${draggedType.label}节点`, config: {} }
-  }
-  
-  addNodes([newNode])
-  draggedType = null
-}
-
-const onNodeClick = (event) => {
-  selectedNode.value = event.node.id
-}
-
-const onConnect = (connection) => {
-  addEdges([{
-    id: `edge-${Date.now()}`,
-    source: connection.source,
-    target: connection.target,
-    animated: true
-  }])
-}
-
-watch(selectedNodeData, (val) => {
-  if (selectedNode.value && val) {
-    updateNode(selectedNode.value, (node) => ({ ...node, data: { ...val } }))
-  }
-}, { deep: true })
-
-const deleteSelectedNode = () => {
-  if (selectedNode.value) {
-    removeNodes([selectedNode.value])
-    selectedNode.value = null
-  }
-}
-
-const handleSave = async () => {
-  saving.value = true
-  try {
-    emit('save', {
-      nodes: nodes.value.map(n => ({
-        id: n.id,
-        type: n.type,
-        name: n.data.label,
-        config: n.data.config,
-        position: n.position
-      })),
-      edges: edges.value.map(e => ({
-        source: e.source,
-        target: e.target
-      }))
-    })
-  } finally {
-    saving.value = false
-  }
-}
-
-const handleTrigger = () => {
-  emit('trigger')
-}
-
-defineExpose({ 
-  getData: () => ({
-    nodes: nodes.value,
-    edges: edges.value
+const onDrop = (e) => {
+  if (!dragType) return
+  const rect = canvasRef.value.getBoundingClientRect()
+  const pos = { x: e.clientX - rect.left - 60, y: e.clientY - rect.top - 20 }
+  const id = `n${nodeCounter.value++}`
+  nodes.value.push({
+    id,
+    type: dragType.type,
+    position: pos,
+    data: { label: `${dragType.label}节点`, config: {} }
   })
-})
+  dragType = null
+}
+
+// 点击节点
+const onNodeClick = (e) => {
+  selectedId.value = e.node.id
+  selectedNode.value = e.node
+  editLabel.value = e.node.data.label
+  editConfig.value = { ...e.node.data.config }
+}
+
+// 连线
+const onConnect = (conn) => {
+  edges.value.push({
+    id: `e${Date.now()}`,
+    source: conn.source,
+    target: conn.target,
+    animated: true
+  })
+}
+
+// 应用编辑（失焦时）
+const applyEdit = () => {
+  if (!selectedId.value) return
+  const idx = nodes.value.findIndex(n => n.id === selectedId.value)
+  if (idx >= 0) {
+    nodes.value[idx].data.label = editLabel.value
+    nodes.value[idx].data.config = { ...editConfig.value }
+  }
+}
+
+// 删除节点
+const deleteNode = () => {
+  if (!selectedId.value) return
+  const idx = nodes.value.findIndex(n => n.id === selectedId.value)
+  if (idx >= 0) {
+    nodes.value.splice(idx, 1)
+    edges.value = edges.value.filter(e => e.source !== selectedId.value && e.target !== selectedId.value)
+  }
+  selectedId.value = null
+  selectedNode.value = null
+}
+
+// 保存
+const handleSave = () => {
+  saving.value = true
+  emit('save', {
+    nodes: nodes.value.map(n => ({
+      id: n.id,
+      type: n.type,
+      name: n.data.label,
+      config: n.data.config,
+      position: n.position
+    })),
+    edges: edges.value.map(e => ({ source: e.source, target: e.target }))
+  })
+  saving.value = false
+}
+
+const handleTrigger = () => emit('trigger')
+const goBack = () => emit('back')
+
+defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
 </script>
 
 <style scoped>
@@ -266,126 +283,100 @@ defineExpose({
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  background: #f0f2f5;
 }
 
 .toolbar {
   padding: 12px 16px;
   background: #fff;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #d9d9d9;
 }
 
-.editor-container {
+.editor-body {
   flex: 1;
   display: flex;
   overflow: hidden;
 }
 
-.node-panel {
+.left-panel {
   width: 200px;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
   padding: 12px;
+  background: #fff;
+  border-right: 1px solid #d9d9d9;
+  overflow-y: auto;
 }
 
-.node-item {
+.node-list {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.draggable-node {
+  display: flex;
   gap: 10px;
   padding: 10px;
-  margin-bottom: 8px;
   background: #fafafa;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #d9d9d9;
   border-radius: 6px;
   cursor: grab;
 }
 
-.node-item:hover {
+.draggable-node:hover {
   border-color: #18a058;
-  background: #f0fff4;
+  background: #f6ffed;
 }
 
-.node-icon {
+.draggable-node .icon {
   font-size: 20px;
 }
 
-.node-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.node-name {
+.draggable-node .name {
   font-weight: 500;
   font-size: 13px;
 }
 
-.node-desc {
+.draggable-node .desc {
   font-size: 11px;
   color: #999;
 }
 
-.canvas-area {
+.canvas {
   flex: 1;
   background: #fff;
 }
 
-.property-panel {
-  width: 250px;
-  background: #fff;
-  border-left: 1px solid #e0e0e0;
+.right-panel {
+  width: 260px;
   padding: 12px;
+  background: #fff;
+  border-left: 1px solid #d9d9d9;
+  overflow-y: auto;
 }
 
 /* 节点样式 */
 .wf-node {
-  padding: 12px 20px;
-  border-radius: 8px;
-  border: 2px solid #e0e0e0;
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: 2px solid #d9d9d9;
   background: #fff;
-  min-width: 120px;
+  font-size: 13px;
 }
 
-.wf-node.selected {
+.wf-node.active {
   border-color: #18a058;
   box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.2);
 }
 
-.wf-node.node-task { border-color: #2080f0; }
-.wf-node.node-condition { border-color: #f0a020; }
-.wf-node.node-wait { border-color: #8a8a8a; }
-.wf-node.node-notification { border-color: #722ed1; }
-
-.node-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.node-content .icon {
-  font-size: 16px;
-}
+.wf-node.task { border-color: #1890ff; }
+.wf-node.condition { border-color: #fa8c16; }
+.wf-node.wait { border-color: #8c8c8c; }
+.wf-node.notification { border-color: #722ed1; }
 </style>
 
 <style>
-/* Vue Flow 全局样式（非 scoped） */
-.vue-flow {
-  background: #fafafa;
-}
-
-.vue-flow__edge-path {
-  stroke: #999;
-  stroke-width: 2;
-}
-
-.vue-flow__edge.animated .vue-flow__edge-path {
-  stroke: #18a058;
-}
-
-.vue-flow__handle {
-  width: 10px !important;
-  height: 10px !important;
-  background: #18a058 !important;
-  border: 2px solid #fff !important;
-}
+/* 全局样式 */
+.vue-flow { background: #fafafa; }
+.vue-flow__handle { width: 10px !important; height: 10px !important; background: #18a058 !important; border: 2px solid #fff !important; }
+.vue-flow__edge-path { stroke: #999; stroke-width: 2; }
 </style>
