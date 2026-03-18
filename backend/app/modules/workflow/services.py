@@ -5,15 +5,12 @@ from app.core.db.database import database
 from .models import (
     workflows_table,
     workflow_executions_table,
-    workflow_node_executions_table,
-    workflow_versions_table
+    workflow_node_executions_table
 )
 from .schemas import (
     WorkflowCreate,
     WorkflowUpdate,
     WorkflowQueryParams,
-    WorkflowVersionCreate,
-    WorkflowRestoreRequest,
     BUILTIN_WORKFLOWS
 )
 from .engine import workflow_engine
@@ -100,95 +97,6 @@ class WorkflowService:
         )
         await database.execute(query)
         return True
-
-    # ========== 版本控制相关 ==========
-
-    @staticmethod
-    async def create_version(workflow_id: str, change_note: str = None, created_by: str = None) -> Dict:
-        """创建工作流版本（保存当前状态）"""
-        workflow = await WorkflowService.get_workflow(workflow_id)
-        if not workflow:
-            raise ValueError("工作流不存在")
-        
-        # 获取当前最大版本号
-        max_version_query = select(func.max(workflow_versions_table.c.version)).where(
-            workflow_versions_table.c.workflow_id == workflow_id
-        )
-        max_version = await database.fetch_val(max_version_query) or 0
-        new_version = max_version + 1
-        
-        now = datetime.utcnow()
-        query = workflow_versions_table.insert().values(
-            workflow_id=workflow_id,
-            version=new_version,
-            name=workflow["name"],
-            description=workflow["description"],
-            nodes=workflow["nodes"],
-            edges=workflow["edges"],
-            change_note=change_note,
-            created_by=created_by,
-            created_at=now
-        )
-        record_id = await database.execute(query)
-        
-        get_query = select(workflow_versions_table).where(workflow_versions_table.c.id == record_id)
-        return await database.fetch_one(get_query)
-
-    @staticmethod
-    async def list_versions(workflow_id: str) -> List[Dict]:
-        """获取工作流的所有版本"""
-        query = (
-            select(workflow_versions_table)
-            .where(workflow_versions_table.c.workflow_id == workflow_id)
-            .order_by(workflow_versions_table.c.version.desc())
-        )
-        return await database.fetch_all(query)
-
-    @staticmethod
-    async def get_version(version_id: int) -> Optional[Dict]:
-        """获取单个版本"""
-        query = select(workflow_versions_table).where(workflow_versions_table.c.id == version_id)
-        return await database.fetch_one(query)
-
-    @staticmethod
-    async def restore_version(version_id: int, change_note: str = None) -> Dict:
-        """从版本恢复工作流"""
-        version = await WorkflowService.get_version(version_id)
-        if not version:
-            raise ValueError("版本不存在")
-        
-        workflow_id = version["workflow_id"]
-        
-        # 先保存当前状态为新版本
-        await WorkflowService.create_version(
-            workflow_id,
-            change_note=f"恢复前自动备份 (恢复版本 v{version['version']})",
-            created_by="system"
-        )
-        
-        # 更新工作流
-        now = datetime.utcnow()
-        update_query = (
-            update(workflows_table)
-            .where(workflows_table.c.workflow_id == workflow_id)
-            .values(
-                name=version["name"],
-                description=version["description"],
-                nodes=version["nodes"],
-                edges=version["edges"],
-                updated_at=now
-            )
-        )
-        await database.execute(update_query)
-        
-        # 保存恢复操作
-        await WorkflowService.create_version(
-            workflow_id,
-            change_note=change_note or f"恢复到版本 v{version['version']}",
-            created_by="user"
-        )
-        
-        return await WorkflowService.get_workflow(workflow_id)
 
     @staticmethod
     async def trigger_workflow(workflow_id: str, triggered_by: str = "manual", inputs: Optional[Dict] = None) -> int:

@@ -7,9 +7,7 @@ from .schemas import (
     WorkflowExecution,
     WorkflowNodeExecution,
     WorkflowQueryParams,
-    WorkflowTriggerRequest,
-    WorkflowVersion,
-    WorkflowRestoreRequest
+    WorkflowTriggerRequest
 )
 from .services import WorkflowService
 
@@ -109,47 +107,3 @@ async def get_workflow_executions(workflow_id: str, limit: int = Query(20, ge=1,
 async def get_node_executions(execution_id: int):
     """获取执行的节点记录"""
     return await WorkflowService.get_node_executions(execution_id)
-
-
-# ========== 版本控制接口 ==========
-
-@router.post("/{workflow_id}/versions")
-async def create_workflow_version(workflow_id: str, change_note: Optional[str] = None):
-    """创建工作流版本"""
-    try:
-        version = await WorkflowService.create_version(workflow_id, change_note)
-        return {"message": "版本创建成功", "version": version}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/{workflow_id}/versions", response_model=List[WorkflowVersion])
-async def list_workflow_versions(workflow_id: str):
-    """获取工作流版本列表"""
-    workflow = await WorkflowService.get_workflow(workflow_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="工作流不存在")
-    return await WorkflowService.list_versions(workflow_id)
-
-
-@router.get("/versions/{version_id}", response_model=WorkflowVersion)
-async def get_workflow_version(version_id: int):
-    """获取工作流版本详情"""
-    version = await WorkflowService.get_version(version_id)
-    if not version:
-        raise HTTPException(status_code=404, detail="版本不存在")
-    return version
-
-
-@router.post("/{workflow_id}/versions/restore")
-async def restore_workflow_version(workflow_id: str, data: WorkflowRestoreRequest):
-    """从版本恢复工作流"""
-    workflow = await WorkflowService.get_workflow(workflow_id)
-    if not workflow:
-        raise HTTPException(status_code=404, detail="工作流不存在")
-    
-    try:
-        restored = await WorkflowService.restore_version(data.version_id, data.change_note)
-        return {"message": "恢复成功", "workflow": restored}
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
