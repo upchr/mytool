@@ -177,6 +177,8 @@ class WorkflowEngine:
                 result = await self._execute_wait_node(node, config, state)
             elif node_type == NodeTypes.NOTIFICATION:
                 result = await self._execute_notification_node(node, config, state)
+            elif node_type == NodeTypes.SUBWORKFLOW:
+                result = await self._execute_subworkflow_node(node, config, state)
             else:
                 result = {"status": "success", "output": f"未知节点类型: {node_type}"}
 
@@ -305,6 +307,77 @@ class WorkflowEngine:
             
         except Exception as e:
             logger.error(f"通知节点执行失败: {e}")
+            return {"status": "failed", "error": str(e)}
+
+    async def _execute_subworkflow_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
+        """执行子工作流节点 - 嵌套调用另一个工作流"""
+        node_name = node.get("name")
+        subworkflow_id = config.get("workflow_id")
+        
+        if not subworkflow_id:
+            return {"status": "failed", "error": "未配置子工作流ID"}
+        
+        logger.info(f"执行子工作流: {node_name} -> {subworkflow_id}")
+        
+        try:
+            # 解析子工作流输入参数
+            sub_inputs = config.get("inputs", {})
+            resolved_inputs = {}
+            for key, value in sub_inputs.items():
+                resolved_inputs[key] = WorkflowVariableResolver.resolve(value, state)
+            
+            # 将父工作流的 outputs 也传给子工作流
+            if state.get("outputs"):
+                resolved_inputs["parent_outputs"] = state["outputs"]
+            
+            # 触发子工作流
+            sub_execution_id = await self.start_workflow(
+                subworkflow_id,
+                triggered_by=f"subworkflow:{state.get('workflow', {}).get('workflow_id', 'unknown')}",
+                inputs=resolved_inputs
+            )
+            
+            logger.info(f"子工作流已启动: {subworkflow_id}, execution_id={sub_execution_id}")
+            
+            # 等待子工作流完成
+            max_wait = config.get("max_wait_seconds", 1800)  # 默认30分钟
+            poll_interval = config.get("poll_interval", 2)
+            waited = 0
+            
+            from .services import WorkflowService
+            
+            while waited < max_wait:
+                await asyncio.sleep(poll_interval)
+                waited += poll_interval
+                
+                sub_execution = await WorkflowService.get_execution(sub_execution_id)
+                status = sub_execution.get("status")
+                
+                if status in ["success", "failed", "cancelled"]:
+                    # 获取子工作流的节点输出
+                    sub_node_execs = await WorkflowService.get_node_executions(sub_execution_id)
+                    
+                    # 整理子工作流的输出（取最后一个成功节点的输出）
+                    sub_outputs = {}
+                    for node_exec in sub_node_execs:
+                        if node_exec.get("status") == "success" and node_exec.get("output"):
+                            sub_outputs[node_exec.get("node_id")] = node_exec.get("output")
+                    
+                    return {
+                        "status": "success" if status == "success" else "failed",
+                        "output": json.dumps({
+                            "subworkflow_id": subworkflow_id,
+                            "execution_id": sub_execution_id,
+                            "status": status,
+                            "outputs": sub_outputs
+                        }),
+                        "error": sub_execution.get("error")
+                    }
+            
+            return {"status": "failed", "error": f"子工作流执行超时（{max_wait}秒）"}
+            
+        except Exception as e:
+            logger.error(f"子工作流节点执行失败: {node_name}, error: {e}")
             return {"status": "failed", "error": str(e)}
 
     async def _execute_next_nodes(self, execution_id: int, current_node_id: str, condition: str, state: Dict):
