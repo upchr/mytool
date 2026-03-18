@@ -93,11 +93,11 @@ resource_table = Table(
     "resource",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("name", String(100), nullable=False, description="资源名称"),
-    Column("description", String(500), description="描述"),
-    Column("is_active", Boolean, default=True, description="是否启用"),
-    Column("created_at", DateTime, default=datetime.now, description="创建时间"),
-    Column("updated_at", DateTime, default=datetime.now, onupdate=datetime.now, description="更新时间"),
+    Column("name", String(100), nullable=False, comment ="资源名称"),
+    Column("description", String(500), comment ="描述"),
+    Column("is_active", Boolean, default=True, comment ="是否启用"),
+    Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
+    Column("updated_at", DateTime, default=datetime.now, onupdate=datetime.now, comment ="更新时间"),
     sqlite_autoincrement=True,
 )
 
