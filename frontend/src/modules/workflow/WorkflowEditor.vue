@@ -100,7 +100,7 @@
             <n-form-item label="类型">
               <n-tag>{{ selectedNode.type }}</n-tag>
             </n-form-item>
-            
+
             <!-- 任务节点配置 -->
             <template v-if="selectedNode.type === 'task'">
               <n-form-item label="选择任务">
@@ -115,7 +115,7 @@
                 从「任务管理」中已创建的任务里选择
               </n-text>
             </template>
-            
+
             <!-- 条件节点配置 -->
             <template v-if="selectedNode.type === 'condition'">
               <n-form-item label="条件表达式">
@@ -125,14 +125,14 @@
                 示例：outputs.node1.status == 'success'
               </n-text>
             </template>
-            
+
             <!-- 等待节点配置 -->
             <template v-if="selectedNode.type === 'wait'">
               <n-form-item label="等待秒数">
                 <n-input-number v-model:value="editConfig.seconds" style="width: 100%" @blur="applyEdit" />
               </n-form-item>
             </template>
-            
+
             <!-- 通知节点配置 -->
             <template v-if="selectedNode.type === 'notification'">
               <n-form-item label="标题">
@@ -202,42 +202,7 @@ const loadJobs = async () => {
 
 onMounted(() => {
   loadJobs()  // 加载任务列表
-  
-  if (props.initialData?.nodes?.length > 0) {
-    nodes.value = props.initialData.nodes.map(n => ({
-      id: n.id,
-      type: n.type,
-      position: n.position || { x: 100, y: 100 },
-      data: { label: n.name || '节点', config: n.config || {} }
-    }))
-    nodeCounter.value = props.initialData.nodes.length + 1
-  }
-  if (props.initialData?.edges?.length > 0) {
-    edges.value = props.initialData.edges.map((e, i) => ({
-      id: `e${i}`,
-      source: e.source,
-      target: e.target,
-      animated: true
-    }))
-  }
-})
 
-// 加载任务列表
-const loadJobs = async () => {
-  try {
-    const res = await window.$request.post('/cron/jobsList', {})
-    jobOptions.value = (res?.list || res || []).map(j => ({
-      label: `${j.name} (ID: ${j.id})`,
-      value: j.id
-    }))
-  } catch (e) {
-    console.error('加载任务列表失败', e)
-  }
-}
-
-onMounted(() => {
-  loadJobs()
-  
   if (props.initialData?.nodes?.length > 0) {
     nodes.value = props.initialData.nodes.map(n => ({
       id: n.id,
