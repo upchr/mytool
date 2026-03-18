@@ -25,6 +25,7 @@ BUILTIN_TEMPLATES = [
     {
         "template_id": "weather-push",
         "name": "天气推送",
+        "version": "1.0.0",
         "description": "定时获取天气信息并推送到指定渠道",
         "category": "通知推送",
         "tags": ["天气", "推送", "通知"],
@@ -108,6 +109,7 @@ fi
     {
         "template_id": "system-monitor",
         "name": "系统监控",
+        "version": "1.0.0",
         "description": "监控系统CPU、内存、磁盘使用率并告警",
         "category": "系统运维",
         "tags": ["监控", "告警", "运维"],
@@ -191,6 +193,7 @@ fi
     {
         "template_id": "db-backup",
         "name": "数据库备份",
+        "version": "1.0.0",
         "description": "定时备份数据库文件",
         "category": "数据备份",
         "tags": ["备份", "数据库", "运维"],
