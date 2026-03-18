@@ -67,6 +67,7 @@ class WorkflowListResponse(BaseModel):
     total: int = Field(..., description="总数")
     page: int = Field(..., description="当前页")
     page_size: int = Field(..., description="每页大小")
+    pages: int = Field(..., description="总页数")
     items: List[WorkflowRead] = Field(default_factory=list, description="工作流列表")
 
 

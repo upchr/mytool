@@ -16,6 +16,8 @@ import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
 import WorkflowManager from '../modules/workflow/WorkflowManager.vue'
 import PluginManager from '../modules/plugin/PluginManager.vue'
+import AssetList from '../modules/asset/AssetList.vue'
+
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon,
@@ -36,6 +38,7 @@ import {
     ExtensionPuzzleOutline as PluginIcon,
     GitBranchOutline as WorkflowIcon,
     BookOutline as KnowledgeIcon,
+    BookOutline as AssetIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -52,6 +55,7 @@ const routes = [
     { path: '/ai-chat', component: AIChat },
     { path: '/ai-config', component: AIConfig },
     { path: '/ai-knowledge', component: KnowledgeBase },
+    { path: '/asset', component: AssetList },
     { path: '/ssl-dns', component: SSLDns },
     {
         path: '/ssl-apply',
@@ -91,6 +95,12 @@ const routeLabels = [
         label: '任务管理',
         icon: ClockIcon,
         key: 'jobs'
+    },
+    {
+        path: '/asset',
+        label: '固定资产',
+        icon: AssetIcon,
+        key: 'asset'
     },
     {
         path: '/workflows',

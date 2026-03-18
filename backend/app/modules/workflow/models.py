@@ -18,27 +18,27 @@ workflows_table = Table(
     "workflows",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    
+
     # 基本信息
-    Column("workflow_id", String(100), nullable=False, unique=True, description="工作流唯一标识"),
-    Column("name", String(100), nullable=False, description="工作流名称"),
-    Column("description", Text, description="工作流描述"),
-    
+    Column("workflow_id", String(100), nullable=False, unique=True, comment ="工作流唯一标识"),
+    Column("name", String(100), nullable=False, comment ="工作流名称"),
+    Column("description", Text, comment ="工作流描述"),
+
     # 关联
-    Column("node_id", Integer, ForeignKey("nodes.id"), nullable=False, description="所属节点ID"),
-    
+    Column("node_id", Integer, ForeignKey("nodes.id"), nullable=False, comment ="所属节点ID"),
+
     # 工作流定义
-    Column("schedule", String(50), description="Cron表达式（定时触发）"),
-    Column("nodes", JSON, default=list, description="节点定义列表"),
-    Column("edges", JSON, default=list, description="边定义列表（连线）"),
-    
+    Column("schedule", String(50), comment ="Cron表达式（定时触发）"),
+    Column("nodes", JSON, default=list, comment ="节点定义列表"),
+    Column("edges", JSON, default=list, comment ="边定义列表（连线）"),
+
     # 状态
-    Column("is_active", Boolean, default=True, description="是否启用"),
-    
+    Column("is_active", Boolean, default=True, comment ="是否启用"),
+
     # 时间戳
-    Column("created_at", DateTime, default=datetime.now, description="创建时间"),
-    Column("updated_at", DateTime, default=datetime.now, onupdate=datetime.now, description="更新时间"),
-    
+    Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
+    Column("updated_at", DateTime, default=datetime.now, onupdate=datetime.now, comment ="更新时间"),
+
     sqlite_autoincrement=True,
 )
 
@@ -48,24 +48,24 @@ workflow_executions_table = Table(
     "workflow_executions",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    
+
     # 关联
-    Column("workflow_id", String(100), ForeignKey("workflows.workflow_id"), nullable=False, description="工作流ID"),
-    
+    Column("workflow_id", String(100), ForeignKey("workflows.workflow_id"), nullable=False, comment ="工作流ID"),
+
     # 执行信息
-    Column("status", String(20), default="pending", description="状态：pending/running/success/failed/cancelled"),
-    Column("triggered_by", String(20), default="system", description="触发方式：manual/system/schedule"),
-    
+    Column("status", String(20), default="pending", comment ="状态：pending/running/success/failed/cancelled"),
+    Column("triggered_by", String(20), default="system", comment ="触发方式：manual/system/schedule"),
+
     # 执行时间
-    Column("start_time", DateTime, default=datetime.now, description="开始时间"),
-    Column("end_time", DateTime, description="结束时间"),
-    
+    Column("start_time", DateTime, default=datetime.now, comment ="开始时间"),
+    Column("end_time", DateTime, comment ="结束时间"),
+
     # 结果
-    Column("error", Text, description="错误信息"),
-    
+    Column("error", Text, comment ="错误信息"),
+
     # 时间戳
-    Column("created_at", DateTime, default=datetime.now, description="创建时间"),
-    
+    Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
+
     sqlite_autoincrement=True,
 )
 
@@ -75,29 +75,29 @@ workflow_node_executions_table = Table(
     "workflow_node_executions",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    
+
     # 关联
-    Column("execution_id", Integer, ForeignKey("workflow_executions.id"), nullable=False, description="执行记录ID"),
-    
+    Column("execution_id", Integer, ForeignKey("workflow_executions.id"), nullable=False, comment ="执行记录ID"),
+
     # 节点信息
-    Column("node_id", String(100), nullable=False, description="节点ID（工作流内）"),
-    Column("node_name", String(100), description="节点名称"),
-    Column("node_type", String(20), description="节点类型"),
-    
+    Column("node_id", String(100), nullable=False, comment ="节点ID（工作流内）"),
+    Column("node_name", String(100), comment ="节点名称"),
+    Column("node_type", String(20), comment ="节点类型"),
+
     # 执行状态
-    Column("status", String(20), default="pending", description="状态：pending/running/success/failed/skipped"),
-    
+    Column("status", String(20), default="pending", comment ="状态：pending/running/success/failed/skipped"),
+
     # 执行时间
-    Column("start_time", DateTime, description="开始时间"),
-    Column("end_time", DateTime, description="结束时间"),
-    
+    Column("start_time", DateTime, comment ="开始时间"),
+    Column("end_time", DateTime, comment ="结束时间"),
+
     # 结果
-    Column("output", Text, description="输出"),
-    Column("error", Text, description="错误信息"),
-    
+    Column("output", Text, comment ="输出"),
+    Column("error", Text, comment ="错误信息"),
+
     # 时间戳
-    Column("created_at", DateTime, default=datetime.now, description="创建时间"),
-    
+    Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
+
     sqlite_autoincrement=True,
 )
 
@@ -107,26 +107,26 @@ workflow_versions_table = Table(
     "workflow_versions",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    
+
     # 关联
-    Column("workflow_id", String(100), ForeignKey("workflows.workflow_id"), nullable=False, description="工作流ID"),
-    
+    Column("workflow_id", String(100), ForeignKey("workflows.workflow_id"), nullable=False, comment ="工作流ID"),
+
     # 版本信息
-    Column("version", Integer, nullable=False, description="版本号"),
-    Column("name", String(100), nullable=False, description="版本名称"),
-    Column("description", Text, description="版本描述"),
-    
+    Column("version", Integer, nullable=False, comment ="版本号"),
+    Column("name", String(100), nullable=False, comment ="版本名称"),
+    Column("description", Text, comment ="版本描述"),
+
     # 快照
-    Column("nodes", JSON, default=list, description="节点定义快照"),
-    Column("edges", JSON, default=list, description="边定义快照"),
-    
+    Column("nodes", JSON, default=list, comment ="节点定义快照"),
+    Column("edges", JSON, default=list, comment ="边定义快照"),
+
     # 变更信息
-    Column("change_note", Text, description="变更说明"),
-    Column("created_by", String(100), description="创建者"),
-    
+    Column("change_note", Text, comment ="变更说明"),
+    Column("created_by", String(100), comment ="创建者"),
+
     # 时间戳
-    Column("created_at", DateTime, default=datetime.now, description="创建时间"),
-    
+    Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
+
     sqlite_autoincrement=True,
 )
 

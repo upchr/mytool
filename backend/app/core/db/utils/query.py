@@ -1,5 +1,6 @@
 #app/core/db/utils/query.py
 from sqlalchemy import select, func, and_, or_, text
+from typing import Dict, Any
 
 
 class QueryBuilder:
@@ -48,6 +49,51 @@ class QueryBuilder:
         with engine.connect() as conn:
             result = conn.execute(self.build())
             return [dict(row) for row in result.mappings()]
+
+    def paginate(self, engine, page: int = 1, page_size: int = 20) -> Dict[str, Any]:
+        """
+        分页查询
+
+        Args:
+            engine: 数据库引擎
+            page: 页码（从1开始）
+            page_size: 每页数量
+
+        Returns:
+            分页结果字典，包含：
+                - items: 数据列表
+                - total: 总记录数
+                - page: 当前页码
+                - page_size: 每页数量
+                - pages: 总页数
+        """
+        # 构建查询
+        query = self.build()
+
+        # 获取总数
+        count_query = select(func.count()).select_from(query.alias())
+        with engine.connect() as conn:
+            total = conn.execute(count_query).scalar()
+
+        # 添加分页
+        offset = (page - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+
+        # 执行查询获取数据
+        with engine.connect() as conn:
+            result = conn.execute(query)
+            items = [dict(row) for row in result.mappings()]
+
+        # 计算总页数
+        pages = (total + page_size - 1) // page_size if total > 0 else 0
+
+        return {
+            'items': items,
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'pages': pages
+        }
 
 # 使用示例
 # from app.core.db.query import QueryBuilder
