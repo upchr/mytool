@@ -17,6 +17,7 @@ import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
 import WorkflowManager from '../modules/workflow/WorkflowManager.vue'
 import PluginManager from '../modules/plugin/PluginManager.vue'
 import AssetList from '../modules/asset/AssetList.vue'
+import TemplateMarket from '../modules/task-template/TemplateMarket.vue'
 
 import {
     AccessibilityOutline as AboutIcon,
@@ -47,6 +48,7 @@ const routes = [
     { path: '/jobs', component: JobManager },
     { path: '/workflows', component: WorkflowManager },
     { path: '/plugins', component: PluginManager },
+    { path: '/template-market', component: TemplateMarket },
     { path: '/notify', component: NotificationSettings },
     { path: '/database', component: DatabaseManager },
     { path: '/versions', component: VersionManager },
@@ -113,6 +115,12 @@ const routeLabels = [
         label: '插件市场',
         icon: PluginIcon,
         key: 'plugins'
+    },
+    {
+        path: '/template-market',
+        label: '任务模板',
+        icon: TemplateIcon,
+        key: 'template-market'
     },
     {
         label: 'AI 助手',
