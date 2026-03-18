@@ -7,7 +7,6 @@ from .schemas import (
     TaskTemplateDetail,
     TemplateQueryParams,
     TemplateImportRequest,
-    TemplateApplyRequest,
     TemplateSchema,
     TemplateScript,
     TemplateCronSuggestion,
@@ -191,16 +190,3 @@ async def get_template_script(template_id: str):
 async def get_cron_suggestions(template_id: str):
     """获取模板Cron建议"""
     return await TaskTemplateService.get_cron_suggestions(template_id)
-
-
-@router.post("/{template_id}/apply")
-async def apply_template(template_id: str, data: TemplateApplyRequest):
-    """一键应用模板（新版）- 直接变量替换创建任务"""
-    try:
-        data.template_id = template_id
-        result = await TaskTemplateService.apply_template(template_id, data)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
