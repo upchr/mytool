@@ -3,21 +3,14 @@
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <n-space>
-        <n-button @click="handleSave" type="primary" :loading="saving">
-          <template #icon><n-icon><SaveOutline /></n-icon></template>
-          保存工作流
-        </n-button>
-        <n-button @click="handleTrigger" v-if="workflowId">
-          <template #icon><n-icon><PlayOutline /></n-icon></template>
-          执行
-        </n-button>
+        <n-button @click="handleSave" type="primary" :loading="saving">保存</n-button>
+        <n-button @click="handleTrigger" v-if="workflowId">执行</n-button>
         <n-divider vertical />
         <n-button-group>
-          <n-button @click="zoomIn"><n-icon><AddOutline /></n-icon></n-button>
-          <n-button @click="zoomOut"><n-icon><RemoveOutline /></n-icon></n-button>
-          <n-button @click="fitView"><n-icon><ExpandOutline /></n-icon></n-button>
+          <n-button @click="zoomIn">+</n-button>
+          <n-button @click="zoomOut">-</n-button>
+          <n-button @click="fitView">适应</n-button>
         </n-button-group>
-        <n-divider vertical />
         <n-tag type="info">拖拽左侧节点到画布</n-tag>
       </n-space>
     </div>
@@ -26,30 +19,19 @@
       <!-- 左侧节点面板 -->
       <div class="node-panel">
         <n-card title="节点类型" size="small">
-          <n-space vertical>
-            <div
-              v-for="nodeType in nodeTypes"
-              :key="nodeType.type"
-              class="node-item"
-              draggable="true"
-              @dragstart="onDragStart($event, nodeType)"
-            >
-              <span class="node-icon">{{ nodeType.icon }}</span>
-              <div class="node-info">
-                <span class="node-name">{{ nodeType.label }}</span>
-                <span class="node-desc">{{ nodeType.desc }}</span>
-              </div>
+          <div
+            v-for="nodeType in nodeTypes"
+            :key="nodeType.type"
+            class="node-item"
+            draggable="true"
+            @dragstart="onDragStart($event, nodeType)"
+          >
+            <span class="node-icon">{{ nodeType.icon }}</span>
+            <div class="node-info">
+              <span class="node-name">{{ nodeType.label }}</span>
+              <span class="node-desc">{{ nodeType.desc }}</span>
             </div>
-          </n-space>
-        </n-card>
-        
-        <n-card title="操作提示" size="small" style="margin-top: 12px">
-          <n-text depth="3" style="font-size: 12px">
-            • 拖拽节点到画布添加<br>
-            • 点击节点编辑配置<br>
-            • 拖拽端口连线<br>
-            • 按 Delete 删除选中
-          </n-text>
+          </div>
         </n-card>
       </div>
 
@@ -58,114 +40,90 @@
         <VueFlow
           v-model:nodes="nodes"
           v-model:edges="edges"
-          :default-viewport="{ zoom: 1, x: 0, y: 0 }"
           :min-zoom="0.2"
           :max-zoom="4"
           fit-view-on-init
           @node-click="onNodeClick"
-          @edge-click="onEdgeClick"
-          @nodes-change="onNodesChange"
           @connect="onConnect"
-          @dragover="onDragOver"
+          @dragover.prevent
           @drop="onDrop"
         >
-          <Background :gap="20" pattern-color="#e0e0e0" />
+          <Background />
           <Controls />
           <MiniMap />
 
-          <!-- 自定义节点 -->
-          <template #node-task="nodeProps">
-            <WorkflowNode v-bind="nodeProps" type="task" @edit="editNode(nodeProps.id)" @delete="deleteNode(nodeProps.id)" />
+          <template #node-task="props">
+            <div class="wf-node node-task" :class="{ selected: selectedNode === props.id }">
+              <Handle type="target" :position="Position.Left" />
+              <div class="node-content">
+                <span class="icon">⚙️</span>
+                <span>{{ props.data.label }}</span>
+              </div>
+              <Handle type="source" :position="Position.Right" />
+            </div>
           </template>
-          <template #node-condition="nodeProps">
-            <WorkflowNode v-bind="nodeProps" type="condition" @edit="editNode(nodeProps.id)" @delete="deleteNode(nodeProps.id)" />
+
+          <template #node-condition="props">
+            <div class="wf-node node-condition" :class="{ selected: selectedNode === props.id }">
+              <Handle type="target" :position="Position.Left" />
+              <div class="node-content">
+                <span class="icon">🔷</span>
+                <span>{{ props.data.label }}</span>
+              </div>
+              <Handle type="source" :position="Position.Right" />
+            </div>
           </template>
-          <template #node-wait="nodeProps">
-            <WorkflowNode v-bind="nodeProps" type="wait" @edit="editNode(nodeProps.id)" @delete="deleteNode(nodeProps.id)" />
+
+          <template #node-wait="props">
+            <div class="wf-node node-wait" :class="{ selected: selectedNode === props.id }">
+              <Handle type="target" :position="Position.Left" />
+              <div class="node-content">
+                <span class="icon">⏱️</span>
+                <span>{{ props.data.label }}</span>
+              </div>
+              <Handle type="source" :position="Position.Right" />
+            </div>
           </template>
-          <template #node-notification="nodeProps">
-            <WorkflowNode v-bind="nodeProps" type="notification" @edit="editNode(nodeProps.id)" @delete="deleteNode(nodeProps.id)" />
+
+          <template #node-notification="props">
+            <div class="wf-node node-notification" :class="{ selected: selectedNode === props.id }">
+              <Handle type="target" :position="Position.Left" />
+              <div class="node-content">
+                <span class="icon">📢</span>
+                <span>{{ props.data.label }}</span>
+              </div>
+              <Handle type="source" :position="Position.Right" />
+            </div>
           </template>
         </VueFlow>
       </div>
 
       <!-- 右侧属性面板 -->
       <div class="property-panel">
-        <n-card title="属性配置" size="small" v-if="selectedNode">
-          <template #header-extra>
-            <n-button size="tiny" quaternary @click="selectedNode = null">×</n-button>
-          </template>
-          
+        <n-card title="节点属性" size="small" v-if="selectedNode">
           <n-form label-placement="top" size="small">
-            <n-form-item label="节点名称">
-              <n-input v-model:value="selectedNodeData.label" placeholder="节点名称" />
+            <n-form-item label="名称">
+              <n-input v-model:value="selectedNodeData.label" />
             </n-form-item>
-            
-            <!-- Task 节点配置 -->
-            <template v-if="selectedNodeType === 'task'">
-              <n-form-item label="任务ID">
-                <n-input-number v-model:value="selectedNodeData.config.job_id" :min="1" style="width: 100%" />
-                <n-text depth="3" style="font-size: 11px">要执行的定时任务ID</n-text>
-              </n-form-item>
-              <n-form-item label="超时时间(秒)">
-                <n-input-number v-model:value="selectedNodeData.config.max_wait_seconds" :min="10" :max="3600" style="width: 100%" />
-              </n-form-item>
-            </template>
-            
-            <!-- Condition 节点配置 -->
-            <template v-if="selectedNodeType === 'condition'">
-              <n-form-item label="条件表达式">
-                <n-input v-model:value="selectedNodeData.config.expression" type="textarea" :autosize="{ minRows: 2 }" placeholder="{{outputs.node1.status}} == 'success'" />
-                <n-text depth="3" style="font-size: 11px">支持变量: {{outputs.节点ID.字段}}</n-text>
-              </n-form-item>
-            </template>
-            
-            <!-- Wait 节点配置 -->
-            <template v-if="selectedNodeType === 'wait'">
-              <n-form-item label="等待时间(秒)">
-                <n-input-number v-model:value="selectedNodeData.config.seconds" :min="1" :max="3600" style="width: 100%" />
-              </n-form-item>
-            </template>
-            
-            <!-- Notification 节点配置 -->
-            <template v-if="selectedNodeType === 'notification'">
-              <n-form-item label="通知标题">
-                <n-input v-model:value="selectedNodeData.config.title" placeholder="标题" />
-              </n-form-item>
-              <n-form-item label="通知内容">
-                <n-input v-model:value="selectedNodeData.config.content" type="textarea" :autosize="{ minRows: 2 }" placeholder="内容，支持 {{outputs.xxx}} 变量" />
-              </n-form-item>
-            </template>
           </n-form>
+          <n-space>
+            <n-button size="small" type="error" @click="deleteSelectedNode">删除节点</n-button>
+          </n-space>
         </n-card>
-        
-        <n-card v-else title="属性配置" size="small">
-          <n-empty description="点击节点查看属性" />
+        <n-card v-else title="节点属性" size="small">
+          <n-empty description="点击节点编辑" />
         </n-card>
       </div>
     </div>
-
-    <!-- 触发确认 -->
-    <n-modal v-model:show="showTriggerModal" preset="card" title="执行工作流" style="width: 400px">
-      <p>确定要执行工作流吗？</p>
-      <template #footer>
-        <n-space justify="end">
-          <n-button @click="showTriggerModal = false">取消</n-button>
-          <n-button type="primary" @click="doTrigger" :loading="triggering">执行</n-button>
-        </n-space>
-      </template>
-    </n-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { VueFlow, useVueFlow } from '@vue-flow/core'
+import { ref, computed, onMounted, watch } from 'vue'
+import { VueFlow, useVueFlow, Position, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
-import { SaveOutline, PlayOutline, AddOutline, RemoveOutline, ExpandOutline } from '@vicons/ionicons5'
-import WorkflowNode from './WorkflowNode.vue'
 
 const props = defineProps({
   workflowId: { type: String, default: '' },
@@ -174,12 +132,10 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'trigger'])
 
-const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes, removeEdges, findNode, updateNode } = useVueFlow()
+const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes, updateNode } = useVueFlow()
 
 const vueFlowWrapper = ref(null)
 const saving = ref(false)
-const triggering = ref(false)
-const showTriggerModal = ref(false)
 const selectedNode = ref(null)
 
 const nodes = ref([])
@@ -187,21 +143,15 @@ const edges = ref([])
 
 const nodeTypes = [
   { type: 'task', label: '任务', icon: '⚙️', desc: '执行定时任务' },
-  { type: 'condition', label: '条件', icon: '🔷', desc: '条件判断分支' },
-  { type: 'wait', label: '等待', icon: '⏱️', desc: '等待指定时间' },
-  { type: 'notification', label: '通知', icon: '📢', desc: '发送通知消息' }
+  { type: 'condition', label: '条件', icon: '🔷', desc: '条件判断' },
+  { type: 'wait', label: '等待', icon: '⏱️', desc: '等待时间' },
+  { type: 'notification', label: '通知', icon: '📢', desc: '发送通知' }
 ]
 
 const selectedNodeData = computed(() => {
-  if (!selectedNode.value) return { config: {} }
-  const node = findNode(selectedNode.value)
-  return node?.data || { config: {} }
-})
-
-const selectedNodeType = computed(() => {
-  if (!selectedNode.value) return ''
-  const node = findNode(selectedNode.value)
-  return node?.type || ''
+  if (!selectedNode.value) return { label: '' }
+  const node = nodes.value.find(n => n.id === selectedNode.value)
+  return node?.data || { label: '' }
 })
 
 let nodeIdCounter = 1
@@ -213,41 +163,23 @@ onMounted(() => {
       id: n.id,
       type: n.type,
       position: n.position || { x: 100, y: 100 },
-      data: { label: n.name || n.id, config: n.config || getDefaultConfig(n.type) }
+      data: { label: n.name || n.id, config: n.config || {} }
     }))
-    nodeIdCounter = Math.max(...props.initialData.nodes.map(n => parseInt(n.id.replace('node-', '')) || 0)) + 1
+    nodeIdCounter = props.initialData.nodes.length + 1
   }
-  
   if (props.initialData?.edges?.length > 0) {
-    edges.value = props.initialData.edges.map(e => ({
-      id: `edge-${e.source}-${e.target}`,
+    edges.value = props.initialData.edges.map((e, i) => ({
+      id: `edge-${i}`,
       source: e.source,
       target: e.target,
-      animated: true,
-      label: e.condition || ''
+      animated: true
     }))
   }
 })
 
-const getDefaultConfig = (type) => {
-  switch (type) {
-    case 'task': return { job_id: null, max_wait_seconds: 300 }
-    case 'condition': return { expression: 'True' }
-    case 'wait': return { seconds: 5 }
-    case 'notification': return { title: '通知', content: '' }
-    default: return {}
-  }
-}
-
-// 拖拽
 const onDragStart = (event, nodeType) => {
   draggedType = nodeType
   event.dataTransfer.effectAllowed = 'move'
-}
-
-const onDragOver = (event) => {
-  event.preventDefault()
-  event.dataTransfer.dropEffect = 'move'
 }
 
 const onDrop = (event) => {
@@ -255,69 +187,51 @@ const onDrop = (event) => {
   
   const bounds = vueFlowWrapper.value.getBoundingClientRect()
   const position = {
-    x: event.clientX - bounds.left - 100,
-    y: event.clientY - bounds.top - 40
+    x: event.clientX - bounds.left - 80,
+    y: event.clientY - bounds.top - 30
   }
   
   const newNode = {
     id: `node-${nodeIdCounter++}`,
     type: draggedType.type,
     position,
-    data: { 
-      label: `${draggedType.label}节点`, 
-      config: getDefaultConfig(draggedType.type) 
-    }
+    data: { label: `${draggedType.label}节点`, config: {} }
   }
   
   addNodes([newNode])
   draggedType = null
 }
 
-// 节点操作
 const onNodeClick = (event) => {
   selectedNode.value = event.node.id
 }
 
-const editNode = (nodeId) => {
-  selectedNode.value = nodeId
-}
-
-const deleteNode = (nodeId) => {
-  removeNodes([nodeId])
-  if (selectedNode.value === nodeId) selectedNode.value = null
-}
-
-const onEdgeClick = (event) => {
-  if (confirm('删除这条连线？')) {
-    removeEdges([event.edge.id])
-  }
-}
-
-// 连线
 const onConnect = (connection) => {
   addEdges([{
-    id: `edge-${connection.source}-${connection.target}`,
+    id: `edge-${Date.now()}`,
     source: connection.source,
     target: connection.target,
     animated: true
   }])
 }
 
-// 更新节点数据
-watch([selectedNodeData], () => {
-  if (selectedNode.value && selectedNodeData.value) {
-    updateNode(selectedNode.value, (node) => ({
-      ...node,
-      data: { ...selectedNodeData.value }
-    }))
+watch(selectedNodeData, (val) => {
+  if (selectedNode.value && val) {
+    updateNode(selectedNode.value, (node) => ({ ...node, data: { ...val } }))
   }
 }, { deep: true })
 
-// 保存
+const deleteSelectedNode = () => {
+  if (selectedNode.value) {
+    removeNodes([selectedNode.value])
+    selectedNode.value = null
+  }
+}
+
 const handleSave = async () => {
   saving.value = true
   try {
-    const workflowData = {
+    emit('save', {
       nodes: nodes.value.map(n => ({
         id: n.id,
         type: n.type,
@@ -327,48 +241,24 @@ const handleSave = async () => {
       })),
       edges: edges.value.map(e => ({
         source: e.source,
-        target: e.target,
-        condition: e.label || 'success'
+        target: e.target
       }))
-    }
-    emit('save', workflowData)
+    })
   } finally {
     saving.value = false
   }
 }
 
-// 执行
 const handleTrigger = () => {
-  showTriggerModal.value = true
+  emit('trigger')
 }
 
-const doTrigger = async () => {
-  triggering.value = true
-  try {
-    emit('trigger')
-    showTriggerModal.value = false
-  } finally {
-    triggering.value = false
-  }
-}
-
-// 导出数据
-const getData = () => ({
-  nodes: nodes.value.map(n => ({
-    id: n.id,
-    type: n.type,
-    name: n.data.label,
-    config: n.data.config,
-    position: n.position
-  })),
-  edges: edges.value.map(e => ({
-    source: e.source,
-    target: e.target,
-    condition: e.label || 'success'
-  }))
+defineExpose({ 
+  getData: () => ({
+    nodes: nodes.value,
+    edges: edges.value
+  })
 })
-
-defineExpose({ getData })
 </script>
 
 <style scoped>
@@ -392,37 +282,31 @@ defineExpose({ getData })
 }
 
 .node-panel {
-  width: 220px;
+  width: 200px;
   background: #fff;
   border-right: 1px solid #e0e0e0;
   padding: 12px;
-  overflow-y: auto;
 }
 
 .node-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 10px;
+  margin-bottom: 8px;
   background: #fafafa;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: grab;
-  transition: all 0.2s;
 }
 
 .node-item:hover {
   border-color: #18a058;
   background: #f0fff4;
-  transform: translateX(2px);
-}
-
-.node-item:active {
-  cursor: grabbing;
 }
 
 .node-icon {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .node-info {
@@ -446,21 +330,62 @@ defineExpose({ getData })
 }
 
 .property-panel {
-  width: 280px;
+  width: 250px;
   background: #fff;
   border-left: 1px solid #e0e0e0;
   padding: 12px;
-  overflow-y: auto;
+}
+
+/* 节点样式 */
+.wf-node {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  background: #fff;
+  min-width: 120px;
+}
+
+.wf-node.selected {
+  border-color: #18a058;
+  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.2);
+}
+
+.wf-node.node-task { border-color: #2080f0; }
+.wf-node.node-condition { border-color: #f0a020; }
+.wf-node.node-wait { border-color: #8a8a8a; }
+.wf-node.node-notification { border-color: #722ed1; }
+
+.node-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.node-content .icon {
+  font-size: 16px;
 }
 </style>
 
 <style>
-/* Vue Flow 全局样式 */
+/* Vue Flow 全局样式（非 scoped） */
 .vue-flow {
   background: #fafafa;
 }
 
-.vue-flow__node {
-  border-radius: 8px;
+.vue-flow__edge-path {
+  stroke: #999;
+  stroke-width: 2;
+}
+
+.vue-flow__edge.animated .vue-flow__edge-path {
+  stroke: #18a058;
+}
+
+.vue-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: #18a058 !important;
+  border: 2px solid #fff !important;
 }
 </style>

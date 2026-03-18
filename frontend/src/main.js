@@ -4,6 +4,12 @@ import App from './App.vue'
 import router from './router'
 import './assets/main.css'
 
+// Vue Flow 样式（必须引入）
+import '@vue-flow/core/dist/style.css'
+import '@vue-flow/core/dist/theme-default.css'
+import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/minimap/dist/style.css'
+
 // Pinia
 import { createPinia } from 'pinia'
 const pinia = createPinia()
