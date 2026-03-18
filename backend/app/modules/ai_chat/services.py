@@ -367,21 +367,11 @@ class AIChatService:
             with engine.connect() as conn:
                 # 构建查询
                 query_str = query.lower()
-                keywords = query_str.split()
 
                 # 查询启用的文档
-                # 使用 OR 条件匹配任意关键词
-                from sqlalchemy import or_
-
-                conditions = []
-                for keyword in keywords:
-                    if keyword.strip():
-                        conditions.append(models.knowledge_chunk_table.c.content.ilike(f"%{keyword}%"))
-
-                if conditions:
-                    stmt = select(models.knowledge_chunk_table).where(or_(*conditions))
-                else:
-                    stmt = select(models.knowledge_chunk_table)
+                stmt = select(models.knowledge_chunk_table).where(
+                    models.knowledge_chunk_table.c.content.ilike(f"%{query_str}%")
+                )
 
                 # 如果指定了知识库，添加过滤条件
                 if knowledge_base_id:
