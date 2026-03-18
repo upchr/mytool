@@ -14,9 +14,6 @@ import SSLDetail from '../modules/ssl/store/CertificateDetail.vue'
 import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
-import HelloWorld from '../modules/helloworld/HelloWorld.vue'
-import TemplateMarket from '../modules/task-template/TemplateMarket.vue'
-import PluginMarket from '../modules/plugin/PluginMarket.vue'
 import {
     AccessibilityOutline as AboutIcon,
     AlarmOutline as ClockIcon,
@@ -43,8 +40,6 @@ const routes = [
     { path: '/', component: NoteList },
     { path: '/nodes', component: NodeManager },
     { path: '/jobs', component: JobManager },
-    { path: '/template-market', component: TemplateMarket },
-    { path: '/plugin-market', component: PluginMarket },
     { path: '/notify', component: NotificationSettings },
     { path: '/database', component: DatabaseManager },
     { path: '/versions', component: VersionManager },
@@ -53,7 +48,6 @@ const routes = [
     { path: '/ai-chat', component: AIChat },
     { path: '/ai-config', component: AIConfig },
     { path: '/ai-knowledge', component: KnowledgeBase },
-    { path: '/hello', component: HelloWorld },
     { path: '/ssl-dns', component: SSLDns },
     {
         path: '/ssl-apply',
@@ -67,6 +61,8 @@ const routes = [
         ]
     },
     { path: '/ssl-store', component: SSLStore },
+    // { path: '/ssl-store/:id', component: SSLDetail, props: true },
+
 ]
 
 const routeLabels = [
@@ -93,18 +89,6 @@ const routeLabels = [
         label: '任务管理',
         icon: ClockIcon,
         key: 'jobs'
-    },
-    {
-        path: '/template-market',
-        label: '模板市场',
-        icon: TemplateIcon,
-        key: 'template-market'
-    },
-    {
-        path: '/plugin-market',
-        label: '插件市场',
-        icon: PluginIcon,
-        key: 'plugin-market'
     },
     {
         label: 'AI 助手',
@@ -160,10 +144,11 @@ const routeLabels = [
                 icon: SSLMiIcon,
                 key: 'ssl-min'
             },
+
         ]
     },
     {
-        label: '系统管理',
+        label: '系统管理',  // 另一个父菜单
         icon: AboutIcon,
         key: 'sys',
         children: [
