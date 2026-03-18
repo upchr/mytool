@@ -13,10 +13,15 @@ PROVIDER_CONFIGS = [
         'module_path': 'app.modules.cron.job_provider',
         'provider_name': 'cron_job_provider',
         'enabled': True
-    }
-    ,{
+    },
+    {
         'module_path': 'app.modules.acme.job_provider',
         'provider_name': 'ssl_job_provider',
+        'enabled': True
+    },
+    {
+        'module_path': 'app.modules.workflow.job_provider',
+        'provider_name': 'workflow_job_provider',
         'enabled': True
     },
     # {
