@@ -190,8 +190,8 @@ const jobOptions = ref([])  // 任务列表选项
 // 加载任务列表
 const loadJobs = async () => {
   try {
-    const res = await window.$request.post('/cron/jobsList', {})
-    jobOptions.value = (res?.list || res || []).map(j => ({
+    const res = await window.$request.get('/cron/jobs', { params: { page: 1, page_size: 100 } })
+    jobOptions.value = (res?.items || res || []).map(j => ({
       label: `${j.name} (ID: ${j.id})`,
       value: j.id
     }))
