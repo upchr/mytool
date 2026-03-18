@@ -268,7 +268,7 @@ const onDrop = (e) => {
   if (!dragType) return
   const rect = canvasRef.value.getBoundingClientRect()
   const pos = { x: e.clientX - rect.left - 60, y: e.clientY - rect.top - 20 }
-  const id = `n${nodeCounter.value++}`
+  const id = `n${nodeCounter++}`
   nodes.value.push({
     id,
     type: dragType.type,
