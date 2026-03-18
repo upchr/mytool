@@ -103,16 +103,27 @@
             
             <!-- 任务节点配置 -->
             <template v-if="selectedNode.type === 'task'">
-              <n-form-item label="任务ID">
-                <n-input-number v-model:value="editConfig.job_id" style="width: 100%" @blur="applyEdit" />
+              <n-form-item label="选择任务">
+                <n-select
+                  v-model:value="editConfig.job_id"
+                  :options="jobOptions"
+                  placeholder="请选择要执行的任务"
+                  @update:value="applyEdit"
+                />
               </n-form-item>
+              <n-text depth="3" style="font-size: 11px">
+                从「任务管理」中已创建的任务里选择
+              </n-text>
             </template>
             
             <!-- 条件节点配置 -->
             <template v-if="selectedNode.type === 'condition'">
               <n-form-item label="条件表达式">
-                <n-input v-model:value="editConfig.expression" @blur="applyEdit" />
+                <n-input v-model:value="editConfig.expression" placeholder="True" @blur="applyEdit" />
               </n-form-item>
+              <n-text depth="3" style="font-size: 11px">
+                示例：outputs.node1.status == 'success'
+              </n-text>
             </template>
             
             <!-- 等待节点配置 -->
@@ -174,8 +185,59 @@ const nodeTypes = [
 ]
 
 const selectedNode = ref(null)
+const jobOptions = ref([])  // 任务列表选项
+
+// 加载任务列表
+const loadJobs = async () => {
+  try {
+    const res = await window.$request.post('/cron/jobsList', {})
+    jobOptions.value = (res?.list || res || []).map(j => ({
+      label: `${j.name} (ID: ${j.id})`,
+      value: j.id
+    }))
+  } catch (e) {
+    console.error('加载任务列表失败', e)
+  }
+}
 
 onMounted(() => {
+  loadJobs()  // 加载任务列表
+  
+  if (props.initialData?.nodes?.length > 0) {
+    nodes.value = props.initialData.nodes.map(n => ({
+      id: n.id,
+      type: n.type,
+      position: n.position || { x: 100, y: 100 },
+      data: { label: n.name || '节点', config: n.config || {} }
+    }))
+    nodeCounter.value = props.initialData.nodes.length + 1
+  }
+  if (props.initialData?.edges?.length > 0) {
+    edges.value = props.initialData.edges.map((e, i) => ({
+      id: `e${i}`,
+      source: e.source,
+      target: e.target,
+      animated: true
+    }))
+  }
+})
+
+// 加载任务列表
+const loadJobs = async () => {
+  try {
+    const res = await window.$request.post('/cron/jobsList', {})
+    jobOptions.value = (res?.list || res || []).map(j => ({
+      label: `${j.name} (ID: ${j.id})`,
+      value: j.id
+    }))
+  } catch (e) {
+    console.error('加载任务列表失败', e)
+  }
+}
+
+onMounted(() => {
+  loadJobs()
+  
   if (props.initialData?.nodes?.length > 0) {
     nodes.value = props.initialData.nodes.map(n => ({
       id: n.id,
