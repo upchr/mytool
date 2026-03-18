@@ -3,7 +3,6 @@ from datetime import datetime
 import logging
 import json
 import asyncio
-import re
 from sqlalchemy import select, insert, update
 from app.core.db.database import database
 from .models import (
@@ -14,60 +13,6 @@ from .models import (
 from .schemas import NodeTypes
 
 logger = logging.getLogger(__name__)
-
-
-class WorkflowVariableResolver:
-    """工作流变量解析器"""
-    
-    @staticmethod
-    def resolve(value: str, state: Dict[str, Any]) -> Any:
-        """解析变量 {{inputs.xxx}} 或 {{outputs.node1.xxx}}"""
-        if not isinstance(value, str):
-            return value
-        
-        pattern = r'\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}'
-        
-        def replace_var(match):
-            var_path = match.group(1)
-            parts = var_path.split('.')
-            
-            current = state
-            for part in parts:
-                if isinstance(current, dict) and part in current:
-                    current = current[part]
-                else:
-                    return match.group(0)
-            
-            return str(current) if current is not None else ''
-        
-        result = re.sub(pattern, replace_var, value)
-        
-        if result == value:
-            return value
-        
-        try:
-            return json.loads(result)
-        except (json.JSONDecodeError, TypeError):
-            return result
-    
-    @staticmethod
-    def evaluate_condition(expression: str, state: Dict[str, Any]) -> bool:
-        """评估条件表达式：支持 >, <, ==, !=, >=, <=, and, or, not"""
-        try:
-            resolved_expr = WorkflowVariableResolver.resolve(expression, state)
-            
-            safe_globals = {
-                '__builtins__': {},
-                'True': True,
-                'False': False,
-                'None': None
-            }
-            
-            result = eval(resolved_expr, safe_globals, {})
-            return bool(result)
-        except Exception as e:
-            logger.error(f"条件表达式评估失败: {expression}, error: {e}")
-            return False
 
 
 class WorkflowEngine:
@@ -207,105 +152,30 @@ class WorkflowEngine:
             await self._execute_next_nodes(execution_id, node_id, "failure", state)
 
     async def _execute_task_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
-        """执行任务节点 - 调用 cron 任务"""
+        """执行任务节点（简化版：直接返回成功）"""
+        # TODO: 实际执行命令或调用cron任务
         node_name = node.get("name")
         logger.info(f"执行任务: {node_name}, config={config}")
-        
-        try:
-            job_id = config.get("job_id")
-            if not job_id:
-                return {"status": "failed", "error": "未配置任务ID"}
-            
-            from app.core.db.database import engine
-            from app.modules.cron.services import execute_job, get_execution
-            
-            loop = asyncio.get_running_loop()
-            execution = await loop.run_in_executor(
-                None,
-                lambda: execute_job(engine, int(job_id), "workflow")
-            )
-            
-            execution_id = execution.get("id")
-            
-            max_wait = config.get("max_wait_seconds", 300)
-            poll_interval = config.get("poll_interval", 2)
-            waited = 0
-            
-            while waited < max_wait:
-                await asyncio.sleep(poll_interval)
-                waited += poll_interval
-                
-                exec_result = await loop.run_in_executor(
-                    None,
-                    lambda: get_execution(engine, execution_id)
-                )
-                
-                status = exec_result.get("status")
-                if status in ["success", "failed", "cancelled"]:
-                    return {
-                        "status": "success" if status == "success" else "failed",
-                        "output": exec_result.get("output", ""),
-                        "error": exec_result.get("error", "")
-                    }
-            
-            return {"status": "failed", "error": f"任务执行超时（{max_wait}秒）"}
-            
-        except Exception as e:
-            logger.error(f"任务节点执行失败: {node_name}, error: {e}")
-            return {"status": "failed", "error": str(e)}
+        return {
+            "status": "success",
+            "output": f"任务执行完成: {node_name}"
+        }
 
     async def _execute_condition_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
-        """执行条件节点 - 支持变量表达式"""
-        expression = config.get("expression", "True")
-        logger.info(f"执行条件判断: {expression}")
-        
-        try:
-            result = WorkflowVariableResolver.evaluate_condition(expression, state)
-            return {
-                "status": "success",
-                "output": json.dumps({"result": result, "expression": expression}),
-                "condition_result": result
-            }
-        except Exception as e:
-            logger.error(f"条件节点执行失败: {e}")
-            return {"status": "failed", "error": str(e)}
+        """执行条件节点"""
+        # TODO: 实际条件判断
+        return {"status": "success", "output": "条件判断完成"}
 
     async def _execute_wait_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
         """执行等待节点"""
         wait_seconds = config.get("seconds", 5)
-        
-        resolved_seconds = wait_seconds
-        if isinstance(wait_seconds, str):
-            resolved_seconds = WorkflowVariableResolver.resolve(wait_seconds, state)
-            try:
-                resolved_seconds = int(resolved_seconds)
-            except (ValueError, TypeError):
-                resolved_seconds = 5
-        
-        logger.info(f"等待节点: 等待 {resolved_seconds} 秒")
-        await asyncio.sleep(resolved_seconds)
-        return {"status": "success", "output": f"等待 {resolved_seconds} 秒完成"}
+        await asyncio.sleep(wait_seconds)
+        return {"status": "success", "output": f"等待 {wait_seconds} 秒完成"}
 
     async def _execute_notification_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
-        """执行通知节点 - 调用 notify 模块"""
-        try:
-            title = config.get("title", "工作流通知")
-            content = config.get("content", "")
-            
-            resolved_title = WorkflowVariableResolver.resolve(title, state)
-            resolved_content = WorkflowVariableResolver.resolve(content, state)
-            
-            from app.modules.notify.handler.manager import notification_manager
-            await notification_manager.send_broadcast(
-                content=f"【{resolved_title}】\n{resolved_content}"
-            )
-            
-            logger.info(f"通知发送成功: {resolved_title}")
-            return {"status": "success", "output": "通知发送完成"}
-            
-        except Exception as e:
-            logger.error(f"通知节点执行失败: {e}")
-            return {"status": "failed", "error": str(e)}
+        """执行通知节点"""
+        # TODO: 调用通知插件
+        return {"status": "success", "output": "通知发送完成"}
 
     async def _execute_next_nodes(self, execution_id: int, current_node_id: str, condition: str, state: Dict):
         """执行后续节点"""
@@ -314,33 +184,12 @@ class WorkflowEngine:
         nodes = workflow["nodes"] or []
         node_map = {n.get("id"): n for n in nodes}
 
-        # 获取当前节点输出（如果是条件节点）
-        current_node_output = state["outputs"].get(current_node_id, {})
-        if isinstance(current_node_output, str):
-            try:
-                current_node_output = json.loads(current_node_output)
-            except (json.JSONDecodeError, TypeError):
-                pass
-        
-        condition_result = current_node_output.get("condition_result") if isinstance(current_node_output, dict) else None
-
         # 找到匹配条件的出边
         next_node_ids = []
         for edge in edges:
             if edge.get("source") == current_node_id:
                 edge_condition = edge.get("condition", "success")
-                
-                match = False
-                if edge_condition == "always":
-                    match = True
-                elif edge_condition == condition:
-                    match = True
-                elif edge_condition == "true" and condition_result is True:
-                    match = True
-                elif edge_condition == "false" and condition_result is False:
-                    match = True
-                
-                if match:
+                if edge_condition == "always" or edge_condition == condition:
                     target = edge.get("target")
                     if target and target not in next_node_ids:
                         next_node_ids.append(target)

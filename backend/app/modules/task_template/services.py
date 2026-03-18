@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from sqlalchemy import select, update, delete, and_, or_, func
-from app.core.db.database import database, engine
+from app.core.db.database import database
 from .models import (
     task_templates_table,
     template_schemas_table,
@@ -17,8 +17,7 @@ from .schemas import (
     TemplateCronSuggestionCreate,
     TemplateRatingCreate,
     TemplateQueryParams,
-    TaskTemplateDetail,
-    TemplateApplyRequest
+    TaskTemplateDetail
 )
 
 
@@ -252,62 +251,6 @@ class TaskTemplateService:
                 )
             )
             await database.execute(update_query)
-    
-    @staticmethod
-    async def apply_template(template_id: str, request: TemplateApplyRequest) -> Dict[str, Any]:
-        """一键应用模板 - 创建 cron 任务"""
-        from app.modules.cron.services import create_cron_job
-        from app.modules.cron.schemas import CronJobCreate
-        
-        # 获取模板详情
-        template_detail = await TaskTemplateService.get_template_detail(template_id)
-        if not template_detail:
-            raise ValueError(f"模板不存在: {template_id}")
-        
-        # 增加下载次数
-        await TaskTemplateService.increment_download(template_id)
-        
-        # 处理模板变量替换
-        script = template_detail.script
-        command = script.get("script_content", "") if script else ""
-        
-        # 替换变量: {{variable_name}}
-        variables = request.variables or {}
-        for var_name, var_value in variables.items():
-            command = command.replace(f"{{{{{var_name}}}}}", str(var_value))
-        
-        # 使用请求提供的 schedule 或模板默认
-        schedule = request.schedule
-        if not schedule and template_detail.cron_suggestions:
-            schedule = template_detail.cron_suggestions[0].get("cron_expression", "0 0 * * *")
-        if not schedule:
-            schedule = "0 0 * * *"
-        
-        # 创建 cron 任务
-        cron_job_data = CronJobCreate(
-            name=request.name or f"{template_detail.name} - 从模板创建",
-            description=request.description or template_detail.description,
-            node_id=request.node_id,
-            command=command,
-            schedule=schedule,
-            is_active=request.is_active if request.is_active is not None else False,
-            error_times=request.error_times or 3,
-            consecutive_failures=0
-        )
-        
-        import asyncio
-        loop = asyncio.get_running_loop()
-        
-        result = await loop.run_in_executor(
-            None,
-            lambda: create_cron_job(engine, cron_job_data)
-        )
-        
-        return {
-            "message": "模板应用成功",
-            "template_id": template_id,
-            "cron_job": result
-        }
 
 
 # ========== 初始化内置模板 ==========

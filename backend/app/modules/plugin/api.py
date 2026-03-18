@@ -152,31 +152,3 @@ async def rate_plugin(plugin_id: str, data: PluginRatingCreate):
         raise HTTPException(status_code=404, detail="插件不存在")
     data.plugin_id = plugin_id
     return await PluginService.create_rating(data)
-
-
-@router.post("/{plugin_id}/reload")
-async def reload_plugin(plugin_id: str, force: bool = True):
-    """热重载插件"""
-    plugin = await PluginService.get_plugin(plugin_id)
-    if not plugin:
-        raise HTTPException(status_code=404, detail="插件不存在")
-    
-    plugin_instance = await PluginService.load_plugin(plugin_id, force_reload=force)
-    if not plugin_instance:
-        raise HTTPException(status_code=400, detail="插件重载失败")
-    
-    return {"message": "重载成功"}
-
-
-@router.get("/{plugin_id}/sandbox/log")
-async def get_plugin_sandbox_log(plugin_id: str, limit: int = Query(100, ge=1, le=1000)):
-    """获取插件沙箱操作日志"""
-    plugin = await PluginService.get_plugin(plugin_id)
-    if not plugin:
-        raise HTTPException(status_code=404, detail="插件不存在")
-    
-    sandbox = PluginService._plugin_sandboxes.get(plugin_id)
-    if not sandbox:
-        return {"logs": []}
-    
-    return {"logs": sandbox.get_operation_log(limit)}

@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any, Set
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from sqlalchemy import select, update, delete, and_, or_, func
 from app.core.db.database import database
@@ -15,11 +15,10 @@ from .schemas import (
     PluginRatingCreate,
     PluginQueryParams
 )
-from .plugin_base import BasePlugin, PluginSandbox
+from .plugin_base import BasePlugin
 from .builtin_plugins import get_builtin_plugins
 import importlib
 import logging
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +28,6 @@ class PluginService:
 
     # 已加载的插件缓存
     _loaded_plugins: Dict[str, BasePlugin] = {}
-    # 插件沙箱缓存
-    _plugin_sandboxes: Dict[str, PluginSandbox] = {}
-    # 插件热重载监控
-    _plugin_mtimes: Dict[str, float] = {}
 
     @staticmethod
     async def get_plugin(plugin_id: str) -> Optional[Dict]:
@@ -170,20 +165,15 @@ class PluginService:
         return await PluginService.get_plugin(plugin_id)
 
     @staticmethod
-    async def load_plugin(plugin_id: str, force_reload: bool = False) -> Optional[BasePlugin]:
-        """加载插件（支持热重载）"""
+    async def load_plugin(plugin_id: str) -> Optional[BasePlugin]:
+        """加载插件"""
         plugin = await PluginService.get_plugin(plugin_id)
         if not plugin:
             return None
 
-        # 检查是否已加载且不需要强制重载
-        if not force_reload and plugin_id in PluginService._loaded_plugins:
-            # 检查是否需要热重载
-            if await PluginService._check_plugin_changed(plugin_id):
-                logger.info(f"插件文件变化，触发热重载: {plugin_id}")
-                await PluginService.unload_plugin(plugin_id)
-            else:
-                return PluginService._loaded_plugins[plugin_id]
+        # 检查是否已加载
+        if plugin_id in PluginService._loaded_plugins:
+            return PluginService._loaded_plugins[plugin_id]
 
         try:
             # 先查找内置插件
@@ -194,11 +184,6 @@ class PluginService:
                 # 动态加载外部插件
                 entry_point = plugin["entry_point"]
                 module_name, class_name = entry_point.split(":")
-                
-                # 热重载：重新加载模块
-                if module_name in importlib.sys.modules and force_reload:
-                    importlib.reload(importlib.sys.modules[module_name])
-                
                 module = importlib.import_module(module_name)
                 PluginClass = getattr(module, class_name)
 
@@ -206,106 +191,24 @@ class PluginService:
             configs = await PluginService.get_configs(plugin_id)
             config = {c["config_key"]: c["config_value"] for c in configs}
 
-            # 获取插件声明的权限和数据库中配置的权限
-            declared_perms = getattr(PluginClass, "required_permissions", [])
-            plugin_perms = plugin.get("permissions", [])
-            granted_perms = set(declared_perms) & set(plugin_perms)
-
-            # 创建插件沙箱
-            plugin_data_dir = f"/data/plugins/{plugin_id}"
-            os.makedirs(plugin_data_dir, exist_ok=True)
-            sandbox = PluginSandbox(plugin_id, allowed_dirs=[plugin_data_dir])
-            PluginService._plugin_sandboxes[plugin_id] = sandbox
-
             # 实例化插件
-            plugin_instance = PluginClass(config, granted_permissions=granted_perms)
+            plugin_instance = PluginClass(config)
             plugin_instance.set_logger(logger)
-            plugin_instance._sandbox_context = {"sandbox": sandbox, "data_dir": plugin_data_dir}
 
             # 调用on_load
             plugin_instance.on_load()
 
             # 缓存
             PluginService._loaded_plugins[plugin_id] = plugin_instance
-            
-            # 记录文件修改时间用于热重载
-            await PluginService._record_plugin_mtime(plugin_id, plugin)
 
-            await PluginService._log(plugin_id, "load", "插件加载成功", metadata={"permissions": list(granted_perms)})
-            logger.info(f"插件加载成功: {plugin_id}, permissions={list(granted_perms)}")
+            await PluginService._log(plugin_id, "load", "插件加载成功")
+            logger.info(f"插件加载成功: {plugin_id}")
             return plugin_instance
 
         except Exception as e:
             logger.error(f"插件加载失败: {plugin_id}, error: {e}")
             await PluginService._log(plugin_id, "error", f"插件加载失败: {e}", "error")
             return None
-    
-    @staticmethod
-    async def unload_plugin(plugin_id: str):
-        """卸载插件"""
-        if plugin_id in PluginService._loaded_plugins:
-            try:
-                PluginService._loaded_plugins[plugin_id].on_unload()
-            except Exception as e:
-                logger.error(f"插件卸载时出错: {plugin_id}, error: {e}")
-            del PluginService._loaded_plugins[plugin_id]
-        
-        if plugin_id in PluginService._plugin_sandboxes:
-            del PluginService._plugin_sandboxes[plugin_id]
-        
-        if plugin_id in PluginService._plugin_mtimes:
-            del PluginService._plugin_mtimes[plugin_id]
-    
-    @staticmethod
-    async def _check_plugin_changed(plugin_id: str) -> bool:
-        """检查插件文件是否变化（用于热重载）"""
-        if plugin_id not in PluginService._plugin_mtimes:
-            return False
-        
-        plugin = await PluginService.get_plugin(plugin_id)
-        if not plugin or plugin.get("is_official", True):
-            return False
-        
-        entry_point = plugin.get("entry_point", "")
-        if ":" not in entry_point:
-            return False
-        
-        module_name = entry_point.split(":")[0]
-        if module_name not in importlib.sys.modules:
-            return False
-        
-        module = importlib.sys.modules[module_name]
-        if not hasattr(module, "__file__") or not module.__file__:
-            return False
-        
-        try:
-            current_mtime = os.path.getmtime(module.__file__)
-            return current_mtime > PluginService._plugin_mtimes.get(plugin_id, 0)
-        except Exception:
-            return False
-    
-    @staticmethod
-    async def _record_plugin_mtime(plugin_id: str, plugin: Dict):
-        """记录插件文件修改时间"""
-        if plugin.get("is_official", True):
-            return
-        
-        entry_point = plugin.get("entry_point", "")
-        if ":" not in entry_point:
-            return
-        
-        module_name = entry_point.split(":")[0]
-        if module_name not in importlib.sys.modules:
-            return
-        
-        module = importlib.sys.modules[module_name]
-        if not hasattr(module, "__file__") or not module.__file__:
-            return
-        
-        try:
-            PluginService._plugin_mtimes[plugin_id] = os.path.getmtime(module.__file__)
-        except Exception:
-            pass
 
     @staticmethod
     def get_loaded_plugin(plugin_id: str) -> Optional[BasePlugin]:

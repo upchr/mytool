@@ -1,34 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Set
-import functools
-import logging
-
-
-class PluginPermission:
-    """插件权限定义"""
-    NETWORK = "network"           # 网络访问
-    FILESYSTEM_READ = "fs_read"   # 文件系统读
-    FILESYSTEM_WRITE = "fs_write" # 文件系统写
-    PROCESS_EXEC = "process_exec" # 进程执行
-    DATABASE = "database"          # 数据库访问
-    NOTIFICATION = "notification"  # 发送通知
-    SCHEDULE = "schedule"          # 调度任务
-    CONFIG_READ = "config_read"    # 读取配置
-    CONFIG_WRITE = "config_write"  # 写入配置
-
-
-def require_permission(permission: str):
-    """权限检查装饰器"""
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            if not hasattr(self, '_permissions'):
-                raise PermissionError(f"插件未配置权限: {permission}")
-            if permission not in self._permissions:
-                raise PermissionError(f"插件缺少权限: {permission}")
-            return func(self, *args, **kwargs)
-        return wrapper
-    return decorator
+from typing import Dict, Any, Optional
 
 
 class BasePlugin(ABC):
@@ -44,14 +15,9 @@ class BasePlugin(ABC):
     category: str = ""
     icon: str = ""
 
-    # 插件声明需要的权限
-    required_permissions: List[str] = []
-
-    def __init__(self, config: Optional[Dict[str, Any]] = None, granted_permissions: Optional[Set[str]] = None):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
         self.logger = None
-        self._permissions = granted_permissions or set()
-        self._sandbox_context: Optional[Dict[str, Any]] = None
 
     def set_logger(self, logger):
         """设置日志器"""
@@ -275,48 +241,3 @@ class AIEnginePlugin(BasePlugin):
             向量数组
         """
         raise NotImplementedError
-
-
-# ============== 插件沙箱管理器 ==============
-
-class PluginSandbox:
-    """插件沙箱管理器 - 限制插件资源访问"""
-    
-    def __init__(self, plugin_id: str, allowed_dirs: Optional[List[str]] = None):
-        self.plugin_id = plugin_id
-        self.allowed_dirs = allowed_dirs or []
-        self.logger = logging.getLogger(f"plugin_sandbox.{plugin_id}")
-        self._operation_log: List[Dict] = []
-    
-    def log_operation(self, operation: str, details: Dict[str, Any]):
-        """记录插件操作"""
-        log_entry = {
-            "timestamp": __import__("datetime").datetime.utcnow().isoformat(),
-            "operation": operation,
-            "details": details
-        }
-        self._operation_log.append(log_entry)
-        self.logger.debug(f"Plugin operation: {operation} - {details}")
-    
-    def can_access_file(self, path: str, mode: str = "r") -> bool:
-        """检查是否可以访问文件"""
-        import os
-        norm_path = os.path.normpath(path)
-        
-        for allowed_dir in self.allowed_dirs:
-            allowed_norm = os.path.normpath(allowed_dir)
-            if norm_path.startswith(allowed_norm):
-                self.log_operation("file_access", {"path": path, "mode": mode, "allowed": True})
-                return True
-        
-        self.log_operation("file_access", {"path": path, "mode": mode, "allowed": False})
-        return False
-    
-    def can_access_network(self, host: str, port: int = None) -> bool:
-        """检查是否可以访问网络"""
-        self.log_operation("network_access", {"host": host, "port": port})
-        return True
-    
-    def get_operation_log(self, limit: int = 100) -> List[Dict]:
-        """获取操作日志"""
-        return self._operation_log[-limit:]
