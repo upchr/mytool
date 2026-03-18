@@ -150,6 +150,128 @@ class WecomNotificationPlugin(NotificationPlugin):
             return False
 
 
+class FeishuNotificationPlugin(NotificationPlugin):
+    """飞书群机器人通知插件"""
+    plugin_id = "notification-feishu"
+    name = "飞书"
+    description = "通过飞书群机器人发送通知"
+    category = "通知渠道"
+    icon = "📘"
+
+    def get_config_schema(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "webhook_url": {
+                    "type": "string",
+                    "title": "Webhook地址",
+                    "required": True
+                }
+            }
+        }
+
+    def send(self, title: str, content: str, **kwargs) -> bool:
+        url = self.config.get("webhook_url")
+
+        if not url:
+            self.log("飞书Webhook未配置", "error")
+            return False
+
+        try:
+            data = {
+                "msg_type": "interactive",
+                "card": {
+                    "elements": [
+                        {
+                            "tag": "div",
+                            "text": {
+                                "content": content,
+                                "tag": "lark_md"
+                            }
+                        }
+                    ],
+                    "header": {
+                        "title": {
+                            "content": title,
+                            "tag": "plain_text"
+                        },
+                        "template": "blue"
+                    }
+                }
+            }
+            requests.post(url, json=data, timeout=10)
+            self.log(f"飞书通知发送成功: {title}")
+            return True
+        except Exception as e:
+            self.log(f"飞书通知发送失败: {e}", "error")
+            return False
+
+
+class DingtalkNotificationPlugin(NotificationPlugin):
+    """钉钉群机器人通知插件"""
+    plugin_id = "notification-dingtalk"
+    name = "钉钉"
+    description = "通过钉钉群机器人发送通知"
+    category = "通知渠道"
+    icon = "📎"
+
+    def get_config_schema(self) -> Dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "webhook_url": {
+                    "type": "string",
+                    "title": "Webhook地址",
+                    "required": True
+                },
+                "secret": {
+                    "type": "string",
+                    "title": "加签密钥（可选）",
+                    "required": False
+                }
+            }
+        }
+
+    def send(self, title: str, content: str, **kwargs) -> bool:
+        url = self.config.get("webhook_url")
+        secret = self.config.get("secret")
+
+        if not url:
+            self.log("钉钉Webhook未配置", "error")
+            return False
+
+        try:
+            # 如果有 secret，加签
+            if secret:
+                import time
+                import hmac
+                import hashlib
+                import base64
+                import urllib.parse
+
+                timestamp = str(round(time.time() * 1000))
+                secret_enc = secret.encode("utf-8")
+                string_to_sign = f"{timestamp}\n{secret}"
+                string_to_sign_enc = string_to_sign.encode("utf-8")
+                hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
+                sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
+                url = f"{url}&timestamp={timestamp}&sign={sign}"
+
+            data = {
+                "msgtype": "markdown",
+                "markdown": {
+                    "title": title,
+                    "text": f"### {title}\n\n{content}"
+                }
+            }
+            requests.post(url, json=data, timeout=10)
+            self.log(f"钉钉通知发送成功: {title}")
+            return True
+        except Exception as e:
+            self.log(f"钉钉通知发送失败: {e}", "error")
+            return False
+
+
 # ============== 内置执行器插件 ==============
 
 class LocalExecutorPlugin(ExecutorPlugin):
@@ -295,6 +417,8 @@ def get_builtin_plugins():
         WebhookNotificationPlugin,
         BarkNotificationPlugin,
         WecomNotificationPlugin,
+        FeishuNotificationPlugin,
+        DingtalkNotificationPlugin,
         LocalExecutorPlugin,
         LocalStoragePlugin,
     ]
