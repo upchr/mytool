@@ -27,10 +27,12 @@
               <n-space>
                 <n-text strong>{{ wf.name }}</n-text>
                 <n-tag :type="wf.is_active ? 'success' : 'default'" size="small">{{ wf.is_active ? '启用' : '禁用' }}</n-tag>
+                <n-tag v-if="wf.default_version" type="info" size="small">v{{ wf.default_version }}</n-tag>
               </n-space>
             </template>
             <template #header-extra>
               <n-space>
+                <n-button size="small" @click="handleVersions(wf)">版本</n-button>
                 <n-button size="small" type="primary" @click="handleEdit(wf)">编辑</n-button>
                 <n-button size="small" @click="handleTrigger(wf)">执行</n-button>
                 <n-button size="small" type="error" @click="handleDelete(wf)">删除</n-button>
@@ -125,6 +127,74 @@
         </n-space>
       </template>
     </n-modal>
+
+    <!-- 版本管理对话框 -->
+    <n-modal v-model:show="showVersionsDialog" preset="card" title="版本管理" style="width: 800px" @after-leave="loadList">
+      <template #header-extra>
+        <n-space>
+          <n-button type="primary" size="small" @click="handleCreateVersion">创建新版本</n-button>
+        </n-space>
+      </template>
+
+      <n-empty v-if="versions.length === 0" description="暂无版本记录" />
+
+      <n-timeline v-else>
+        <n-timeline-item
+          v-for="version in versions"
+          :key="version.id"
+          :type="version.is_default ? 'success' : 'default'"
+        >
+          <template #header>
+            <n-space align="center">
+              <n-text strong>v{{ version.version }} - {{ version.name }}</n-text>
+              <n-tag v-if="version.is_default" type="success" size="small" style="font-weight: bold; padding: 4px 12px;">⭐ 默认版本</n-tag>
+            </n-space>
+          </template>
+          <div style="margin-bottom: 8px;">
+            <n-text depth="3">{{ version.description || '暂无描述' }}</n-text>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <n-text depth="2" style="font-size: 12px;">
+              变更说明: {{ version.change_note || '无' }}
+            </n-text>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <n-text depth="2" style="font-size: 12px;">
+              创建者: {{ version.created_by || '未知' }} | 创建时间: {{ formatTime(version.created_at) }}
+            </n-text>
+          </div>
+          <n-space>
+            <n-button
+              size="small"
+              :type="version.is_default ? 'success' : 'primary'"
+              @click="handleEditVersion(version)"
+            >
+              编辑
+            </n-button>
+            <n-button
+              v-if="version.is_default"
+              size="small"
+              type="default"
+              disabled
+            >
+              已是默认
+            </n-button>
+            <n-button
+              v-else
+              size="small"
+              type="info"
+              @click="handleSetDefaultVersion(version)"
+            >
+              设为默认
+            </n-button>
+          </n-space>
+        </n-timeline-item>
+      </n-timeline>
+
+      <template #footer>
+        <n-button @click="showVersionsDialog = false">关闭</n-button>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -138,6 +208,11 @@ const showEditor = ref(false)
 const editorRef = ref(null)
 const current = ref(null)
 const currentWorkflowName = ref('')
+const currentEditingVersion = ref(null)
+
+// 版本管理
+const showVersionsDialog = ref(false)
+const versions = ref([])
 
 // 输入参数对话框
 const showInputDialog = ref(false)
@@ -182,10 +257,37 @@ const handleCreate = () => {
   showEditor.value = true
 }
 
-const handleEdit = (wf) => {
-  current.value = wf
-  currentWorkflowName.value = wf.name || ''
-  showEditor.value = true
+const handleEdit = async (wf) => {
+  try {
+    // 获取工作流的默认版本
+    const r = await window.$request.get(`/workflows/${wf.workflow_id}/versions`)
+    const versions = r.items || r || []
+    
+    // 找到默认版本
+    const defaultVersion = versions.find(v => v.is_default)
+    
+    if (defaultVersion) {
+      // 加载默认版本的数据
+      current.value = {
+        workflow_id: wf.workflow_id,
+        name: wf.name,
+        description: wf.description,
+        nodes: defaultVersion.nodes || [],
+        edges: defaultVersion.edges || []
+      }
+      currentWorkflowName.value = wf.name
+      currentEditingVersion.value = null
+    } else {
+      // 如果没有版本，直接使用工作流数据
+      current.value = wf
+      currentWorkflowName.value = wf.name || ''
+      currentEditingVersion.value = null
+    }
+    
+    showEditor.value = true
+  } catch (e) {
+    window.$message.error('加载工作流失败')
+  }
 }
 
 const handleDelete = async (wf) => {
@@ -285,6 +387,34 @@ const confirmTrigger = async () => {
 
 const onSave = async (data) => {
   try {
+    // 先验证工作流格式
+    const validation = await validateWorkflow(data)
+    if (!validation.valid) {
+      window.$message.error('工作流格式验证失败')
+      window.$dialog.error({
+        title: '工作流格式验证失败',
+        content: `以下问题需要修复：\n${validation.errors.join('\n')}\n\n警告：\n${validation.warnings.join('\n')}`,
+        positiveText: '确定'
+      })
+      return
+    }
+    
+    // 如果有警告，提示用户
+    if (validation.warnings.length > 0) {
+      const proceed = await new Promise((resolve) => {
+        window.$dialog.warning({
+          title: '工作流格式警告',
+          content: `以下警告可能影响工作流执行：\n${validation.warnings.join('\n')}\n\n是否继续保存？`,
+          positiveText: '继续保存',
+          negativeText: '取消',
+          onPositiveClick: () => resolve(true),
+          onNegativeClick: () => resolve(false)
+        })
+      })
+      
+      if (!proceed) return
+    }
+    
     const payload = {
       workflow_id: current.value.workflow_id || `wf-${Date.now()}`,
       name: currentWorkflowName.value || '新工作流',
@@ -294,7 +424,9 @@ const onSave = async (data) => {
       ...data
     }
     if (current.value.workflow_id) {
-      await window.$request.put(`/workflows/${current.value.workflow_id}`, payload)
+      // 如果正在编辑特定版本，传递版本号
+      const params = currentEditingVersion.value ? { version: currentEditingVersion.value } : {}
+      await window.$request.put(`/workflows/${current.value.workflow_id}`, payload, { params })
     } else {
       await window.$request.post('/workflows', payload)
     }
@@ -318,6 +450,84 @@ const onSave = async (data) => {
   } catch (e) {
     window.$message.error('保存失败')
   }
+}
+
+// 验证工作流格式
+const validateWorkflow = async (data) => {
+  try {
+    const r = await window.$request.post('/workflows/validate', data)
+    return r
+  } catch (e) {
+    return { valid: false, errors: ['验证请求失败'], warnings: [] }
+  }
+}
+
+// 版本管理
+const handleVersions = async (wf) => {
+  current.value = wf
+  try {
+    const r = await window.$request.get(`/workflows/${wf.workflow_id}/versions`)
+    versions.value = r.items || r || []
+    showVersionsDialog.value = true
+  } catch (e) {
+    window.$message.error('加载版本失败')
+  }
+}
+
+const handleCreateVersion = async () => {
+  try {
+    // 直接创建新版本（从默认版本复制）
+    await window.$request.post(`/workflows/${current.value.workflow_id}/versions`)
+    
+    window.$message.success('版本创建成功')
+    
+    // 重新加载版本列表
+    const r2 = await window.$request.get(`/workflows/${current.value.workflow_id}/versions`)
+    versions.value = r2.items || r2 || []
+  } catch (e) {
+    window.$message.error('创建版本失败')
+  }
+}
+
+const handleSetDefaultVersion = async (version) => {
+  try {
+    await window.$request.put(`/workflows/${current.value.workflow_id}/versions/${version.id}/default`)
+    window.$message.success('默认版本设置成功')
+    
+    // 重新加载版本列表
+    const r = await window.$request.get(`/workflows/${current.value.workflow_id}/versions`)
+    versions.value = r.items || r || []
+  } catch (e) {
+    window.$message.error('设置默认版本失败')
+  }
+}
+
+const handleEditVersion = async (version) => {
+  showVersionsDialog.value = false
+  
+  try {
+    // 获取工作流信息
+    const workflow = await window.$request.get(`/workflows/${current.value.workflow_id}`)
+    
+    current.value = {
+      workflow_id: current.value.workflow_id,
+      name: workflow.name,
+      description: workflow.description,
+      nodes: version.nodes || [],
+      edges: version.edges || []
+    }
+    currentWorkflowName.value = workflow.name
+    currentEditingVersion.value = version.version
+    showEditor.value = true
+  } catch (e) {
+    window.$message.error('加载版本失败')
+  }
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  const date = new Date(time)
+  return date.toLocaleString('zh-CN')
 }
 
 const onTrigger = () => {

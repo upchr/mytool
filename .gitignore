@@ -2,6 +2,9 @@
 *.iml
 */.gitignore
 
+__pycache__
+.DS_Store
+vite.config.js
 *.db
 notes.db*
 

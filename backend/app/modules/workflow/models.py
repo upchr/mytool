@@ -35,6 +35,10 @@ workflows_table = Table(
     # 状态
     Column("is_active", Boolean, default=True, comment ="是否启用"),
 
+    # 版本控制
+    Column("current_version", Integer, default=1, comment ="当前版本号"),
+    Column("default_version", Integer, default=1, comment ="默认版本号"),
+
     # 时间戳
     Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
     Column("updated_at", DateTime, default=datetime.now, onupdate=datetime.now, comment ="更新时间"),

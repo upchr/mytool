@@ -36,6 +36,8 @@ class WorkflowBase(BaseModel):
     nodes: List[Dict[str, Any]] = Field(default_factory=list, description="节点定义列表")
     edges: List[Dict[str, Any]] = Field(default_factory=list, description="边定义列表")
     is_active: bool = Field(True, description="是否启用")
+    current_version: int = Field(1, description="当前版本号")
+    default_version: int = Field(1, description="默认版本号")
 
 
 class WorkflowCreate(WorkflowBase):

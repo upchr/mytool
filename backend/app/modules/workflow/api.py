@@ -112,6 +112,46 @@ async def get_node_executions(
 
 # ========== 版本管理（具名路由，放在动态路由前面） ==========
 
+@router.post("/validate")
+async def validate_workflow_data(
+    data: Optional[schemas.WorkflowUpdate] = None,
+    engine=Depends(get_engine)
+):
+    """验证工作流格式（不需要 workflow_id）"""
+    try:
+        service = WorkflowService(engine)
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"验证工作流数据: {data}")
+        
+        if data:
+            validation_result = service.validate_workflow_format(
+                data.nodes or [],
+                data.edges or []
+            )
+        else:
+            validation_result = {
+                "valid": False,
+                "errors": ["未提供工作流数据"],
+                "warnings": [],
+                "node_count": 0,
+                "edge_count": 0
+            }
+        
+        logger.info(f"验证结果: {validation_result}")
+        
+        if validation_result["valid"]:
+            return BaseResponse.success(validation_result, message="工作流格式验证通过")
+        else:
+            return BaseResponse.error(400, "工作流格式验证失败", validation_result)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"验证工作流失败: {e}", exc_info=True)
+        return BaseResponse.error(500, str(e))
+
+
 @router.get("/versions/{version_id}")
 async def get_workflow_version(
     version_id: int,
@@ -144,6 +184,7 @@ async def get_workflow(
 async def update_workflow(
     workflow_id: str,
     data: schemas.WorkflowUpdate,
+    version: Optional[int] = Query(None, description="版本号（如果指定，则更新该版本；否则更新默认版本）"),
     engine=Depends(get_engine)
 ):
     """更新工作流"""
@@ -153,7 +194,7 @@ async def update_workflow(
         if not existing:
             return BaseResponse.error(404, f"工作流不存在: {workflow_id}")
         
-        result = service.update(workflow_id, data)
+        result = service.update(workflow_id, data, version)
         return BaseResponse.success(result)
     except Exception as e:
         return BaseResponse.error(500, str(e))
@@ -246,5 +287,61 @@ async def restore_workflow_version(
         return BaseResponse.success(result, message="版本恢复成功")
     except ValueError as e:
         return BaseResponse.error(400, str(e))
+    except Exception as e:
+        return BaseResponse.error(500, str(e))
+
+
+@router.put("/{workflow_id}/versions/{version_id}/default")
+async def set_default_version(
+    workflow_id: str,
+    version_id: int,
+    engine=Depends(get_engine)
+):
+    """设置默认版本"""
+    try:
+        workflow_service = WorkflowService(engine)
+        workflow = workflow_service.get_by_id(workflow_id)
+        if not workflow:
+            return BaseResponse.error(404, f"工作流不存在: {workflow_id}")
+        
+        version_service = WorkflowVersionService(engine)
+        result = version_service.set_default_version(workflow_id, version_id)
+        return BaseResponse.success(result, message="默认版本设置成功")
+    except ValueError as e:
+        return BaseResponse.error(400, str(e))
+    except Exception as e:
+        return BaseResponse.error(500, str(e))
+
+
+@router.post("/{workflow_id}/validate")
+async def validate_workflow(
+    workflow_id: str,
+    data: Optional[schemas.WorkflowUpdate] = None,
+    engine=Depends(get_engine)
+):
+    """验证工作流格式"""
+    try:
+        service = WorkflowService(engine)
+        
+        # 如果提供了数据，验证提供的数据
+        if data:
+            validation_result = service.validate_workflow_format(
+                data.nodes or [],
+                data.edges or []
+            )
+        else:
+            # 否则验证现有工作流
+            workflow = service.get_by_id(workflow_id)
+            if not workflow:
+                return BaseResponse.error(404, f"工作流不存在: {workflow_id}")
+            validation_result = service.validate_workflow_format(
+                workflow.get("nodes", []),
+                workflow.get("edges", [])
+            )
+        
+        if validation_result["valid"]:
+            return BaseResponse.success(validation_result, message="工作流格式验证通过")
+        else:
+            return BaseResponse.error(400, "工作流格式验证失败", validation_result)
     except Exception as e:
         return BaseResponse.error(500, str(e))
