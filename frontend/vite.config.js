@@ -21,6 +21,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '0.0.0.0',
+    allowedHosts: ['chrmjj.fun','fnos.chrmjj.fun','chrmjj.fnos.net'],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
