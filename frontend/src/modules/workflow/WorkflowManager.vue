@@ -307,18 +307,37 @@ const handleDelete = async (wf) => {
 const handleTrigger = async (wf) => {
   inputParamsError.value = ''
   
-  // 分析工作流中使用的输入参数
-  const inputs = analyzeWorkflowInputs(wf)
-  usedInputs.value = inputs
-  
-  // 生成输入参数列表
-  inputParamsList.value = inputs.map(input => ({
-    name: input,
-    value: '',
-    required: true
-  }))
-  
-  showInputDialog.value = true
+  try {
+    // 获取工作流的默认版本数据
+    const r = await window.$request.get(`/workflows/${wf.workflow_id}/versions`)
+    const versions = r.items || r || []
+    const defaultVersion = versions.find(v => v.is_default)
+    
+    // 使用默认版本的数据，如果没有默认版本则使用工作流数据
+    const workflowData = defaultVersion ? {
+      ...wf,
+      nodes: defaultVersion.nodes || [],
+      edges: defaultVersion.edges || []
+    } : wf
+    
+    // 设置当前工作流
+    current.value = workflowData
+    
+    // 分析工作流中使用的输入参数
+    const inputs = analyzeWorkflowInputs(workflowData)
+    usedInputs.value = inputs
+    
+    // 生成输入参数列表
+    inputParamsList.value = inputs.map(input => ({
+      name: input,
+      value: '',
+      required: true
+    }))
+    
+    showInputDialog.value = true
+  } catch (e) {
+    window.$message.error('加载工作流失败')
+  }
 }
 
 // 分析工作流中使用的输入参数

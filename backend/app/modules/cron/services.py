@@ -188,7 +188,7 @@ def _add_job_to_scheduler(engine: Engine, job_id: int) -> bool:
 
 # ========== 任务执行相关函数 ==========
 
-def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> dict:
+def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual", inputs: dict = None, outputs: dict = None) -> dict:
     """执行任务并实时保存日志"""
     # 获取任务和节点（提前验证）
     with engine.connect() as conn:
@@ -208,6 +208,151 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
             if full_job_id in scheduler_service.job_ids:
                 scheduler_service.remove_job(full_job_id)
             raise ValueError(f"任务 {job_id} 的节点{job['node_id']}不存在，已移除计划")
+
+    # 替换命令中的输入参数和输出参数
+    command = job['command']
+    logger.info(f"原始命令: {command}")
+    logger.info(f"输入参数: {inputs}")
+    logger.info(f"输出参数: {outputs}")
+    
+    # 替换输入参数 {{inputs.xxx}}
+    if inputs:
+        for key, value in inputs.items():
+            placeholder = f"{{inputs.{key}}}"
+            if placeholder in command:
+                command = command.replace(placeholder, str(value))
+                logger.info(f"替换输入参数: {placeholder} -> {value}")
+    
+    # 替换输出参数 {{outputs.node_id}} 或 {{outputs.node_id.xxx}}
+    if outputs:
+        import re
+        output_pattern = r'\{\{outputs\.(\w+)(?:\.(\w+))?\}\}'
+        matches = re.findall(output_pattern, command)
+        
+        for node_id, field in matches:
+            if node_id in outputs:
+                node_output = outputs[node_id]
+                if field:
+                    # 替换特定字段 {{outputs.node_id.output}}
+                    value = node_output.get(field, "")
+                    placeholder = f"{{outputs.{node_id}.{field}}}"
+                else:
+                    # 替换整个输出对象 {{outputs.node_id}}
+                    value = str(node_output)
+                    placeholder = f"{{outputs.{node_id}}}"
+                
+                if placeholder in command:
+                    command = command.replace(placeholder, str(value))
+                    logger.info(f"替换输出参数: {placeholder} -> {value}")
+    
+    logger.info(f"最终命令: {command}")
+
+    # 工作流调用时，同步执行任务；否则后台执行
+    if triggered_by == "workflow":
+        # 同步执行模式：直接执行并等待完成
+        return _execute_job_sync(engine, job_id, command, node, job, inputs, outputs)
+    else:
+        # 后台执行模式：在后台线程中执行
+        return _execute_job_async(engine, job_id, command, node, job, triggered_by)
+
+
+def _execute_job_sync(engine: Engine, job_id: int, command: str, node: dict, job: dict, inputs: dict = None, outputs: dict = None) -> dict:
+    """同步执行任务（用于工作流）"""
+    ssh = None
+    output_buffer = []
+    error_buffer = []
+    
+    # 创建执行记录
+    stmt = insert(models.job_executions_table).values(
+        job_id=job_id,
+        start_time=datetime.now(),
+        status="running",
+        triggered_by="workflow"
+    )
+    with engine.begin() as conn:
+        result = conn.execute(stmt)
+        execution_id = result.inserted_primary_key[0]
+        logger.info(f"✅ 工作流任务调度：时间（{datetime.now().replace(second=0, microsecond=0)}），设备（{node['name']}），任务（{job['name']}）")
+    
+    try:
+        # 初始化执行日志
+        _init_execution_log(engine, execution_id)
+        
+        from app.modules.node.schemas import NodeRead
+        ssh = SSHClient(NodeRead(**node))
+        ssh.connect()
+
+        _, stdout, stderr = ssh.client.exec_command(command, timeout=60)
+
+        while True:
+            if stdout.channel.recv_ready():
+                line = stdout.channel.recv(1024).decode('utf-8', errors='replace')
+                if line:
+                    output_buffer.append(line)
+
+            if stderr.channel.recv_stderr_ready():
+                line = stderr.channel.recv_stderr(1024).decode('utf-8', errors='replace')
+                if line:
+                    error_buffer.append(line)
+
+            if stdout.channel.exit_status_ready():
+                while stdout.channel.recv_ready():
+                    line = stdout.channel.recv(4096).decode("utf-8", errors="replace")
+                    if line:
+                        output_buffer.append(line)
+
+                while stderr.channel.recv_stderr_ready():
+                    line = stderr.channel.recv_stderr(4096).decode("utf-8", errors="replace")
+                    if line:
+                        error_buffer.append(line)
+
+                break
+
+        exit_code = stdout.channel.recv_exit_status()
+        status = "success" if exit_code == 0 else "failed"
+
+        final_output = "".join(output_buffer)
+        final_error = "".join(error_buffer)
+        
+        # 保存输出和错误日志
+        if output_buffer or error_buffer:
+            _save_and_clear_buffer(engine, execution_id, output_buffer, error_buffer, status)
+        
+        # 更新最终状态
+        _update_execution_final_status(engine, execution_id, status, job, final_error)
+
+        logger.info(f"任务执行完成: job_id={job_id}, status={status}, output={final_output[:100] if final_output else ''}, error={final_error[:100] if final_error else ''}")
+
+        return {
+            "status": status,
+            "output": final_output,
+            "error": final_error
+        }
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"任务执行异常: job_id={job_id}, error={error_msg}")
+        
+        # 保存错误日志
+        if error_buffer:
+            _save_and_clear_buffer(engine, execution_id, [], error_buffer, "failed")
+        
+        # 更新最终状态
+        _update_execution_final_status(engine, execution_id, "failed", job, error_msg)
+
+        return {
+            "status": "failed",
+            "output": "",
+            "error": error_msg
+        }
+
+    finally:
+        if ssh:
+            ssh.close()
+
+
+def _execute_job_async(engine: Engine, job_id: int, command: str, node: dict, job: dict, triggered_by: str) -> dict:
+    """异步执行任务（用于手动执行和调度）"""
 
     # 创建执行记录
     stmt = insert(models.job_executions_table).values(
@@ -239,7 +384,7 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual") -> di
             initial_log = {"status": "running", "output": "正在连接...\n", "error": "", "end_time": None}
             ws_manager.send_log_sync(execution_id, initial_log)
 
-            _, stdout, stderr = ssh.client.exec_command(job['command'], timeout=60)
+            _, stdout, stderr = ssh.client.exec_command(command, timeout=60)
 
             while True:
                 if execution_manager.should_stop(execution_id):

@@ -120,8 +120,13 @@
       <div class="right-panel">
         <n-card title="节点属性" size="small" v-if="selectedNode">
           <n-form label-placement="top" size="small">
-            <n-form-item label="名称">
-              <n-input v-model:value="editLabel" @blur="applyEdit" />
+            <n-form-item>
+              <template #label>
+                名称<n-tag type="info" size="small" style="margin-left: 8px;">ID：{{ selectedNode.id }}</n-tag>
+              </template>
+              <n-space align="center" style="width: 100%">
+                <n-input v-model:value="editLabel" @blur="applyEdit" style="flex: 1;" />
+              </n-space>
             </n-form-item>
             <n-form-item label="类型">
               <n-tag>{{ selectedNode.type }}</n-tag>

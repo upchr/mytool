@@ -215,6 +215,7 @@ class WorkflowEngine:
             
             # 更新状态
             state["outputs"][node_id] = result
+            logger.info(f"节点执行完成: {node_id}, 状态: {result.get('status')}, 结果: {result}")
             
             # 执行后续节点
             await self._execute_next_nodes(execution_id, node_id, result.get("status", "success"), 
@@ -224,22 +225,34 @@ class WorkflowEngine:
             logger.error(f"节点执行失败: {node_name}, error: {e}")
             await self._update_node_execution(node_execution_id, "failed", error=str(e))
             state["outputs"][node_id] = {"status": "failed", "error": str(e)}
+            logger.info(f"节点执行异常: {node_id}, 状态: failed, 错误: {str(e)}")
     
     async def _execute_task_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
         """执行任务节点"""
         job_id = config.get("job_id")
+        node_id = node.get("id")
         if not job_id:
             return {"status": "failed", "error": "未配置任务ID"}
         
         try:
-            # 调用 cron 模块执行任务
+            # 调用 cron 模块执行任务，传递输入参数和输出参数
             from app.modules.cron.services import execute_job
+            
+            # 获取输入参数和输出参数
+            inputs = state.get("inputs", {})
+            outputs = state.get("outputs", {})
+            
+            logger.info(f"执行任务节点: {node_id}, job_id: {job_id}")
+            logger.info(f"任务节点输入参数: {inputs}")
+            logger.info(f"任务节点输出参数: {outputs}")
             
             loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
                 None,
-                lambda: execute_job(self.engine, int(job_id), "workflow")
+                lambda: execute_job(self.engine, int(job_id), "workflow", inputs, outputs)
             )
+            
+            logger.info(f"任务节点执行结果: {node_id}, 结果: {result}")
             
             return {
                 "status": "success" if result.get("status") == "success" else "failed",
@@ -247,6 +260,7 @@ class WorkflowEngine:
                 "error": result.get("error", "")
             }
         except Exception as e:
+            logger.error(f"任务节点执行异常: {node_id}, 错误: {e}")
             return {"status": "failed", "error": str(e)}
     
     async def _execute_condition_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
