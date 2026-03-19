@@ -10,10 +10,6 @@ from ...core.pojo.response import BaseResponse
 router = APIRouter(prefix="/nodes", tags=["nodes"])
 
 # 节点管理
-@router.get("")
-def list_nodes(active_only: bool = False):
-    return BaseResponse.success(services.get_nodes(engine, active_only))
-
 @router.post("")
 def create_node(node: schemas.NodeCreate):
     return BaseResponse.success(services.create_node(engine, node))

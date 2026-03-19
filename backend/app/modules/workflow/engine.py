@@ -124,12 +124,14 @@ class WorkflowEngine:
             await self._update_execution(execution_id, "failed", error="工作流不存在")
             return
         
-        # 初始化状态
+        # 初始化状态，从执行记录中获取输入参数
         state = {
-            "inputs": {},  # TODO: 从触发参数获取
+            "inputs": execution.get("inputs", {}),
             "outputs": {},
             "workflow": workflow
         }
+        
+        logger.info(f"工作流执行开始: {workflow_id}, execution_id={execution_id}, inputs={state['inputs']}")
         
         # 更新执行状态为运行中
         await self._update_execution(execution_id, "running")
@@ -169,6 +171,18 @@ class WorkflowEngine:
         node_type = node.get("type", "task")
         config = node.get("config", {})
         node_name = node.get("name", node_id)
+        
+        # 开始节点不需要执行记录
+        if node_type == "start":
+            logger.info(f"开始节点: {node_name}")
+            # 执行后续节点
+            await self._execute_next_nodes(execution_id, node_id, "success", state, all_nodes, all_edges)
+            return
+        
+        # 结束节点
+        if node_type == "end":
+            logger.info(f"结束节点: {node_name}")
+            return
         
         # 创建节点执行记录
         node_execution_id = await self._create_node_execution(
@@ -284,29 +298,37 @@ class WorkflowEngine:
             return {"status": "failed", "error": str(e)}
     
     async def _execute_next_nodes(self, execution_id: int, current_node_id: str, 
-                                   condition: str, state: Dict, 
+                                   status: str, state: Dict, 
                                    all_nodes: list, all_edges: list):
         """执行后续节点"""
         # 找到匹配条件的出边
         next_node_ids = []
         for edge in all_edges:
             if edge.get("source") == current_node_id:
-                edge_condition = edge.get("condition", "success")
+                edge_condition = edge.get("condition", "always")
                 
-                # 获取当前节点的条件结果
+                # 获取当前节点的输出
                 current_output = state["outputs"].get(current_node_id, {})
-                condition_result = current_output.get("condition_result") if isinstance(current_output, dict) else None
                 
                 # 判断是否匹配
                 match = False
                 if edge_condition == "always":
+                    # 总是执行（适用于非条件节点）
                     match = True
-                elif edge_condition == condition:
-                    match = True
-                elif edge_condition == "true" and condition_result is True:
-                    match = True
-                elif edge_condition == "false" and condition_result is False:
-                    match = True
+                elif edge_condition == "true":
+                    # 条件为真时执行
+                    condition_result = current_output.get("condition_result") if isinstance(current_output, dict) else None
+                    match = condition_result is True
+                elif edge_condition == "false":
+                    # 条件为假时执行
+                    condition_result = current_output.get("condition_result") if isinstance(current_output, dict) else None
+                    match = condition_result is False
+                elif edge_condition == "success":
+                    # 节点成功时执行（适用于任务节点）
+                    match = status == "success"
+                elif edge_condition == "failed":
+                    # 节点失败时执行
+                    match = status == "failed"
                 
                 if match:
                     target = edge.get("target")

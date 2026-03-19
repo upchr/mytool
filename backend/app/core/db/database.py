@@ -50,7 +50,7 @@ class Database:
         def _fetch():
             with engine.connect() as conn:
                 result = conn.execute(query).fetchone()
-                return dict(result._mapping) if result else None
+                return dict(result) if result else None
         return await loop.run_in_executor(None, _fetch)
 
     @staticmethod
@@ -60,7 +60,7 @@ class Database:
         loop = asyncio.get_running_loop()
         def _fetch():
             with engine.connect() as conn:
-                return [dict(row._mapping) for row in conn.execute(query).fetchall()]
+                return [dict(row) for row in conn.execute(query).fetchall()]
         return await loop.run_in_executor(None, _fetch)
 
     @staticmethod

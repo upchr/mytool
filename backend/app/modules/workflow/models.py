@@ -56,6 +56,9 @@ workflow_executions_table = Table(
     Column("status", String(20), default="pending", comment ="状态：pending/running/success/failed/cancelled"),
     Column("triggered_by", String(20), default="system", comment ="触发方式：manual/system/schedule"),
 
+    # 输入参数
+    Column("inputs", JSON, default=dict, comment ="输入参数"),
+
     # 执行时间
     Column("start_time", DateTime, default=datetime.now, comment ="开始时间"),
     Column("end_time", DateTime, comment ="结束时间"),

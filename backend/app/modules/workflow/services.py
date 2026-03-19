@@ -203,6 +203,7 @@ class WorkflowService:
             workflow_id=workflow_id,
             status="pending",
             triggered_by=triggered_by,
+            inputs=inputs or {},
             start_time=now,
             created_at=now
         )
@@ -221,7 +222,7 @@ class WorkflowService:
         )
         thread.start()
         
-        logger.info(f"工作流触发: {workflow_id}, execution_id={execution_id}")
+        logger.info(f"工作流触发: {workflow_id}, execution_id={execution_id}, inputs={inputs}")
         
         return execution_id
     
