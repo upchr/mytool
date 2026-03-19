@@ -28,6 +28,7 @@
                 <n-text strong>{{ wf.name }}</n-text>
                 <n-tag :type="wf.is_active ? 'success' : 'default'" size="small">{{ wf.is_active ? '启用' : '禁用' }}</n-tag>
                 <n-tag v-if="wf.default_version" type="info" size="small">v{{ wf.default_version }}</n-tag>
+                <n-tag v-if="wf.schedule" type="warning" size="small">⏰ {{ wf.schedule }}</n-tag>
               </n-space>
             </template>
             <template #header-extra>
@@ -52,11 +53,13 @@
       ref="editorRef"
       :workflow-id="current?.workflow_id"
       :workflow-name="currentWorkflowName"
+      :schedule="currentSchedule"
       :initial-data="{ nodes: current?.nodes || [], edges: current?.edges || [] }"
       @save="onSave"
       @trigger="onTrigger"
       @back="showEditor = false"
       @update:workflow-name="onWorkflowNameUpdate"
+      @update:schedule="onScheduleUpdate"
     />
 
     <!-- 输入参数对话框 -->
@@ -208,6 +211,7 @@ const showEditor = ref(false)
 const editorRef = ref(null)
 const current = ref(null)
 const currentWorkflowName = ref('')
+const currentSchedule = ref('')
 const currentEditingVersion = ref(null)
 
 // 版本管理
@@ -492,6 +496,7 @@ const onSave = async (data) => {
       name: currentWorkflowName.value || '新工作流',
       description: current.value.description || '',
       node_id: 1,
+      schedule: currentSchedule.value || null,
       is_active: true,
       ...data
     }
@@ -522,6 +527,10 @@ const onSave = async (data) => {
   } catch (e) {
     window.$message.error('保存失败')
   }
+}
+
+const onScheduleUpdate = (schedule) => {
+  currentSchedule.value = schedule
 }
 
 // 验证工作流格式
