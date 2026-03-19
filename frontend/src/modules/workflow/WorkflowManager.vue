@@ -320,11 +320,20 @@ const handleTrigger = async (wf) => {
       edges: defaultVersion.edges || []
     } : wf
     
+    // 获取任务列表，用于分析任务命令中的占位符
+    let jobs = []
+    try {
+      const jobsRes = await window.$request.post('/cron/jobsList', {node_ids:[] } )
+      jobs = jobsRes.data || []
+    } catch (e) {
+      console.warn('获取任务列表失败', e)
+    }
+    
     // 设置当前工作流
     current.value = workflowData
     
     // 分析工作流中使用的输入参数
-    const inputs = analyzeWorkflowInputs(workflowData)
+    const inputs = analyzeWorkflowInputs(workflowData, jobs)
     usedInputs.value = inputs
     
     // 生成输入参数列表
@@ -341,21 +350,65 @@ const handleTrigger = async (wf) => {
 }
 
 // 分析工作流中使用的输入参数
-const analyzeWorkflowInputs = (workflow) => {
+const analyzeWorkflowInputs = (workflow, jobs = []) => {
   const inputs = new Set()
   
   // 遍历所有节点
   const nodes = workflow.nodes || []
   nodes.forEach(node => {
-    // 只分析条件节点
+    const config = node.config || {}
+    
+    // 根据节点类型分析不同的配置字段
     if (node.type === 'condition') {
-      const expression = node.config?.expression || ''
-      
-      // 提取 inputs.xxx 格式的参数
+      // 条件节点：分析表达式
+      const expression = config.expression || ''
       const matches = expression.match(/inputs\.(\w+)/g)
       if (matches) {
         matches.forEach(match => {
           const inputName = match.replace('inputs.', '')
+          if (inputName && inputName !== 'xxx') {
+            inputs.add(inputName)
+          }
+        })
+      }
+    } else if (node.type === 'task') {
+      // 任务节点：分析命令
+      const jobId = config.job_id
+      if (jobId && jobs.length > 0) {
+        const job = jobs.find(j => j.id === jobId)
+        if (job && job.command) {
+          const matches = job.command.match(/\{\{inputs\.(\w+)\}\}/g)
+          if (matches) {
+            matches.forEach(match => {
+              const inputName = match.replace(/\{\{inputs\.|\}\}/g, '')
+              if (inputName && inputName !== 'xxx') {
+                inputs.add(inputName)
+              }
+            })
+          }
+        }
+      }
+    } else if (node.type === 'notification') {
+      // 通知节点：分析标题和内容
+      const title = config.title || ''
+      const content = config.content || ''
+      
+      // 分析标题
+      const titleMatches = title.match(/\{\{inputs\.(\w+)\}\}/g)
+      if (titleMatches) {
+        titleMatches.forEach(match => {
+          const inputName = match.replace(/\{\{inputs\.|\}\}/g, '')
+          if (inputName && inputName !== 'xxx') {
+            inputs.add(inputName)
+          }
+        })
+      }
+      
+      // 分析内容
+      const contentMatches = content.match(/\{\{inputs\.(\w+)\}\}/g)
+      if (contentMatches) {
+        contentMatches.forEach(match => {
+          const inputName = match.replace(/\{\{inputs\.|\}\}/g, '')
           if (inputName && inputName !== 'xxx') {
             inputs.add(inputName)
           }

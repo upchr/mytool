@@ -99,6 +99,22 @@
             </div>
           </template>
 
+          <template #node-and="props">
+            <div class="wf-node and" :class="{ active: selectedId === props.id }">
+              <Handle type="target" :position="Position.Left" />
+              <div class="content">🔗 {{ props.data.label }}</div>
+              <Handle type="source" :position="Position.Right" />
+            </div>
+          </template>
+
+          <template #node-or="props">
+            <div class="wf-node or" :class="{ active: selectedId === props.id }">
+              <Handle type="target" :position="Position.Left" />
+              <div class="content">🔀 {{ props.data.label }}</div>
+              <Handle type="source" :position="Position.Right" />
+            </div>
+          </template>
+
           <template #node-notification="props">
             <div class="wf-node notification" :class="{ active: selectedId === props.id }">
               <Handle type="target" :position="Position.Left" />
@@ -131,6 +147,38 @@
             <n-form-item label="类型">
               <n-tag>{{ selectedNode.type }}</n-tag>
             </n-form-item>
+
+            <!-- AND 节点配置 -->
+            <template v-if="selectedNode.type === 'and'">
+              <n-alert type="info" size="small" style="margin-bottom: 12px">
+                <template #header>💡 AND 节点说明</template>
+                <div style="font-size: 11px; line-height: 1.6">
+                  <div><strong>AND 节点</strong>：等待所有前置节点完成后才执行</div>
+                  <div style="margin-top: 4px; color: #666;">
+                    • 适用于需要访问所有前置节点输出的场景
+                  </div>
+                  <div style="margin-top: 4px; color: #666;">
+                    • 例如：通知节点需要访问多个前置节点的输出
+                  </div>
+                </div>
+              </n-alert>
+            </template>
+
+            <!-- OR 节点配置 -->
+            <template v-if="selectedNode.type === 'or'">
+              <n-alert type="info" size="small" style="margin-bottom: 12px">
+                <template #header>💡 OR 节点说明</template>
+                <div style="font-size: 11px; line-height: 1.6">
+                  <div><strong>OR 节点</strong>：任一前置节点完成即执行</div>
+                  <div style="margin-top: 4px; color: #666;">
+                    • 适用于并行执行的场景
+                  </div>
+                  <div style="margin-top: 4px; color: #666;">
+                    • 例如：多个任务完成后发送通知，不需要等待所有任务
+                  </div>
+                </div>
+              </n-alert>
+            </template>
 
             <!-- 任务节点配置 -->
             <template v-if="selectedNode.type === 'task'">
@@ -247,11 +295,62 @@
 
             <!-- 通知节点配置 -->
             <template v-if="selectedNode.type === 'notification'">
+              <n-alert type="info" size="small" style="margin-bottom: 12px">
+                <template #header>💡 通知节点说明</template>
+                <div style="font-size: 11px; line-height: 1.6">
+                  <div><strong>支持占位符：</strong></div>
+                  <div style="margin-top: 4px; color: #666;">
+                    • <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 3px;">&lbrace;&lbrace;inputs.xxx&rbrace;&rbrace;</code> - 工作流输入参数
+                  </div>
+                  <div style="margin-top: 4px; color: #666;">
+                    • <code style="background: #f0f0f0; padding: 2px 4px; border-radius: 3px;">&lbrace;&lbrace;outputs.node_id.xxx&rbrace;&rbrace;</code> - 前置节点输出
+                  </div>
+                </div>
+              </n-alert>
+              
               <n-form-item label="标题">
-                <n-input v-model:value="editConfig.title" @blur="applyEdit" />
+                <n-input v-model:value="editConfig.title" @blur="applyEdit" placeholder="例如：任务执行成功" />
               </n-form-item>
               <n-form-item label="内容">
-                <n-input v-model:value="editConfig.content" type="textarea" @blur="applyEdit" />
+                <n-input v-model:value="editConfig.content" type="textarea" @blur="applyEdit" placeholder="例如：用户&lbrace;&lbrace;inputs.name&rbrace;&rbrace;的任务执行完成，状态：&lbrace;&lbrace;outputs.task1.status&rbrace;&rbrace;" />
+              </n-form-item>
+              
+              <n-form-item label="可用变量">
+                <n-collapse size="small">
+                  <n-collapse-item v-if="previousNodes.length > 0" title="前置节点变量">
+                    <div v-for="node in previousNodes" :key="node.value" style="margin-bottom: 12px">
+                      <n-space align="center" style="margin-bottom: 4px">
+                        <n-tag type="info" size="small">{{ node.label }}</n-tag>
+                        <n-tag :type="getNodeById(node.value)?.type === 'condition' ? 'warning' : 'default'" size="small">
+                          {{ getNodeById(node.value)?.type === 'condition' ? '条件节点' : '普通节点' }}
+                        </n-tag>
+                      </n-space>
+                      <div style="font-size: 11px; margin-top: 6px; color: #666; line-height: 1.8;">
+                        <div v-if="getNodeById(node.value)?.type === 'condition'" @click="copyVariable(`outputs.${node.value}.condition_result`)" style="cursor: pointer; color: #18a058;">
+                          📋 outputs.{{ node.value }}.condition_result <span style="color: #999; font-size: 10px;"> (条件结果：True/False)</span>
+                        </div>
+                        <div v-else>
+                          <div @click="copyVariable(`outputs.${node.value}.status`)" style="cursor: pointer; color: #18a058;">
+                            📋 outputs.{{ node.value }}.status <span style="color: #999; font-size: 10px;"> (状态：success/failed)</span>
+                          </div>
+                          <div @click="copyVariable(`outputs.${node.value}.output`)" style="cursor: pointer; color: #18a058;">
+                            📋 outputs.{{ node.value }}.output <span style="color: #999; font-size: 10px;"> (输出内容)</span>
+                          </div>
+                          <div @click="copyVariable(`outputs.${node.value}.error`)" style="cursor: pointer; color: #18a058;">
+                            📋 outputs.{{ node.value }}.error <span style="color: #999; font-size: 10px;"> (错误信息)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </n-collapse-item>
+                  <n-collapse-item title="输入参数变量">
+                    <div v-for="input in usedInputs" :key="input" style="margin-bottom: 8px">
+                      <div @click="copyVariable(`inputs.${input}`)" style="cursor: pointer; color: #18a058; font-size: 11px;">
+                        📋 inputs.{{ input }}
+                      </div>
+                    </div>
+                  </n-collapse-item>
+                </n-collapse>
               </n-form-item>
             </template>
           </n-form>
@@ -345,6 +444,8 @@ const nodeTypes = [
   { type: 'condition', label: '条件', icon: '🔷', desc: '条件判断' },
   { type: 'wait', label: '等待', icon: '⏱️', desc: '等待时间' },
   { type: 'notification', label: '通知', icon: '📢', desc: '发送消息' },
+  { type: 'and', label: 'AND', icon: '🔗', desc: '等待所有前置节点完成' },
+  { type: 'or', label: 'OR', icon: '🔀', desc: '任一前置节点完成即执行' },
   { type: 'end', label: '结束', icon: '🏁', desc: '工作流终点' }
 ]
 
@@ -863,6 +964,8 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
 .wf-node.condition { border-color: #fa8c16; }
 .wf-node.wait { border-color: #8c8c8c; }
 .wf-node.notification { border-color: #722ed1; }
+.wf-node.and { border-color: #13c2c2; }
+.wf-node.or { border-color: #eb2f96; }
 .wf-node.start { border-color: #52c41a; background: #f6ffed; }
 .wf-node.end { border-color: #ff4d4f; background: #fff1f0; }
 </style>

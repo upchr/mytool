@@ -21,6 +21,15 @@ from app.modules.workflow.models import (
 logger = logging.getLogger(__name__)
 
 
+class AttrDict(dict):
+    """支持属性访问的字典类"""
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
+
+
 class WorkflowVariableResolver:
     """工作流变量解析器"""
     
@@ -86,7 +95,9 @@ class WorkflowVariableResolver:
                 '__builtins__': {},
                 'True': True,
                 'False': False,
-                'None': None
+                'None': None,
+                'inputs': AttrDict(state.get('inputs', {})),
+                'outputs': AttrDict(state.get('outputs', {}))
             }
             
             result = eval(str(resolved_expr), safe_globals, {})
@@ -128,6 +139,7 @@ class WorkflowEngine:
         state = {
             "inputs": execution.get("inputs", {}),
             "outputs": {},
+            "executed_nodes": set(),  # 跟踪已执行的节点
             "workflow": workflow
         }
         
@@ -172,6 +184,14 @@ class WorkflowEngine:
         config = node.get("config", {})
         node_name = node.get("name", node_id)
         
+        # 检查节点是否已经执行过
+        if node_id in state["executed_nodes"]:
+            logger.info(f"节点 {node_id} 已经执行过，跳过")
+            return
+        
+        # 标记节点为已执行
+        state["executed_nodes"].add(node_id)
+        
         # 开始节点不需要执行记录
         if node_type == "start":
             logger.info(f"开始节点: {node_name}")
@@ -182,6 +202,23 @@ class WorkflowEngine:
         # 结束节点
         if node_type == "end":
             logger.info(f"结束节点: {node_name}")
+            return
+        
+        # AND 和 OR 节点不需要执行记录
+        if node_type in ["and", "or"]:
+            # 根据节点类型执行
+            if node_type == "and":
+                result = await self._execute_and_node(node, config, state)
+            elif node_type == "or":
+                result = await self._execute_or_node(node, config, state)
+            
+            # 更新状态
+            state["outputs"][node_id] = result
+            logger.info(f"节点执行完成: {node_id}, 状态: {result.get('status')}, 结果: {result}")
+            
+            # 执行后续节点
+            await self._execute_next_nodes(execution_id, node_id, result.get("status", "success"), 
+                                           state, all_nodes, all_edges)
             return
         
         # 创建节点执行记录
@@ -269,10 +306,38 @@ class WorkflowEngine:
         
         result = WorkflowVariableResolver.evaluate_condition(expression, state)
         
+        logger.info(f"条件节点执行: node_id={node.get('id')}, expression={expression}, result={result}, result_type={type(result)}")
+        
         return {
             "status": "success",
             "output": json.dumps({"result": result, "expression": expression}),
             "condition_result": result
+        }
+    
+    async def _execute_and_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
+        """执行 AND 节点"""
+        node_id = node.get("id")
+        
+        # AND 节点只是一个控制节点，不执行任何操作
+        # 它的作用是等待所有前置节点完成
+        logger.info(f"AND 节点执行: node_id={node_id}")
+        
+        return {
+            "status": "success",
+            "output": "AND 节点执行完成"
+        }
+    
+    async def _execute_or_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
+        """执行 OR 节点"""
+        node_id = node.get("id")
+        
+        # OR 节点只是一个控制节点，不执行任何操作
+        # 它的作用是任一前置节点完成即执行
+        logger.info(f"OR 节点执行: node_id={node_id}")
+        
+        return {
+            "status": "success",
+            "output": "OR 节点执行完成"
         }
     
     async def _execute_wait_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
@@ -329,32 +394,73 @@ class WorkflowEngine:
                 if edge_condition == "always":
                     # 总是执行（适用于非条件节点）
                     match = True
+                    logger.info(f"连线条件: {current_node_id} -> {edge.get('target')}, condition=always, match={match}")
                 elif edge_condition == "true":
                     # 条件为真时执行
                     condition_result = current_output.get("condition_result") if isinstance(current_output, dict) else None
                     match = condition_result is True
+                    logger.info(f"连线条件: {current_node_id} -> {edge.get('target')}, condition=true, condition_result={condition_result}, match={match}")
                 elif edge_condition == "false":
                     # 条件为假时执行
                     condition_result = current_output.get("condition_result") if isinstance(current_output, dict) else None
                     match = condition_result is False
+                    logger.info(f"连线条件: {current_node_id} -> {edge.get('target')}, condition=false, condition_result={condition_result}, match={match}")
                 elif edge_condition == "success":
                     # 节点成功时执行（适用于任务节点）
                     match = status == "success"
+                    logger.info(f"连线条件: {current_node_id} -> {edge.get('target')}, condition=success, status={status}, match={match}")
                 elif edge_condition == "failed":
                     # 节点失败时执行
                     match = status == "failed"
+                    logger.info(f"连线条件: {current_node_id} -> {edge.get('target')}, condition=failed, status={status}, match={match}")
                 
                 if match:
                     target = edge.get("target")
                     if target and target not in next_node_ids:
                         next_node_ids.append(target)
+                        logger.info(f"执行后续节点: {target}")
+        
+        # 检查所有前置节点是否都已完成
+        node_map = {n.get("id"): n for n in all_nodes}
+        for next_node_id in next_node_ids[:]:
+            next_node = node_map.get(next_node_id)
+            if next_node:
+                node_type = next_node.get("type", "task")
+                
+                # AND 节点：等待所有前置节点完成
+                if node_type == "and":
+                    if not await self._check_prerequisites_completed(next_node_id, state, all_edges):
+                        logger.info(f"AND 节点 {next_node_id} 的前置节点未完成，跳过执行")
+                        next_node_ids.remove(next_node_id)
+                # OR 节点：任一前置节点完成即执行
+                elif node_type == "or":
+                    logger.info(f"OR 节点 {next_node_id} 任一前置节点完成即执行")
+                # 其他节点：任一前置节点完成即执行（默认行为）
+                else:
+                    logger.info(f"节点 {next_node_id} 任一前置节点完成即执行")
         
         # 执行后续节点
-        node_map = {n.get("id"): n for n in all_nodes}
         for next_node_id in next_node_ids:
             next_node = node_map.get(next_node_id)
             if next_node:
                 await self._execute_node(execution_id, next_node, state, all_nodes, all_edges)
+    
+    async def _check_prerequisites_completed(self, node_id: str, state: Dict, all_edges: list) -> bool:
+        """检查节点的前置节点是否都已完成"""
+        # 找到所有入边（前置节点）
+        prerequisite_ids = []
+        for edge in all_edges:
+            if edge.get("target") == node_id:
+                prerequisite_ids.append(edge.get("source"))
+        
+        # 检查所有前置节点是否都已完成
+        for prereq_id in prerequisite_ids:
+            if prereq_id not in state["outputs"]:
+                logger.info(f"前置节点 {prereq_id} 还未完成")
+                return False
+        
+        logger.info(f"节点 {node_id} 的所有前置节点都已完成: {prerequisite_ids}")
+        return True
     
     def _find_start_nodes(self, nodes: list, edges: list) -> list:
         """找到起始节点（没有入边的节点）"""
