@@ -3,22 +3,51 @@
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <n-space align="center">
-        <n-button @click="goBack">← 返回</n-button>
+        <n-button quaternary @click="goBack">
+          <template #icon>
+            <n-icon><ArrowBackIcon /></n-icon>
+          </template>
+          返回
+        </n-button>
         <n-divider vertical />
+        <n-icon size="20" color="#18a058"><DocumentIcon /></n-icon>
         <n-text strong>{{ workflowName }}</n-text>
         <n-divider vertical />
-        <n-tag :type="executionStatus === 'success' ? 'success' : (executionStatus === 'failed' ? 'error' : 'info')">
+        <n-tag :type="executionStatus === 'success' ? 'success' : (executionStatus === 'failed' ? 'error' : 'info')" size="medium">
+          <template #icon>
+            <n-icon v-if="executionStatus === 'success'"><CheckmarkCircleIcon /></n-icon>
+            <n-icon v-else-if="executionStatus === 'failed'"><CloseCircleIcon /></n-icon>
+            <n-icon v-else><TimeIcon /></n-icon>
+          </template>
           {{ executionStatus === 'success' ? '执行成功' : (executionStatus === 'failed' ? '执行失败' : '执行中') }}
         </n-tag>
         <n-divider vertical />
-        <n-text depth="3" style="font-size: 12px;">
-          开始时间: {{ formatTime(execution.start_time) }}
-          <span v-if="execution.end_time"> | 结束时间: {{ formatTime(execution.end_time) }}</span>
-        </n-text>
+        <n-space align="center" size="small">
+          <n-icon size="16" color="#666"><TimeIcon /></n-icon>
+          <n-text depth="3" style="font-size: 12px;">
+            开始: {{ formatTime(execution.start_time) }}
+            <span v-if="execution.end_time"> | 结束: {{ formatTime(execution.end_time) }}</span>
+          </n-text>
+        </n-space>
         <n-divider vertical />
-        <n-button @click="zoomIn">放大</n-button>
-        <n-button @click="zoomOut">缩小</n-button>
-        <n-button @click="fitView">适应</n-button>
+        <n-button quaternary @click="zoomIn">
+          <template #icon>
+            <n-icon><AddIcon /></n-icon>
+          </template>
+          放大
+        </n-button>
+        <n-button quaternary @click="zoomOut">
+          <template #icon>
+            <n-icon><RemoveIcon /></n-icon>
+          </template>
+          缩小
+        </n-button>
+        <n-button quaternary @click="fitView">
+          <template #icon>
+            <n-icon><ExpandIcon /></n-icon>
+          </template>
+          适应
+        </n-button>
       </n-space>
     </div>
 
@@ -219,34 +248,73 @@
 
       <!-- 右侧节点详情面板 -->
       <div class="right-panel" v-if="selectedNodeExecution">
-        <n-card title="📊 节点执行详情" size="small">
+        <n-card title="节点执行详情" size="small">
+          <template #header-extra>
+            <n-tag :type="selectedNodeExecution.status === 'success' ? 'success' : (selectedNodeExecution.status === 'failed' ? 'error' : 'info')" size="small">
+              <template #icon>
+                <n-icon v-if="selectedNodeExecution.status === 'success'"><CheckmarkCircleIcon /></n-icon>
+                <n-icon v-else-if="selectedNodeExecution.status === 'failed'"><CloseCircleIcon /></n-icon>
+                <n-icon v-else><TimeIcon /></n-icon>
+              </template>
+              {{ selectedNodeExecution.status === 'success' ? '成功' : (selectedNodeExecution.status === 'failed' ? '失败' : '进行中') }}
+            </n-tag>
+          </template>
           <n-descriptions :column="1" size="small" bordered>
-            <n-descriptions-item label="节点名称">{{ selectedNodeExecution.node_name }}</n-descriptions-item>
-            <n-descriptions-item label="节点类型">{{ selectedNodeExecution.node_type }}</n-descriptions-item>
-            <n-descriptions-item label="节点ID">{{ selectedNodeExecution.node_id }}</n-descriptions-item>
-            <n-descriptions-item label="执行状态">
-              <n-tag :type="selectedNodeExecution.status === 'success' ? 'success' : (selectedNodeExecution.status === 'failed' ? 'error' : 'info')">
-                {{ selectedNodeExecution.status === 'success' ? '成功' : (selectedNodeExecution.status === 'failed' ? '失败' : '进行中') }}
-              </n-tag>
+            <n-descriptions-item label="节点名称">
+              <n-space align="center">
+                <n-icon size="16" color="#2080f0"><DocumentIcon /></n-icon>
+                <n-text>{{ selectedNodeExecution.node_name }}</n-text>
+              </n-space>
             </n-descriptions-item>
-            <n-descriptions-item label="开始时间">{{ formatTime(selectedNodeExecution.start_time) }}</n-descriptions-item>
-            <n-descriptions-item label="结束时间">{{ selectedNodeExecution.end_time ? formatTime(selectedNodeExecution.end_time) : '进行中' }}</n-descriptions-item>
+            <n-descriptions-item label="节点类型">
+              <n-tag type="info" size="small">{{ selectedNodeExecution.node_type }}</n-tag>
+            </n-descriptions-item>
+            <n-descriptions-item label="节点ID">
+              <n-code :code="selectedNodeExecution.node_id" language="text" size="tiny" />
+            </n-descriptions-item>
+            <n-descriptions-item label="开始时间">
+              <n-space align="center">
+                <n-icon size="14" color="#666"><TimeIcon /></n-icon>
+                <n-text depth="2">{{ formatTime(selectedNodeExecution.start_time) }}</n-text>
+              </n-space>
+            </n-descriptions-item>
+            <n-descriptions-item label="结束时间">
+              <n-space align="center">
+                <n-icon size="14" color="#666"><TimeIcon /></n-icon>
+                <n-text depth="2">{{ selectedNodeExecution.end_time ? formatTime(selectedNodeExecution.end_time) : '进行中' }}</n-text>
+              </n-space>
+            </n-descriptions-item>
             <n-descriptions-item label="执行时长">
-              {{ selectedNodeExecution.end_time ? calculateDuration(selectedNodeExecution.start_time, selectedNodeExecution.end_time) : '进行中' }}
+              <n-tag :type="selectedNodeExecution.end_time ? 'default' : 'info'" size="small">
+                {{ selectedNodeExecution.end_time ? calculateDuration(selectedNodeExecution.start_time, selectedNodeExecution.end_time) : '进行中' }}
+              </n-tag>
             </n-descriptions-item>
           </n-descriptions>
 
           <div v-if="selectedNodeExecution.output" style="margin-top: 12px;">
-            <n-text depth="2" style="font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block;">输出:</n-text>
+            <n-space align="center" style="margin-bottom: 8px">
+              <n-icon size="16" color="#18a058"><CheckmarkCircleIcon /></n-icon>
+              <n-text strong style="font-size: 13px;">输出结果</n-text>
+            </n-space>
             <n-code :code="selectedNodeExecution.output" language="text" :word-wrap="true" />
           </div>
 
           <div v-if="selectedNodeExecution.error" style="margin-top: 12px;">
-            <n-alert type="error" size="small" title="错误信息">{{ selectedNodeExecution.error }}</n-alert>
+            <n-space align="center" style="margin-bottom: 8px">
+              <n-icon size="16" color="#d03050"><CloseCircleIcon /></n-icon>
+              <n-text strong style="font-size: 13px;">错误信息</n-text>
+            </n-space>
+            <n-alert type="error" size="small" :bordered="false">
+              {{ selectedNodeExecution.error }}
+            </n-alert>
           </div>
 
           <div v-if="selectedNodeExecution.logs && selectedNodeExecution.logs.length > 0" style="margin-top: 12px;">
-            <n-text depth="2" style="font-size: 12px; font-weight: bold; margin-bottom: 8px; display: block;">执行日志:</n-text>
+            <n-space align="center" style="margin-bottom: 8px">
+              <n-icon size="16" color="#2080f0"><DocumentIcon /></n-icon>
+              <n-text strong style="font-size: 13px;">执行日志</n-text>
+              <n-tag size="tiny" type="info">{{ selectedNodeExecution.logs.length }} 条</n-tag>
+            </n-space>
             <n-timeline size="small">
               <n-timeline-item
                 v-for="(log, index) in selectedNodeExecution.logs"
@@ -255,18 +323,20 @@
                 :time="log.timestamp"
               >
                 <div 
-                  style="padding: 4px 8px; background: #fafafa; border-radius: 4px; border-left: 3px solid #ccc;"
+                  style="padding: 6px 10px; background: #fafafa; border-radius: 6px; border-left: 3px solid #ccc;"
                   :style="{
                     'border-left-color': getLogBorderColor(log.type),
                     'background': getLogBackgroundColor(log.type)
                   }"
                 >
-                  <n-tag :type="getLogType(log.type)" size="tiny" style="margin-right: 8px;">
-                    {{ getLogTypeLabel(log.type) }}
-                  </n-tag>
+                  <n-space align="center" style="margin-bottom: 4px">
+                    <n-tag :type="getLogType(log.type)" size="tiny">
+                      {{ getLogTypeLabel(log.type) }}
+                    </n-tag>
+                  </n-space>
                   <n-text 
                     depth="3" 
-                    style="font-size: 12px;"
+                    style="font-size: 12px; line-height: 1.6;"
                     :style="{
                       'font-weight': isNodeInfoLog(log.message) ? 'bold' : 'normal',
                       'color': isNodeInfoLog(log.message) ? '#2080f0' : ''
@@ -290,6 +360,16 @@ import { useRouter, useRoute } from 'vue-router'
 import { VueFlow, useVueFlow, Handle, Position } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
+import {
+  ArrowBackOutline as ArrowBackIcon,
+  DocumentOutline as DocumentIcon,
+  CheckmarkCircleOutline as CheckmarkCircleIcon,
+  CloseCircleOutline as CloseCircleIcon,
+  TimeOutline as TimeIcon,
+  AddOutline as AddIcon,
+  RemoveOutline as RemoveIcon,
+  ExpandOutline as ExpandIcon
+} from '@vicons/ionicons5'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 
@@ -542,15 +622,20 @@ onMounted(() => {
 
 .wf-node {
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: white;
   border: 2px solid #e0e0e0;
   min-width: 100px;
   max-width: 160px;
   text-align: center;
   position: relative;
-  transition: all 0.3s;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.wf-node:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .wf-node.executed {
@@ -559,17 +644,17 @@ onMounted(() => {
 
 .wf-node.executed.success {
   border-color: #52c41a;
-  background: #f6ffed;
+  background: linear-gradient(135deg, #f6ffed 0%, #fff 100%);
 }
 
 .wf-node.executed.failed {
   border-color: #ff4d4f;
-  background: #fff2f0;
+  background: linear-gradient(135deg, #fff2f0 0%, #fff 100%);
 }
 
 .wf-node.executed.running {
   border-color: #1890ff;
-  background: #e6f7ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #fff 100%);
   animation: pulse 2s infinite;
 }
 
@@ -584,7 +669,8 @@ onMounted(() => {
 
 .wf-node.selected {
   border-color: #2080f0;
-  box-shadow: 0 0 0 2px rgba(32, 128, 240, 0.3);
+  box-shadow: 0 0 0 3px rgba(32, 128, 240, 0.3);
+  transform: scale(1.02);
 }
 
 .wf-node .content {
@@ -610,130 +696,130 @@ onMounted(() => {
 }
 
 .wf-node.start {
-  background: linear-gradient(135deg, #8b9dc3 0%, #a8c0d1 100%);
-  color: white;
-  border: none;
+  background: linear-gradient(135deg, #e6fffa 0%, #fff 100%);
+  color: #333;
+  border-color: #52c41a;
 }
 
 .wf-node.start.executed {
-  background: linear-gradient(135deg, #8b9dc3 0%, #a8c0d1 100%);
+  background: linear-gradient(135deg, #e6fffa 0%, #fff 100%);
   border: 2px solid #52c41a;
 }
 
 .wf-node.start.executed.failed {
-  background: linear-gradient(135deg, #8b9dc3 0%, #a8c0d1 100%);
+  background: linear-gradient(135deg, #e6fffa 0%, #fff 100%);
   border: 2px solid #ff4d4f;
 }
 
 .wf-node.end {
-  background: linear-gradient(135deg, #d4a5a5 0%, #e8c4c4 100%);
-  color: white;
-  border: none;
+  background: linear-gradient(135deg, #ffe8e6 0%, #fff 100%);
+  color: #333;
+  border-color: #ff4d4f;
 }
 
 .wf-node.end.executed {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #ffe8e6 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.end.executed.failed {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #ffe8e6 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 
 .wf-node.task {
-  background: linear-gradient(135deg, #a8d8ea 0%, #c5e3f0 100%);
+  background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
   color: #333;
-  border: none;
+  border-color: #1890ff;
 }
 
 .wf-node.task.executed {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.task.executed.failed {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 
 .wf-node.condition {
-  background: linear-gradient(135deg, #f5d0c5 0%, #f8e1d8 100%);
+  background: linear-gradient(135deg, #ffe3e3 0%, #fff 100%);
   color: #333;
-  border: none;
+  border-color: #fa8c16;
 }
 
 .wf-node.condition.executed {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: linear-gradient(135deg, #ffe3e3 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.condition.executed.failed {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  background: linear-gradient(135deg, #ffe3e3 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 
 .wf-node.wait {
-  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8f2 100%);
+  background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
   color: #333;
-  border: none;
+  border-color: #8c8c8c;
 }
 
 .wf-node.wait.executed {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.wait.executed.failed {
-  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 
 .wf-node.and {
-  background: linear-gradient(135deg, #e1d5e7 0%, #f0e6f5 100%);
+  background: linear-gradient(135deg, #d4f8e8 0%, #fff 100%);
   color: #333;
-  border: none;
+  border-color: #13c2c2;
 }
 
 .wf-node.and.executed {
-  background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+  background: linear-gradient(135deg, #d4f8e8 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.and.executed.failed {
-  background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+  background: linear-gradient(135deg, #d4f8e8 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 
 .wf-node.or {
-  background: linear-gradient(135deg, #d4e5f7 0%, #e8f0fa 100%);
+  background: linear-gradient(135deg, #f8e8d4 0%, #fff 100%);
   color: #333;
-  border: none;
+  border-color: #eb2f96;
 }
 
 .wf-node.or.executed {
-  background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+  background: linear-gradient(135deg, #f8e8d4 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.or.executed.failed {
-  background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+  background: linear-gradient(135deg, #f8e8d4 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 
 .wf-node.notification {
-  background: linear-gradient(135deg, #f5e6d3 0%, #faf3e8 100%);
+  background: linear-gradient(135deg, #e8d4f8 0%, #fff 100%);
   color: #333;
-  border: none;
+  border-color: #722ed1;
 }
 
 .wf-node.notification.executed {
-  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  background: linear-gradient(135deg, #e8d4f8 0%, #fff 100%);
   border: 2px solid #18a058;
 }
 
 .wf-node.notification.executed.failed {
-  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  background: linear-gradient(135deg, #e8d4f8 0%, #fff 100%);
   border: 2px solid #d03050;
 }
 </style>

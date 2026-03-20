@@ -33,12 +33,42 @@
             </template>
             <template #header-extra>
               <n-space>
-                <n-button size="small" @click="handleSchedule(wf)">定时</n-button>
-                <n-button size="small" @click="handleVersions(wf)">版本</n-button>
-                <n-button size="small" @click="handleExecutions(wf)">执行记录</n-button>
-                <n-button size="small" type="primary" @click="handleEdit(wf)">编辑</n-button>
-                <n-button size="small" @click="handleTrigger(wf)">执行</n-button>
-                <n-button size="small" type="error" @click="handleDelete(wf)">删除</n-button>
+                <n-button size="small" quaternary @click="handleSchedule(wf)">
+                  <template #icon>
+                    <n-icon><ClockIcon /></n-icon>
+                  </template>
+                  定时
+                </n-button>
+                <n-button size="small" quaternary @click="handleVersions(wf)">
+                  <template #icon>
+                    <n-icon><GitBranchIcon /></n-icon>
+                  </template>
+                  版本
+                </n-button>
+                <n-button size="small" quaternary @click="handleExecutions(wf)">
+                  <template #icon>
+                    <n-icon><ListIcon /></n-icon>
+                  </template>
+                  执行记录
+                </n-button>
+                <n-button size="small" type="primary" @click="handleEdit(wf)">
+                  <template #icon>
+                    <n-icon><CreateIcon /></n-icon>
+                  </template>
+                  编辑
+                </n-button>
+                <n-button size="small" type="success" @click="handleTrigger(wf)">
+                  <template #icon>
+                    <n-icon><PlayIcon /></n-icon>
+                  </template>
+                  执行
+                </n-button>
+                <n-button size="small" type="error" @click="handleDelete(wf)">
+                  <template #icon>
+                    <n-icon><TrashIcon /></n-icon>
+                  </template>
+                  删除
+                </n-button>
               </n-space>
             </template>
             <template #description>
@@ -403,7 +433,15 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import WorkflowEditor from './WorkflowEditor.vue'
 import CronGenerator from '@/components/CronGenerator.vue'
-import { CalendarOutline } from '@vicons/ionicons5'
+import {
+  CalendarOutline,
+  AlarmOutline as ClockIcon,
+  GitBranchOutline as GitBranchIcon,
+  ListOutline as ListIcon,
+  CreateOutline as CreateIcon,
+  PlayOutline as PlayIcon,
+  TrashOutline as TrashIcon
+} from '@vicons/ionicons5'
 
 const router = useRouter()
 const loading = ref(false)

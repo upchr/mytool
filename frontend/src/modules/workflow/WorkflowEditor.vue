@@ -3,7 +3,12 @@
     <!-- 顶部工具栏 -->
     <div class="toolbar">
       <n-space align="center">
-        <n-button @click="goBack">← 返回列表</n-button>
+        <n-button quaternary @click="goBack">
+          <template #icon>
+            <n-icon><ArrowBackIcon /></n-icon>
+          </template>
+          返回列表
+        </n-button>
         <n-divider vertical />
         <n-input
           v-model:value="currentWorkflowName"
@@ -12,17 +17,57 @@
           @update:value="onWorkflowNameChange"
         />
         <n-divider vertical />
-        <n-button @click="showScheduleDialog = true">⏰ 定时设置</n-button>
+        <!-- <n-button quaternary @click="showScheduleDialog = true">
+          <template #icon>
+            <n-icon><ClockIcon /></n-icon>
+          </template>
+          定时设置
+        </n-button> -->
         <n-divider vertical />
-        <n-button @click="handleUndo" :disabled="!canUndo">↩ 撤销</n-button>
-        <n-button @click="handleRedo" :disabled="!canRedo">↪ 重做</n-button>
+        <n-button quaternary @click="handleUndo" :disabled="!canUndo">
+          <template #icon>
+            <n-icon><UndoIcon /></n-icon>
+          </template>
+          撤销
+        </n-button>
+        <n-button quaternary @click="handleRedo" :disabled="!canRedo">
+          <template #icon>
+            <n-icon><RedoIcon /></n-icon>
+          </template>
+          重做
+        </n-button>
         <n-divider vertical />
-        <n-button type="primary" @click="handleSave" :loading="saving">保存</n-button>
-        <n-button @click="handleTrigger" v-if="workflowId">执行</n-button>
+        <n-button type="primary" @click="handleSave" :loading="saving">
+          <template #icon>
+            <n-icon><SaveIcon /></n-icon>
+          </template>
+          保存
+        </n-button>
+        <n-button type="success" @click="handleTrigger" v-if="workflowId">
+          <template #icon>
+            <n-icon><PlayIcon /></n-icon>
+          </template>
+          执行
+        </n-button>
         <n-divider vertical />
-        <n-button @click="zoomIn">放大</n-button>
-        <n-button @click="zoomOut">缩小</n-button>
-        <n-button @click="fitView">适应</n-button>
+        <n-button quaternary @click="zoomIn">
+          <template #icon>
+            <n-icon><AddIcon /></n-icon>
+          </template>
+          放大
+        </n-button>
+        <n-button quaternary @click="zoomOut">
+          <template #icon>
+            <n-icon><RemoveIcon /></n-icon>
+          </template>
+          缩小
+        </n-button>
+        <n-button quaternary @click="fitView">
+          <template #icon>
+            <n-icon><ExpandIcon /></n-icon>
+          </template>
+          适应
+        </n-button>
       </n-space>
     </div>
 
@@ -46,9 +91,18 @@
             </div>
           </div>
         </n-card>
-        <n-card size="small" style="margin-top: 8px">
-          <n-text depth="3" style="font-size: 12px">
-            操作：拖拽节点到画布 → 点击选中 → 右侧编辑属性 → 拖拽端口连线
+        <n-card size="small" style="margin-top: 12px">
+          <template #header>
+            <n-space align="center">
+              <n-icon color="#18a058"><InformationCircleIcon /></n-icon>
+              <n-text strong>操作提示</n-text>
+            </n-space>
+          </template>
+          <n-text depth="3" style="font-size: 12px; line-height: 1.8;">
+            <div>📌 拖拽节点到画布</div>
+            <div>🖱️ 点击选中节点</div>
+            <div>⚙️ 右侧编辑属性</div>
+            <div>🔗 拖拽端口连线</div>
           </n-text>
         </n-card>
       </div>
@@ -357,7 +411,12 @@
               </n-form-item>
             </template>
           </n-form>
-          <n-button type="error" size="small" block @click="deleteNode">删除此节点</n-button>
+          <n-button type="error" size="small" block @click="deleteNode">
+            <template #icon>
+              <n-icon><TrashIcon /></n-icon>
+            </template>
+            删除此节点
+          </n-button>
         </n-card>
         
         <!-- 连线属性面板 -->
@@ -388,7 +447,12 @@
               </div>
             </n-alert>
           </n-form>
-          <n-button type="error" size="small" block @click="deleteEdge" style="margin-top: 8px">删除此连线</n-button>
+          <n-button type="error" size="small" block @click="deleteEdge" style="margin-top: 8px">
+            <template #icon>
+              <n-icon><TrashIcon /></n-icon>
+            </template>
+            删除此连线
+          </n-button>
         </n-card>
         
         <n-card v-else-if="!selectedNode && !selectedEdge" title="属性面板" size="small">
@@ -483,8 +547,18 @@
           </template>
         </n-split>
         <n-space justify="end">
-          <n-button @click="showScheduleDialog = false">取消</n-button>
-          <n-button type="primary" @click="saveSchedule">保存</n-button>
+          <n-button quaternary @click="showScheduleDialog = false">
+            <template #icon>
+              <n-icon><CloseIcon /></n-icon>
+            </template>
+            取消
+          </n-button>
+          <n-button type="primary" @click="saveSchedule">
+            <template #icon>
+              <n-icon><SaveIcon /></n-icon>
+            </template>
+            保存
+          </n-button>
         </n-space>
       </n-space>
     </n-modal>
@@ -496,7 +570,21 @@ import { ref, onMounted, computed, watch, h } from 'vue'
 import { VueFlow, useVueFlow, Position, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { SwapHorizontal as SwapHorizontalIcon } from '@vicons/ionicons5'
+import {
+  SwapHorizontal as SwapHorizontalIcon,
+  ArrowBackOutline as ArrowBackIcon,
+  AlarmOutline as ClockIcon,
+  ArrowUndoOutline as UndoIcon,
+  ArrowRedoOutline as RedoIcon,
+  SaveOutline as SaveIcon,
+  PlayOutline as PlayIcon,
+  AddOutline as AddIcon,
+  RemoveOutline as RemoveIcon,
+  ExpandOutline as ExpandIcon,
+  InformationCircleOutline as InformationCircleIcon,
+  TrashOutline as TrashIcon,
+  CloseOutline as CloseIcon
+} from '@vicons/ionicons5'
 
 const props = defineProps({
   workflowId: String,
@@ -1220,26 +1308,61 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
 
 /* 节点样式 */
 .wf-node {
-  padding: 10px 16px;
-  border-radius: 6px;
-  border: 2px solid #d9d9d9;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
   background: #fff;
   font-size: 13px;
+  min-width: 100px;
+  max-width: 160px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.wf-node:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .wf-node.active {
   border-color: #18a058;
-  box-shadow: 0 0 0 2px rgba(24, 160, 88, 0.2);
+  box-shadow: 0 0 0 3px rgba(24, 160, 88, 0.3);
+  transform: scale(1.02);
 }
 
-.wf-node.task { border-color: #1890ff; }
-.wf-node.condition { border-color: #fa8c16; }
-.wf-node.wait { border-color: #8c8c8c; }
-.wf-node.notification { border-color: #722ed1; }
-.wf-node.and { border-color: #13c2c2; }
-.wf-node.or { border-color: #eb2f96; }
-.wf-node.start { border-color: #52c41a; background: #f6ffed; }
-.wf-node.end { border-color: #ff4d4f; background: #fff1f0; }
+.wf-node.task { 
+  border-color: #1890ff;
+  background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
+}
+.wf-node.condition { 
+  border-color: #fa8c16;
+  background: linear-gradient(135deg, #ffe3e3 0%, #fff 100%);
+}
+.wf-node.wait { 
+  border-color: #8c8c8c;
+  background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
+}
+.wf-node.notification { 
+  border-color: #722ed1;
+  background: linear-gradient(135deg, #e8d4f8 0%, #fff 100%);
+}
+.wf-node.and { 
+  border-color: #13c2c2;
+  background: linear-gradient(135deg, #d4f8e8 0%, #fff 100%);
+}
+.wf-node.or { 
+  border-color: #eb2f96;
+  background: linear-gradient(135deg, #f8e8d4 0%, #fff 100%);
+}
+.wf-node.start { 
+  border-color: #52c41a; 
+  background: linear-gradient(135deg, #e6fffa 0%, #fff 100%);
+}
+.wf-node.end { 
+  border-color: #ff4d4f; 
+  background: linear-gradient(135deg, #ffe8e6 0%, #fff 100%);
+}
 
 .time-item {
   margin: 4px 0;

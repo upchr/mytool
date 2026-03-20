@@ -556,4 +556,49 @@ onMounted(async () => {
 </script>
 
 <style>
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .n-card {
+    margin: 8px;
+  }
+
+  .n-space {
+    flex-wrap: wrap;
+  }
+
+  .n-button {
+    margin-bottom: 8px;
+  }
+
+  .n-code {
+    font-size: 12px;
+  }
+
+  .n-card[style*="height:60vh"] {
+    height: 40vh !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .n-card {
+    margin: 4px;
+  }
+
+  .n-button {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+
+  .n-code {
+    font-size: 11px;
+  }
+
+  .n-card[style*="height:60vh"] {
+    height: 35vh !important;
+  }
+
+  .n-alert {
+    font-size: 12px;
+  }
+}
 </style>

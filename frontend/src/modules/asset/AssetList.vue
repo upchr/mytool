@@ -1,9 +1,19 @@
 <template>
   <n-card title="固定资产管理">
+    <template #header-extra>
+      <n-space align="center">
+        <n-tag type="info" size="small">{{ stats.total || 0 }} 个资产</n-tag>
+        <n-tag type="success" size="small">¥{{ (stats.total_value || 0).toLocaleString() }}</n-tag>
+      </n-space>
+    </template>
+    
     <!-- 顶部统计卡片 -->
     <n-grid :x-gap="16" :y-gap="16" :cols="4" style="margin-bottom: 16px">
       <n-gi>
         <n-statistic label="总资产数量" :value="stats.total || 0">
+          <template #prefix>
+            <n-icon size="18" color="#2080f0"><CubeOutline /></n-icon>
+          </template>
           <template #suffix>
             <span style="font-size: 14px; color: #909399">件</span>
           </template>
@@ -11,7 +21,12 @@
       </n-gi>
       <n-gi>
         <n-statistic label="总资产价值" :value="stats.total_value || 0">
-          <template #prefix>¥</template>
+          <template #prefix>
+            <n-space align="center" :size="4">
+              <n-icon size="18" color="#18a058"><CashOutline /></n-icon>
+              <span>¥</span>
+            </n-space>
+          </template>
           <template #suffix>
             <span style="font-size: 14px; color: #909399">元</span>
           </template>
@@ -19,7 +34,12 @@
       </n-gi>
       <n-gi>
         <n-statistic label="日均成本总和" :value="stats.daily_cost_sum || 0">
-          <template #prefix>¥</template>
+          <template #prefix>
+            <n-space align="center" :size="4">
+              <n-icon size="18" color="#f0a020"><TrendingUpOutline /></n-icon>
+              <span>¥</span>
+            </n-space>
+          </template>
           <template #suffix>
             <span style="font-size: 14px; color: #909399">元/天</span>
           </template>
@@ -27,6 +47,9 @@
       </n-gi>
       <n-gi>
         <n-statistic label="已报废资产" :value="stats.scrapped || 0">
+          <template #prefix>
+            <n-icon size="18" color="#d03050"><TrashOutline /></n-icon>
+          </template>
           <template #suffix>
             <span style="font-size: 14px; color: #909399">件</span>
           </template>
@@ -37,6 +60,9 @@
     <!-- 图表展示 -->
     <n-space vertical style="margin-bottom: 16px">
       <n-card size="small" title="资产类别分布">
+        <template #header-extra>
+          <n-tag type="info" size="small">饼图</n-tag>
+        </template>
         <n-spin :show="chartLoading">
           <div ref="categoryChartRef" style="height: 300px"></div>
           <n-empty v-if="!chartLoading && !categoryChart" description="暂无数据" style="height: 300px" />
@@ -45,6 +71,9 @@
       <n-grid :x-gap="16" :cols="2">
         <n-gi>
           <n-card size="small" title="年度购买趋势">
+            <template #header-extra>
+              <n-tag type="info" size="small">柱状图</n-tag>
+            </template>
             <n-spin :show="chartLoading">
               <div ref="yearTrendChartRef" style="height: 300px"></div>
               <n-empty v-if="!chartLoading && !yearTrendChart" description="暂无数据" style="height: 300px" />
@@ -53,6 +82,9 @@
         </n-gi>
         <n-gi>
           <n-card size="small" title="价值排行榜">
+            <template #header-extra>
+              <n-tag type="warning" size="small">TOP 10</n-tag>
+            </template>
             <n-spin :show="loading">
               <n-list bordered style="max-height: 300px; overflow-y: auto">
                 <n-list-item v-for="(item, index) in topValueAssets" :key="item.id">
@@ -106,7 +138,12 @@
             :options="statusOptions"
             @update:value="loadAssets"
         />
-        <n-button @click="resetFilters">重置</n-button>
+        <n-button quaternary @click="resetFilters">
+          <template #icon>
+            <n-icon><RefreshOutline /></n-icon>
+          </template>
+          重置
+        </n-button>
       </n-space>
       <n-space>
         <n-button type="primary" @click="handleAdd">
@@ -187,7 +224,17 @@
 <script setup>
 import {h, onMounted, ref, reactive, computed, nextTick} from "vue"
 import {NButton, NTag, NSpace, NInput, NSelect, NStatistic, NGrid, NGi, NList, NListItem, NEmpty} from "naive-ui"
-import {AddOutline, TrashOutline, SearchOutline, StopCircleOutline} from "@vicons/ionicons5"
+import {
+  AddOutline, 
+  TrashOutline, 
+  SearchOutline, 
+  StopCircleOutline,
+  RefreshOutline,
+  CubeOutline,
+  CashOutline,
+  TrendingUpOutline,
+  CreateOutline
+} from "@vicons/ionicons5"
 import DialogForm from "@/components/DialogForm.vue"
 import * as assetApi from "@/api/asset"
 import * as echarts from 'echarts'
@@ -356,7 +403,7 @@ const columns = [
   {
     title: "操作",
     key: "actions",
-    width: 180,
+    width: 200,
     fixed: "right",
     render(row) {
       return h(NSpace, {size: 'small'}, {
@@ -366,21 +413,30 @@ const columns = [
             tertiary: true,
             size: "small",
             onClick: () => handleEdit(row)
-          }, {default: () => "编辑"}),
+          }, {
+            icon: () => h(CreateOutline),
+            default: () => "编辑"
+          }),
           row.status === 'active' ? h(NButton, {
             strong: true,
             tertiary: true,
             size: "small",
             type: "warning",
             onClick: () => handleScrap(row)
-          }, {default: () => "报废"}) : null,
+          }, {
+            icon: () => h(StopCircleOutline),
+            default: () => "报废"
+          }) : null,
           h(NButton, {
             strong: true,
             tertiary: true,
             size: "small",
             type: "error",
             onClick: () => handleDelete(row)
-          }, {default: () => "删除"})
+          }, {
+            icon: () => h(TrashOutline),
+            default: () => "删除"
+          })
         ]
       })
     }

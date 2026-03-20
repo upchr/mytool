@@ -171,3 +171,41 @@ const saveAndClose = (data) => {
   showDialog.value = false
 }
 </script>
+
+<style scoped>
+/* 移动端适配 */
+@media (max-width: 768px) {
+  div[style*="padding: 20px"] {
+    padding: 10px !important;
+  }
+
+  h2 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  .n-space {
+    flex-wrap: wrap;
+  }
+
+  .n-button {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="padding: 20px"] {
+    padding: 5px !important;
+  }
+
+  h2 {
+    font-size: 16px;
+  }
+
+  .n-button {
+    font-size: 13px;
+    padding: 8px 12px;
+  }
+}
+</style>
