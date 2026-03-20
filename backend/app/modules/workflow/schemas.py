@@ -31,12 +31,10 @@ class WorkflowBase(BaseModel):
     workflow_id: str = Field(..., description="工作流唯一标识", min_length=1, max_length=100)
     name: str = Field(..., description="工作流名称", min_length=1, max_length=100)
     description: Optional[str] = Field(None, description="工作流描述")
-    node_id: int = Field(..., description="所属节点ID", gt=0)
     schedule: Optional[str] = Field(None, description="Cron表达式")
     nodes: List[Dict[str, Any]] = Field(default_factory=list, description="节点定义列表")
     edges: List[Dict[str, Any]] = Field(default_factory=list, description="边定义列表")
     is_active: bool = Field(True, description="是否启用")
-    current_version: int = Field(1, description="当前版本号")
     default_version: int = Field(1, description="默认版本号")
 
 
@@ -153,7 +151,6 @@ class WorkflowRestoreRequest(BaseModel):
 
 class WorkflowQueryParams(BaseModel):
     """工作流查询参数"""
-    node_id: Optional[int] = Field(None, description="节点ID")
     is_active: Optional[bool] = Field(None, description="是否启用")
     keyword: Optional[str] = Field(None, description="关键词搜索")
     page: int = Field(1, ge=1, description="页码")

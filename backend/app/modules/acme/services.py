@@ -336,7 +336,15 @@ class ApplicationService:
             return True
 
     def execute(self, application_id: int, triggered_by: str = "manual") -> Dict[str, Any]:
-        """手动执行证书申请"""
+        """执行证书申请
+        
+        Args:
+            application_id: 申请ID
+            triggered_by: 触发方式（manual/schedule/workflow）
+        
+        Returns:
+            工作流调用时返回执行结果，否则返回执行ID
+        """
         # 检查10分钟内是否有正在处理的申请
         if not self.check_and_clean_stuck_processing(application_id):
             raise ValueError("上一个申请正在执行中，请稍后再试（10分钟内只能执行一次）")
@@ -350,6 +358,126 @@ class ApplicationService:
         if not dns_auth or not dns_auth['is_active']:
             raise ValueError("关联的DNS授权无效或已禁用")
 
+        # 工作流调用时，同步执行；否则后台执行
+        if triggered_by == "workflow":
+            # 同步执行模式：直接执行并等待完成
+            return self._execute_sync(application_id, application, dns_auth, triggered_by)
+        else:
+            # 后台执行模式：在后台线程中执行
+            return self._execute_async(application_id, application, dns_auth, triggered_by)
+
+    def _execute_sync(self, application_id: int, application: dict, dns_auth: dict, triggered_by: str) -> Dict[str, Any]:
+        """同步执行证书申请（用于工作流）"""
+        # 创建执行记录
+        execution_id = self.execution_repo.start_execution(application_id, triggered_by)
+        
+        cert_data = None
+        error_msg = None
+        cert = None
+        key = None
+        
+        try:
+            logger.info(f"开始申请证书: {application['domains']}")
+            try:
+                from app.modules.acme.client import issue_certificate
+                cert, key = issue_certificate(
+                    domains=application['domains'],
+                    email=application['email'],
+                    secret_id=dns_auth['secret_id'],
+                    secret_key=dns_auth['secret_key'],
+                    dns_provider=dns_auth['provider']
+                )
+                logger.info(f"申请证书成功: {cert}, {key}")
+                success = True
+            except Exception as e:
+                success = False
+                error_msg = str(e)
+                logger.error(f"申请证书失败: {error_msg}")
+
+            dns_auth_repo = DNSAuthRepository(self.repo.engine)
+            if success:
+                # 创建证书记录
+                cert_data = {
+                    "cert_path": cert,
+                    "key_path": key,
+                    "application_id": application_id,
+                    "execution_id": execution_id,
+                    "domains": json.dumps(application['domains']),
+                    "algorithm": application['algorithm'],
+                    "issuer": "Let's Encrypt",
+                    "not_before": datetime.now(),
+                    "not_after": datetime.now() + timedelta(days=90),
+                    "is_active": True
+                }
+                cert_id = self.cert_repo.create(cert_data)
+
+                # 完成执行
+                self.execution_repo.complete_execution(
+                    execution_id,
+                    success=True,
+                    cert_id=cert_id,
+                    log="证书申请成功"
+                )
+
+                # 更新申请状态
+                self.repo.update_status(application_id, "completed")
+
+                # 更新DNS授权统计
+                dns_auth_repo.update_stats(application['dns_auth_id'], True)
+
+                # 停用旧证书
+                self.cert_repo.deactivate_old_certificates(application_id, cert_id)
+
+                # 上传证书到节点
+                try:
+                    from app.modules.node.services import get_node
+                    node_dict = get_node(engine, application['node_id'])
+                    from app.modules.node.schemas import NodeRead
+                    from app.core.sh.ssh_client import SSHClient
+                    ssh = SSHClient(NodeRead(**node_dict))
+                    ssh.connect()
+                    ssh.upload_file(cert, application['crt_path'])
+                    ssh.upload_file(key, application['key_path'])
+                    logger.info(f"证书上传成功: {application['crt_path']}")
+                    ssh.close()
+                except Exception as e:
+                    logger.error(f"证书上传失败: {str(e)}")
+
+                # 更新下次续期时间
+                self.repo.update_next_renew(application_id, cert_data['not_after'])
+
+            else:
+                self.execution_repo.fail_execution(execution_id, f"申请证书失败: {error_msg}")
+                self.repo.update_status(application_id, "failed")
+                dns_auth_repo.update_stats(application['dns_auth_id'], False)
+
+            # 发送通知
+            self._send_notification(
+                application=application,
+                success=success,
+                cert_data=cert_data,
+                error_msg=error_msg
+            )
+
+            # 返回执行结果
+            return {
+                "status": "success" if success else "failed",
+                "output": "证书申请成功" if success else "证书申请失败",
+                "error": error_msg if not success else ""
+            }
+
+        except Exception as e:
+            logger.error(f"证书申请失败: {str(e)}")
+            self.execution_repo.fail_execution(execution_id, str(e))
+            self.repo.update_status(application_id, "failed")
+            return {
+                "status": "failed",
+                "output": "",
+                "error": str(e)
+            }
+
+    def _execute_async(self, application_id: int, application: dict, dns_auth: dict, triggered_by: str) -> Dict[str, Any]:
+        """异步执行证书申请（用于手动执行和调度）"""
         # 创建执行记录
         execution_id = self.execution_repo.start_execution(application_id, triggered_by)
 
@@ -362,20 +490,26 @@ class ApplicationService:
                 logger.info(f"开始申请证书: {application['domains']}")
                 try:
                     from app.modules.acme.client import issue_certificate
-                    cert, key = issue_certificate(domains=application['domains'],email=application['email'],secret_id=dns_auth['secret_id'],secret_key=dns_auth['secret_key'],dns_provider=dns_auth['provider'])
+                    cert, key = issue_certificate(
+                        domains=application['domains'],
+                        email=application['email'],
+                        secret_id=dns_auth['secret_id'],
+                        secret_key=dns_auth['secret_key'],
+                        dns_provider=dns_auth['provider']
+                    )
                     logger.info(f"申请证书成功: {cert}, {key}")
                     success = True
                 except Exception as e:
                     success = False
-                    error_msg=str(e)
+                    error_msg = str(e)
                     logger.error(f"申请证书失败: {error_msg}")
 
                 dns_auth_repo = DNSAuthRepository(self.repo.engine)
                 if success:
                     # 创建证书记录
                     cert_data = {
-                        "cert_path":cert,
-                        "key_path":key,
+                        "cert_path": cert,
+                        "key_path": key,
                         "application_id": application_id,
                         "execution_id": execution_id,
                         "domains": json.dumps(application['domains']),
@@ -420,7 +554,6 @@ class ApplicationService:
                             # 上传失败不影响主流程，只记录日志
                     threading.Thread(target=upload_task, daemon=True).start()
 
-
                     # 更新下次续期时间
                     self.repo.update_next_renew(application_id, cert_data['not_after'])
 
@@ -436,17 +569,13 @@ class ApplicationService:
                     cert_data=cert_data,
                     error_msg=error_msg
                 )
-                # return {
-                #     "execution_id": execution_id,
-                #     "cert_id": cert_id,
-                #     "success": success
-                # }
 
             except Exception as e:
                 logger.error(f"证书申请失败: {str(e)}")
                 self.execution_repo.fail_execution(execution_id, str(e))
                 self.repo.update_status(application_id, "failed")
                 raise
+        
         threading.Thread(target=run_task, daemon=True).start()
 
         return {

@@ -40,7 +40,6 @@ async def create_workflow(
 
 @router.get("", response_model=BaseResponse[schemas.WorkflowListResponse])
 async def list_workflows(
-    node_id: Optional[int] = None,
     is_active: Optional[bool] = None,
     keyword: Optional[str] = None,
     page: int = Query(1, ge=1),
@@ -50,7 +49,6 @@ async def list_workflows(
     """获取工作流列表"""
     try:
         params = schemas.WorkflowQueryParams(
-            node_id=node_id,
             is_active=is_active,
             keyword=keyword,
             page=page,
@@ -205,7 +203,7 @@ async def delete_workflow(
     workflow_id: str,
     engine=Depends(get_engine)
 ):
-    """删除工作流（软删除）"""
+    """删除工作流（硬删除）"""
     try:
         service = WorkflowService(engine)
         existing = service.get_by_id(workflow_id)

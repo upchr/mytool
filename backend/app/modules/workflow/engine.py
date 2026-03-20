@@ -10,7 +10,7 @@ import re
 import json
 from typing import Dict, Any, Optional
 from datetime import datetime
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 
 from app.modules.workflow.models import (
     workflows_table,
@@ -192,25 +192,96 @@ class WorkflowEngine:
         # 标记节点为已执行
         state["executed_nodes"].add(node_id)
         
-        # 开始节点不需要执行记录
+        # 开始节点
         if node_type == "start":
             logger.info(f"开始节点: {node_name}")
+            
+            # 创建节点执行记录
+            node_execution_id = await self._create_node_execution(
+                execution_id, node_id, node_name, node_type
+            )
+            
+            # 获取后置节点
+            next_nodes = []
+            for edge in all_edges:
+                if edge.get("source") == node_id:
+                    next_nodes.append(edge.get("target"))
+            
+            # 记录节点开始执行
+            await self._add_node_log(node_execution_id, f"节点开始执行: {node_name} ({node_type})", "info")
+            await self._add_node_log(node_execution_id, f"前置节点: 无", "info")
+            await self._add_node_log(node_execution_id, f"后置节点: {', '.join(next_nodes) if next_nodes else '无'}", "info")
+            
+            # 更新节点状态为成功
+            await self._update_node_execution(node_execution_id, "success", output="开始节点")
+            
             # 执行后续节点
-            await self._execute_next_nodes(execution_id, node_id, "success", state, all_nodes, all_edges)
+            await self._execute_next_nodes(execution_id, node_id, "success", state, all_nodes, all_edges, node_execution_id)
             return
         
         # 结束节点
         if node_type == "end":
             logger.info(f"结束节点: {node_name}")
+            
+            # 创建节点执行记录
+            node_execution_id = await self._create_node_execution(
+                execution_id, node_id, node_name, node_type
+            )
+            
+            # 获取前置节点
+            prev_nodes = []
+            for edge in all_edges:
+                if edge.get("target") == node_id:
+                    prev_nodes.append(edge.get("source"))
+            
+            # 记录节点开始执行
+            await self._add_node_log(node_execution_id, f"节点开始执行: {node_name} ({node_type})", "info")
+            await self._add_node_log(node_execution_id, f"前置节点: {', '.join(prev_nodes) if prev_nodes else '无'}", "info")
+            await self._add_node_log(node_execution_id, f"后置节点: 无", "info")
+            
+            # 更新节点状态为成功
+            await self._update_node_execution(node_execution_id, "success", output="结束节点")
             return
         
-        # AND 和 OR 节点不需要执行记录
+        # AND 和 OR 节点需要创建执行记录来记录日志
         if node_type in ["and", "or"]:
+            # 创建节点执行记录
+            node_execution_id = await self._create_node_execution(
+                execution_id, node_id, node_name, node_type
+            )
+            
+            # 获取前置节点和后置节点
+            prev_nodes = []
+            next_nodes = []
+            for edge in all_edges:
+                if edge.get("target") == node_id:
+                    prev_nodes.append(edge.get("source"))
+                elif edge.get("source") == node_id:
+                    next_nodes.append(edge.get("target"))
+            
+            # 记录节点开始执行
+            await self._add_node_log(node_execution_id, f"节点开始执行: {node_name} ({node_type})", "info")
+            await self._add_node_log(node_execution_id, f"前置节点: {', '.join(prev_nodes) if prev_nodes else '无'}", "info")
+            await self._add_node_log(node_execution_id, f"后置节点: {', '.join(next_nodes) if next_nodes else '无'}", "info")
+            
+            # 更新节点状态为运行中
+            await self._update_node_execution(node_execution_id, "running")
+            
             # 根据节点类型执行
             if node_type == "and":
-                result = await self._execute_and_node(node, config, state)
+                result = await self._execute_and_node(node, config, state, node_execution_id, all_edges)
             elif node_type == "or":
-                result = await self._execute_or_node(node, config, state)
+                result = await self._execute_or_node(node, config, state, node_execution_id, all_edges)
+            
+            # 更新节点状态
+            await self._update_node_execution(
+                node_execution_id,
+                result.get("status", "success"),
+                output=result.get("output")
+            )
+            
+            # 记录节点完成
+            await self._add_node_log(node_execution_id, f"节点执行成功: {result.get('output', '')}", "success")
             
             # 更新状态
             state["outputs"][node_id] = result
@@ -218,13 +289,27 @@ class WorkflowEngine:
             
             # 执行后续节点
             await self._execute_next_nodes(execution_id, node_id, result.get("status", "success"), 
-                                           state, all_nodes, all_edges)
+                                           state, all_nodes, all_edges, node_execution_id)
             return
         
         # 创建节点执行记录
         node_execution_id = await self._create_node_execution(
             execution_id, node_id, node_name, node_type
         )
+        
+        # 获取前置节点和后置节点
+        prev_nodes = []
+        next_nodes = []
+        for edge in all_edges:
+            if edge.get("target") == node_id:
+                prev_nodes.append(edge.get("source"))
+            elif edge.get("source") == node_id:
+                next_nodes.append(edge.get("target"))
+        
+        # 记录节点开始执行
+        await self._add_node_log(node_execution_id, f"节点开始执行: {node_name} ({node_type})", "info")
+        await self._add_node_log(node_execution_id, f"前置节点: {', '.join(prev_nodes) if prev_nodes else '无'}", "info")
+        await self._add_node_log(node_execution_id, f"后置节点: {', '.join(next_nodes) if next_nodes else '无'}", "info")
         
         # 更新节点状态为运行中
         await self._update_node_execution(node_execution_id, "running")
@@ -250,6 +335,12 @@ class WorkflowEngine:
                 error=result.get("error")
             )
             
+            # 记录节点完成
+            if result.get("status") == "success":
+                await self._add_node_log(node_execution_id, f"节点执行成功: {result.get('output', '')}", "success")
+            else:
+                await self._add_node_log(node_execution_id, f"节点执行失败: {result.get('error', '')}", "failed")
+            
             # 更新状态
             state["outputs"][node_id] = result
             logger.info(f"节点执行完成: {node_id}, 状态: {result.get('status')}, 结果: {result}")
@@ -261,33 +352,46 @@ class WorkflowEngine:
         except Exception as e:
             logger.error(f"节点执行失败: {node_name}, error: {e}")
             await self._update_node_execution(node_execution_id, "failed", error=str(e))
+            await self._add_node_log(node_execution_id, f"节点执行异常: {str(e)}", "error")
             state["outputs"][node_id] = {"status": "failed", "error": str(e)}
             logger.info(f"节点执行异常: {node_id}, 状态: failed, 错误: {str(e)}")
     
     async def _execute_task_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
         """执行任务节点"""
         job_id = config.get("job_id")
+        job_type = config.get("job_type", "cron")  # 默认为 cron 任务
         node_id = node.get("id")
         if not job_id:
             return {"status": "failed", "error": "未配置任务ID"}
         
         try:
-            # 调用 cron 模块执行任务，传递输入参数和输出参数
-            from app.modules.cron.services import execute_job
-            
             # 获取输入参数和输出参数
             inputs = state.get("inputs", {})
             outputs = state.get("outputs", {})
             
-            logger.info(f"执行任务节点: {node_id}, job_id: {job_id}")
+            logger.info(f"执行任务节点: {node_id}, job_id: {job_id}, job_type: {job_type}")
             logger.info(f"任务节点输入参数: {inputs}")
             logger.info(f"任务节点输出参数: {outputs}")
             
-            loop = asyncio.get_running_loop()
-            result = await loop.run_in_executor(
-                None,
-                lambda: execute_job(self.engine, int(job_id), "workflow", inputs, outputs)
-            )
+            if job_type == "cron":
+                # 执行 cron 任务
+                from app.modules.cron.services import execute_job
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: execute_job(self.engine, int(job_id), "workflow", inputs, outputs)
+                )
+            elif job_type == "acme":
+                # 执行 acme 证书申请任务
+                from app.modules.acme.services import ApplicationService
+                acme_service = ApplicationService(self.engine)
+                loop = asyncio.get_running_loop()
+                result = await loop.run_in_executor(
+                    None,
+                    lambda: acme_service.execute(int(job_id), "workflow")
+                )
+            else:
+                return {"status": "failed", "error": f"不支持的任务类型: {job_type}"}
             
             logger.info(f"任务节点执行结果: {node_id}, 结果: {result}")
             
@@ -314,7 +418,7 @@ class WorkflowEngine:
             "condition_result": result
         }
     
-    async def _execute_and_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
+    async def _execute_and_node(self, node: Dict, config: Dict, state: Dict, node_execution_id: int = None, all_edges: list = None) -> Dict:
         """执行 AND 节点"""
         node_id = node.get("id")
         
@@ -322,18 +426,26 @@ class WorkflowEngine:
         # 它的作用是等待所有前置节点完成
         logger.info(f"AND 节点执行: node_id={node_id}")
         
+        if node_execution_id:
+            # 记录 AND 节点的执行逻辑
+            await self._add_node_log(node_execution_id, f"AND 节点等待所有前置节点完成", "info")
+        
         return {
             "status": "success",
             "output": "AND 节点执行完成"
         }
     
-    async def _execute_or_node(self, node: Dict, config: Dict, state: Dict) -> Dict:
+    async def _execute_or_node(self, node: Dict, config: Dict, state: Dict, node_execution_id: int = None, all_edges: list = None) -> Dict:
         """执行 OR 节点"""
         node_id = node.get("id")
         
         # OR 节点只是一个控制节点，不执行任何操作
         # 它的作用是任一前置节点完成即执行
         logger.info(f"OR 节点执行: node_id={node_id}")
+        
+        if node_execution_id:
+            # 记录 OR 节点的执行逻辑
+            await self._add_node_log(node_execution_id, f"OR 节点任一前置节点完成即执行", "info")
         
         return {
             "status": "success",
@@ -378,8 +490,19 @@ class WorkflowEngine:
     
     async def _execute_next_nodes(self, execution_id: int, current_node_id: str, 
                                    status: str, state: Dict, 
-                                   all_nodes: list, all_edges: list):
-        """执行后续节点"""
+                                   all_nodes: list, all_edges: list, 
+                                   current_node_execution_id: int = None):
+        """执行后续节点
+        
+        Args:
+            execution_id: 执行记录ID
+            current_node_id: 当前节点ID
+            status: 当前节点状态
+            state: 当前状态
+            all_nodes: 所有节点
+            all_edges: 所有边
+            current_node_execution_id: 当前节点执行记录ID（用于记录日志）
+        """
         # 找到匹配条件的出边
         next_node_ids = []
         for edge in all_edges:
@@ -419,6 +542,25 @@ class WorkflowEngine:
                     if target and target not in next_node_ids:
                         next_node_ids.append(target)
                         logger.info(f"执行后续节点: {target}")
+                        
+                        # 记录路由日志
+                        if current_node_execution_id:
+                            # 获取目标节点的后置节点
+                            target_next_nodes = []
+                            for e in all_edges:
+                                if e.get("source") == target:
+                                    target_next_nodes.append(e.get("target"))
+                            
+                            await self._add_node_log(
+                                current_node_execution_id,
+                                f"路由到节点: {target} (条件: {edge_condition})",
+                                "route"
+                            )
+                            await self._add_node_log(
+                                current_node_execution_id,
+                                f"目标节点后置节点: {', '.join(target_next_nodes) if target_next_nodes else '无'}",
+                                "route"
+                            )
         
         # 检查所有前置节点是否都已完成
         node_map = {n.get("id"): n for n in all_nodes}
@@ -439,11 +581,20 @@ class WorkflowEngine:
                 else:
                     logger.info(f"节点 {next_node_id} 任一前置节点完成即执行")
         
-        # 执行后续节点
+        # 执行后续节点（并行执行）
+        tasks = []
         for next_node_id in next_node_ids:
             next_node = node_map.get(next_node_id)
             if next_node:
-                await self._execute_node(execution_id, next_node, state, all_nodes, all_edges)
+                # 创建异步任务，不立即 await
+                task = asyncio.create_task(
+                    self._execute_node(execution_id, next_node, state, all_nodes, all_edges)
+                )
+                tasks.append(task)
+        
+        # 等待所有任务完成
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
     
     async def _check_prerequisites_completed(self, node_id: str, state: Dict, all_edges: list) -> bool:
         """检查节点的前置节点是否都已完成"""
@@ -457,6 +608,13 @@ class WorkflowEngine:
         for prereq_id in prerequisite_ids:
             if prereq_id not in state["outputs"]:
                 logger.info(f"前置节点 {prereq_id} 还未完成")
+                return False
+            
+            # 检查前置节点的执行状态是否为 success
+            prereq_output = state["outputs"].get(prereq_id, {})
+            prereq_status = prereq_output.get("status") if isinstance(prereq_output, dict) else None
+            if prereq_status != "success":
+                logger.info(f"前置节点 {prereq_id} 状态为 {prereq_status}，不是 success，等待完成")
                 return False
         
         logger.info(f"节点 {node_id} 的所有前置节点都已完成: {prerequisite_ids}")
@@ -539,6 +697,47 @@ class WorkflowEngine:
         with self.engine.connect() as conn:
             conn.execute(query)
             conn.commit()
+    
+    async def _add_node_log(self, node_execution_id: int, message: str, log_type: str = "info"):
+        """添加节点执行日志
+        
+        Args:
+            node_execution_id: 节点执行记录ID
+            message: 日志消息
+            log_type: 日志类型（info/warning/error/success/failed/condition/route）
+        """
+        now = datetime.now()
+        log_entry = {
+            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+            "message": message,
+            "type": log_type
+        }
+        
+        # 先获取现有的日志
+        query = select(workflow_node_executions_table.c.logs).where(
+            workflow_node_executions_table.c.id == node_execution_id
+        )
+        
+        try:
+            with self.engine.connect() as conn:
+                result = conn.execute(query)
+                row = result.first()
+                existing_logs = list(row._mapping.get("logs", [])) if row else []
+                
+                # 添加新日志
+                existing_logs.append(log_entry)
+                
+                # 更新日志
+                update_query = (
+                    update(workflow_node_executions_table)
+                    .where(workflow_node_executions_table.c.id == node_execution_id)
+                    .values(logs=existing_logs)
+                )
+                conn.execute(update_query)
+                conn.commit()
+        except Exception as e:
+            logger.error(f"添加节点日志失败: {e}")
+
 
 
 # ========== 同步执行入口 ==========

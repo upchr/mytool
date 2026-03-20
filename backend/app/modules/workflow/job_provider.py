@@ -22,10 +22,10 @@ class WorkflowJobProvider(JobProvider):
     def get_enabled_jobs(self) -> List[JobInfo]:
         """获取所有启用的工作流（有 schedule 的）"""
         jobs = []
-        db_workflows = services.WorkflowService(engine).get_all()
+        db_workflows = services.WorkflowService(engine).get_all_active()
         
         for workflow in db_workflows:
-            if workflow['is_active'] and workflow.get('schedule'):
+            if workflow.get('schedule'):
                 jobs.append(JobInfo(
                     job_id=str(workflow['id']),
                     name=workflow['name'],

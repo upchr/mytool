@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import select, func, update, delete, and_, or_
 
 from app.core.db.utils.query import QueryBuilder
+from app.core.scheduler import scheduler_service
 from app.modules.workflow.models import (
     workflows_table,
     workflow_executions_table,
@@ -52,15 +53,25 @@ class WorkflowRepository:
             return result.rowcount > 0
     
     def delete(self, workflow_id: str) -> bool:
-        """删除工作流（软删除）"""
+        """删除工作流（硬删除）"""
+        # 先获取工作流信息，用于从调度器移除
+        workflow = self.get_by_id(workflow_id)
+        
         query = (
-            self.table.update()
+            self.table.delete()
             .where(self.table.c.workflow_id == workflow_id)
-            .values(is_active=False, updated_at=datetime.now())
         )
         with self.engine.connect() as conn:
             result = conn.execute(query)
             conn.commit()
+            
+            # 从调度器移除
+            if workflow:
+                full_job_id = f"workflows:{workflow['id']}"
+                if full_job_id in scheduler_service.job_ids:
+                    scheduler_service.remove_job(full_job_id)
+                    logger.info(f"🗑️ 工作流已从调度器移除: {workflow['name']}")
+            
             return result.rowcount > 0
     
     def get_by_id(self, workflow_id: str) -> Optional[Dict[str, Any]]:
@@ -83,9 +94,6 @@ class WorkflowRepository:
         """获取工作流列表（分页）"""
         query = QueryBuilder(self.table)
         
-        # 默认只查询启用的
-        query.where_eq('is_active', True)
-        
         # 过滤条件
         for key, value in filters.items():
             if value is not None:
@@ -95,6 +103,12 @@ class WorkflowRepository:
                     query.where_eq(key, value)
         
         return query.paginate(self.engine, page, page_size)
+    
+    def get_all_active(self) -> List[Dict[str, Any]]:
+        query = select(self.table).where(self.table.c.is_active == True)
+        with self.engine.connect() as conn:
+            result = conn.execute(query)
+            return [dict(row._mapping) for row in result.fetchall()]
 
 
 class WorkflowService:
@@ -155,13 +169,13 @@ class WorkflowService:
         if not update_data:
             return self.repo.get_by_id(workflow_id)
         
+        # 获取当前工作流信息
+        workflow = self.repo.get_by_id(workflow_id)
+        if not workflow:
+            return None
+        
         # 如果更新了 nodes 或 edges，更新指定版本
         if "nodes" in update_data or "edges" in update_data:
-            # 获取当前工作流信息
-            workflow = self.repo.get_by_id(workflow_id)
-            if not workflow:
-                return None
-            
             # 确定要更新的版本号
             version_service = WorkflowVersionService(self.engine)
             if version_number:
@@ -196,11 +210,39 @@ class WorkflowService:
         # 如果只是更新名称或描述，直接更新工作流
         update_data["updated_at"] = datetime.now()
         self.repo.update(workflow_id, update_data)
+        
+        # 如果更新了 schedule 或 is_active，处理调度器
+        if "schedule" in update_data or "is_active" in update_data:
+            full_job_id = f"workflows:{workflow['id']}"
+            new_is_active = update_data.get("is_active", workflow.get("is_active"))
+            new_schedule = update_data.get("schedule", workflow.get("schedule"))
+            
+            # 只有当有 schedule 且 is_active 为 True 时才添加到调度器
+            if new_is_active and new_schedule:
+                # 添加到调度器
+                from app.core.scheduler.base import JobInfo
+                job_info = JobInfo(
+                    job_id=str(workflow['id']),
+                    name=workflow['name'],
+                    schedule=new_schedule,
+                    module="workflows",
+                    enabled=True,
+                    params={'workflow_id': workflow['workflow_id']},
+                    description=workflow.get('description', '')
+                )
+                scheduler_service.add_job(job_info)
+                logger.info(f"✅ 工作流已添加到调度器: {workflow['name']}")
+            else:
+                # 从调度器移除
+                if full_job_id in scheduler_service.job_ids:
+                    scheduler_service.remove_job(full_job_id)
+                    logger.info(f"🗑️ 工作流已从调度器移除: {workflow['name']}")
+        
         return self.repo.get_by_id(workflow_id)
     
     def delete(self, workflow_id: str) -> bool:
         """
-        删除工作流（软删除）
+        删除工作流（硬删除）
         
         Args:
             workflow_id: 工作流ID
@@ -235,10 +277,12 @@ class WorkflowService:
         return self.repo.get_list(
             page=params.page,
             page_size=params.page_size,
-            node_id=params.node_id,
             is_active=params.is_active,
             keyword=params.keyword
         )
+    
+    def get_all_active(self) -> List[Dict[str, Any]]:
+        return self.repo.get_all_active()
     
     def trigger(self, workflow_id: str, triggered_by: str = "manual", inputs: Optional[Dict] = None) -> int:
         """

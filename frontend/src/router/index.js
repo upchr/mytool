@@ -15,6 +15,7 @@ import AIChat from '../modules/ai-chat/AIChat_with_history.vue'
 import AIConfig from '../modules/ai-chat/AIConfig.vue'
 import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
 import WorkflowManager from '../modules/workflow/WorkflowManager.vue'
+import WorkflowExecutionLog from '../modules/workflow/WorkflowExecutionLog.vue'
 import PluginManager from '../modules/plugin/PluginManager.vue'
 import AssetList from '../modules/asset/AssetList.vue'
 import TemplateMarket from '../modules/task-template/TemplateMarket.vue'
@@ -47,6 +48,7 @@ const routes = [
     { path: '/nodes', component: NodeManager },
     { path: '/jobs', component: JobManager },
     { path: '/workflows', component: WorkflowManager },
+    { path: '/workflow-execution-log', component: WorkflowExecutionLog },
     { path: '/plugins', component: PluginManager },
     { path: '/template-market', component: TemplateMarket },
     { path: '/notify', component: NotificationSettings },

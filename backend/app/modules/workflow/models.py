@@ -24,9 +24,6 @@ workflows_table = Table(
     Column("name", String(100), nullable=False, comment ="工作流名称"),
     Column("description", Text, comment ="工作流描述"),
 
-    # 关联
-    Column("node_id", Integer, ForeignKey("nodes.id"), nullable=False, comment ="所属节点ID"),
-
     # 工作流定义
     Column("schedule", String(50), comment ="Cron表达式（定时触发）"),
     Column("nodes", JSON, default=list, comment ="节点定义列表"),
@@ -36,7 +33,6 @@ workflows_table = Table(
     Column("is_active", Boolean, default=True, comment ="是否启用"),
 
     # 版本控制
-    Column("current_version", Integer, default=1, comment ="当前版本号"),
     Column("default_version", Integer, default=1, comment ="默认版本号"),
 
     # 时间戳
@@ -101,6 +97,9 @@ workflow_node_executions_table = Table(
     # 结果
     Column("output", Text, comment ="输出"),
     Column("error", Text, comment ="错误信息"),
+
+    # 执行日志（JSON格式，记录详细的执行过程）
+    Column("logs", JSON, default=list, comment ="执行日志：[{timestamp, message, type}]"),
 
     # 时间戳
     Column("created_at", DateTime, default=datetime.now, comment ="创建时间"),
