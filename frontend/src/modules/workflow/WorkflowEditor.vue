@@ -1,80 +1,148 @@
 <template>
   <div class="workflow-editor">
+    <!-- 横屏提示横幅（仅移动端竖屏时显示） -->
+    <div v-if="isMobile && !isLandscapeMode" class="landscape-banner">
+      <n-alert type="info" size="small" :closable="false" style="margin: 0; border-radius: 0;">
+        <template #header>
+          <n-space align="center" justify="center">
+            <n-icon :size="18"><SwapHorizontalIcon /></n-icon>
+            <n-text style="font-size: 13px;">建议旋转设备横屏编辑，体验更佳</n-text>
+            <n-button text size="tiny" @click="toggleLandscapeMode">
+              切换
+            </n-button>
+          </n-space>
+        </template>
+      </n-alert>
+    </div>
+
     <!-- 顶部工具栏 -->
     <div class="toolbar">
-      <n-space align="center">
-        <n-button quaternary @click="goBack">
-          <template #icon>
-            <n-icon><ArrowBackIcon /></n-icon>
-          </template>
-          返回列表
-        </n-button>
-        <n-divider vertical />
-        <n-input
-          v-model:value="currentWorkflowName"
-          placeholder="工作流名称"
-          style="width: 200px"
-          @update:value="onWorkflowNameChange"
-        />
-        <n-divider vertical />
-        <!-- <n-button quaternary @click="showScheduleDialog = true">
-          <template #icon>
-            <n-icon><ClockIcon /></n-icon>
-          </template>
-          定时设置
-        </n-button> -->
-        <n-divider vertical />
-        <n-button quaternary @click="handleUndo" :disabled="!canUndo">
-          <template #icon>
-            <n-icon><UndoIcon /></n-icon>
-          </template>
-          撤销
-        </n-button>
-        <n-button quaternary @click="handleRedo" :disabled="!canRedo">
-          <template #icon>
-            <n-icon><RedoIcon /></n-icon>
-          </template>
-          重做
-        </n-button>
-        <n-divider vertical />
-        <n-button type="primary" @click="handleSave" :loading="saving">
-          <template #icon>
-            <n-icon><SaveIcon /></n-icon>
-          </template>
-          保存
-        </n-button>
-        <n-button type="success" @click="handleTrigger" v-if="workflowId">
-          <template #icon>
-            <n-icon><PlayIcon /></n-icon>
-          </template>
-          执行
-        </n-button>
-        <n-divider vertical />
-        <n-button quaternary @click="zoomIn">
-          <template #icon>
-            <n-icon><AddIcon /></n-icon>
-          </template>
-          放大
-        </n-button>
-        <n-button quaternary @click="zoomOut">
-          <template #icon>
-            <n-icon><RemoveIcon /></n-icon>
-          </template>
-          缩小
-        </n-button>
-        <n-button quaternary @click="fitView">
-          <template #icon>
-            <n-icon><ExpandIcon /></n-icon>
-          </template>
-          适应
-        </n-button>
+      <n-space :vertical="isMobile" :align="isMobile ? 'start' : 'center'" style="width: 100%">
+        <!-- 第一行：返回、名称、保存、执行 -->
+        <n-space :wrap="true" :size="isMobile ? 8 : 0" style="width: 100%">
+          <n-button quaternary :size="isMobile ? 'medium' : 'small'" @click="goBack">
+            <template #icon>
+              <n-icon :size="isMobile ? 20 : 16"><ArrowBackIcon /></n-icon>
+            </template>
+            <span v-if="!isMobile">返回</span>
+          </n-button>
+          <n-divider v-if="!isMobile" vertical />
+          <n-input
+            v-model:value="currentWorkflowName"
+            placeholder="工作流名称"
+            :style="{ width: isMobile ? '150px' : '200px' }"
+            :size="isMobile ? 'medium' : 'small'"
+            @update:value="onWorkflowNameChange"
+          />
+          <n-divider v-if="!isMobile" vertical />
+          <n-space :size="isMobile ? 4 : 0">
+            <n-button 
+              quaternary 
+              :size="isMobile ? 'medium' : 'small'" 
+              @click="handleUndo" 
+              :disabled="!canUndo"
+            >
+              <template #icon>
+                <n-icon :size="isMobile ? 18 : 16"><UndoIcon /></n-icon>
+              </template>
+              <span v-if="!isMobile">撤销</span>
+            </n-button>
+            <n-button 
+              quaternary 
+              :size="isMobile ? 'medium' : 'small'" 
+              @click="handleRedo" 
+              :disabled="!canRedo"
+            >
+              <template #icon>
+                <n-icon :size="isMobile ? 18 : 16"><RedoIcon /></n-icon>
+              </template>
+              <span v-if="!isMobile">重做</span>
+            </n-button>
+          </n-space>
+          <n-divider v-if="!isMobile" vertical />
+          <n-space :size="isMobile ? 4 : 0">
+            <n-button 
+              type="primary" 
+              :size="isMobile ? 'medium' : 'small'" 
+              @click="handleSave" 
+              :loading="saving"
+            >
+              <template #icon>
+                <n-icon :size="isMobile ? 18 : 16"><SaveIcon /></n-icon>
+              </template>
+              保存
+            </n-button>
+            <n-button 
+              v-if="workflowId"
+              type="success" 
+              :size="isMobile ? 'medium' : 'small'" 
+              @click="handleTrigger"
+            >
+              <template #icon>
+                <n-icon :size="isMobile ? 18 : 16"><PlayIcon /></n-icon>
+              </template>
+              执行
+            </n-button>
+          </n-space>
+        </n-space>
+
+        <!-- 第二行：缩放控制和横屏切换（移动端显示横屏切换） -->
+        <n-space align="center" :size="isMobile ? 4 : 0">
+          <n-divider v-if="!isMobile" vertical />
+          <n-button 
+            v-if="isMobile"
+            quaternary 
+            :size="isMobile ? 'medium' : 'small'" 
+            @click="toggleLandscapeMode"
+            :type="isLandscapeMode ? 'primary' : 'default'"
+          >
+            <template #icon>
+              <n-icon :size="isMobile ? 18 : 16">
+                <SwapHorizontalIcon />
+              </n-icon>
+            </template>
+            {{ isLandscapeMode ? '竖屏' : '横屏' }}
+          </n-button>
+          <n-space v-if="!isMobile" :size="0">
+            <n-button quaternary size="small" @click="zoomIn">
+              <template #icon>
+                <n-icon><AddIcon /></n-icon>
+              </template>
+              放大
+            </n-button>
+            <n-button quaternary size="small" @click="zoomOut">
+              <template #icon>
+                <n-icon><RemoveIcon /></n-icon>
+              </template>
+              缩小
+            </n-button>
+            <n-button quaternary size="small" @click="fitView">
+              <template #icon>
+                <n-icon><ExpandIcon /></n-icon>
+              </template>
+              适应
+            </n-button>
+          </n-space>
+        </n-space>
       </n-space>
     </div>
 
-    <div class="editor-body">
+    <div class="editor-body" :class="{ 'landscape-mode': isLandscapeMode }">
       <!-- 左侧节点面板 -->
-      <div class="left-panel">
-        <n-card title="节点类型" size="small">
+      <div class="left-panel" 
+           v-show="!isMobile || !leftPanelCollapsed"
+           :class="{ 'collapsed': leftPanelCollapsed, 'landscape': isLandscapeMode }">
+        <div v-if="isMobile && isLandscapeMode" class="panel-header">
+          <n-button text @click="leftPanelCollapsed = !leftPanelCollapsed" size="small">
+            <n-icon :size="16"><InformationCircleIcon /></n-icon>
+            {{ leftPanelCollapsed ? '展开' : '收起' }}
+          </n-button>
+        </div>
+        <n-card 
+          title="节点类型" 
+          :size="isMobile ? 'small' : 'small'"
+          :style="{ width: isMobile ? '100%' : 'auto' }"
+        >
           <div class="node-list">
             <div
               v-for="item in nodeTypes"
@@ -91,14 +159,17 @@
             </div>
           </div>
         </n-card>
-        <n-card size="small" style="margin-top: 12px">
+        <n-card 
+          :size="isMobile ? 'small' : 'small'" 
+          :style="{ marginTop: isMobile ? '8px' : '12px' }"
+        >
           <template #header>
             <n-space align="center">
               <n-icon color="#18a058"><InformationCircleIcon /></n-icon>
-              <n-text strong>操作提示</n-text>
+              <n-text :style="{ fontSize: isMobile ? '13px' : '14px' }" strong>操作提示</n-text>
             </n-space>
           </template>
-          <n-text depth="3" style="font-size: 12px; line-height: 1.8;">
+          <n-text depth="3" :style="{ fontSize: isMobile ? '11px' : '12px', lineHeight: 1.8 }">
             <div>📌 拖拽节点到画布</div>
             <div>🖱️ 点击选中节点</div>
             <div>⚙️ 右侧编辑属性</div>
@@ -114,7 +185,8 @@
           v-model:edges="edges"
           :min-zoom="0.2"
           :max-zoom="4"
-          fit-view-on-init
+          :fit-view-on-init="true"
+          :fit-view-options="{ padding: isMobile ? 0.4 : 0.2 }"
           @node-click="onNodeClick"
           @edge-click="onEdgeClick"
           @connect="onConnect"
@@ -122,7 +194,7 @@
           @drop="onDrop"
         >
           <Background />
-          <Controls />
+          <Controls v-if="isMobile" />
 
           <template #node-start="props">
             <div class="wf-node start" :class="{ active: selectedId === props.id }">
@@ -189,8 +261,16 @@
       </div>
 
       <!-- 右侧属性面板 -->
-      <div class="right-panel">
-        <n-card title="节点属性" size="small" v-if="selectedNode">
+      <div class="right-panel" 
+           :class="{ 'collapsed': rightPanelCollapsed, 'landscape': isLandscapeMode }"
+           v-if="selectedNode">
+        <div v-if="isMobile && isLandscapeMode" class="panel-header">
+          <n-button text @click="rightPanelCollapsed = !rightPanelCollapsed" size="small">
+            <n-icon :size="16"><InformationCircleIcon /></n-icon>
+            {{ rightPanelCollapsed ? '展开' : '收起' }}
+          </n-button>
+        </div>
+        <n-card title="节点属性" size="small">
           <n-form label-placement="top" size="small">
             <n-form-item>
               <template #label>
@@ -566,7 +646,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, h } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, h } from 'vue'
+import { useBreakpoints } from '@vueuse/core'
 import { VueFlow, useVueFlow, Position, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -585,6 +666,44 @@ import {
   TrashOutline as TrashIcon,
   CloseOutline as CloseIcon
 } from '@vicons/ionicons5'
+
+// 响应式断点
+const breakpoints = useBreakpoints({
+  mobile: 640,
+  tablet: 768,
+  laptop: 1024,
+})
+
+const isMobile = breakpoints.smaller('mobile')
+const isTablet = breakpoints.between('mobile', 'laptop')
+
+// 横屏模式
+const isLandscapeMode = ref(false)
+const leftPanelCollapsed = ref(false)
+const rightPanelCollapsed = ref(false)
+
+// 检测屏幕方向
+const checkOrientation = () => {
+  const width = window.innerWidth
+  const height = window.innerHeight
+  // 如果宽度大于高度，自动启用横屏模式
+  isLandscapeMode.value = width > height
+}
+
+// 切换横屏模式
+const toggleLandscapeMode = () => {
+  isLandscapeMode.value = !isLandscapeMode.value
+}
+
+// 监听屏幕方向变化
+onMounted(() => {
+  checkOrientation()
+  window.addEventListener('resize', checkOrientation)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkOrientation)
+})
 
 const props = defineProps({
   workflowId: String,
@@ -1238,6 +1357,11 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
   background: #f0f2f5;
 }
 
+.landscape-banner {
+  background: #e6f7ff;
+  border-bottom: 1px solid #91d5ff;
+}
+
 .toolbar {
   padding: 12px 16px;
   background: #fff;
@@ -1366,6 +1490,165 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
 
 .time-item {
   margin: 4px 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .toolbar {
+    padding: 8px 12px;
+  }
+
+  .editor-body {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px;
+    border-right: none;
+    border-bottom: 1px solid #d9d9d9;
+  }
+
+  .node-list {
+    gap: 6px;
+  }
+
+  .draggable-node {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .draggable-node .icon {
+    font-size: 18px;
+  }
+
+  .draggable-node .name {
+    font-size: 12px;
+  }
+
+  .draggable-node .desc {
+    font-size: 10px;
+  }
+
+  .canvas {
+    flex: 1;
+    min-height: 400px;
+  }
+
+  .right-panel {
+    width: 100%;
+    max-width: 100%;
+    padding: 8px;
+    border-left: none;
+    border-top: 1px solid #d9d9d9;
+  }
+
+  .wf-node {
+    padding: 6px 10px;
+    font-size: 12px;
+    min-width: 80px;
+    max-width: 140px;
+  }
+}
+
+/* 横屏模式 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .landscape-mode .editor-body {
+    flex-direction: row !important;
+  }
+
+  .landscape-mode .left-panel {
+    width: 200px !important;
+    max-width: 200px !important;
+    padding: 8px !important;
+    border-right: 1px solid #d9d9d9 !important;
+    border-bottom: none !important;
+    border-top: none !important;
+  }
+
+  .landscape-mode .left-panel.collapsed {
+    width: 50px !important;
+    max-width: 50px !important;
+  }
+
+  .landscape-mode .right-panel {
+    width: 200px !important;
+    max-width: 200px !important;
+    padding: 8px !important;
+    border-left: 1px solid #d9d9d9 !important;
+    border-top: none !important;
+  }
+
+  .landscape-mode .right-panel.collapsed {
+    width: 50px !important;
+    max-width: 50px !important;
+  }
+
+  .landscape-mode .canvas {
+    min-height: auto !important;
+  }
+
+  .landscape-mode .node-list {
+    gap: 6px;
+  }
+
+  .landscape-mode .draggable-node {
+    padding: 6px;
+  }
+
+  .landscape-mode .draggable-node .info {
+    display: block !important;
+  }
+
+  .landscape-mode .draggable-node.collapsed .info {
+    display: none !important;
+  }
+
+  .panel-header {
+    padding: 4px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .left-panel.collapsed .draggable-node {
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .left-panel.collapsed .draggable-node .icon {
+    font-size: 20px;
+  }
+
+  .right-panel.collapsed :deep(.n-card__header) {
+    padding: 8px;
+  }
+
+  .right-panel.collapsed :deep(.n-card__content) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    padding: 6px 8px;
+  }
+
+  .left-panel {
+    padding: 6px;
+  }
+
+  .draggable-node {
+    padding: 6px;
+  }
+
+  .draggable-node .icon {
+    font-size: 16px;
+  }
+
+  .canvas {
+    min-height: 350px;
+  }
 }
 </style>
 

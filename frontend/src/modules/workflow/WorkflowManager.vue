@@ -1,17 +1,29 @@
 <template>
   <div class="workflow-page">
     <!-- 列表 -->
-    <n-card v-if="!showEditor">
+    <n-card v-if="!showEditor" class="workflow-card">
       <template #header>
-        <n-space justify="space-between">
-          <n-text strong style="font-size: 18px">🔄 工作流管理</n-text>
-          <n-button type="primary" @click="handleCreate">新建工作流</n-button>
+        <n-space :vertical="isMobile" :align="isMobile ? 'start' : 'center'" style="width: 100%">
+          <n-text strong :style="{ fontSize: isMobile ? '16px' : '18px' }">🔄 工作流管理</n-text>
+          <n-button 
+            type="primary" 
+            :size="isMobile ? 'medium' : 'small'"
+            @click="handleCreate"
+            block
+          >
+            <template #icon>
+              <n-icon><CreateIcon /></n-icon>
+            </template>
+            新建工作流
+          </n-button>
         </n-space>
       </template>
 
-      <n-alert type="info" style="margin-bottom: 16px">
+      <n-alert type="info" style="margin-bottom: 16px" :closable="false">
         <template #header>什么是工作流？</template>
-        接入节点管理、任务管理、证书管理、消息通知多个模块。可以串联多个任务按顺序执行，支持条件判断、等待、通知等节点。点击「新建」进入可视化编辑器。
+        <div :style="{ fontSize: isMobile ? '12px' : '14px' }">
+          接入节点管理、任务管理、证书管理、消息通知多个模块。可以串联多个任务按顺序执行，支持条件判断、等待、通知等节点。点击「新建」进入可视化编辑器。
+        </div>
       </n-alert>
 
       <n-empty v-if="!loading && list.length === 0">
@@ -20,18 +32,30 @@
         </template>
       </n-empty>
 
-      <n-list v-else bordered>
-        <n-list-item v-for="wf in list" :key="wf.id">
+      <n-list v-else bordered class="workflow-list">
+        <n-list-item 
+          v-for="wf in list" 
+          :key="wf.id"
+          class="workflow-list-item"
+        >
           <n-thing>
             <template #header>
-              <n-space>
-                <n-text strong>{{ wf.name }}</n-text>
-                <n-tag :type="wf.is_active ? 'success' : 'error'" size="small">{{ wf.is_active ? '启用' : '禁用' }}</n-tag>
-                <n-tag v-if="wf.default_version" type="info" size="small">v{{ wf.default_version }}</n-tag>
-                <n-tag v-if="wf.schedule" type="warning" size="small">⏰ {{ wf.schedule }}</n-tag>
+              <n-space :vertical="isMobile" :size="isMobile ? 8 : 8">
+                <n-text strong :style="{ fontSize: isMobile ? '14px' : '16px' }">{{ wf.name }}</n-text>
+                <n-space :size="isMobile ? 6 : 8">
+                  <n-tag :type="wf.is_active ? 'success' : 'error'" :size="isMobile ? 'small' : 'small'">
+                    {{ wf.is_active ? '启用' : '禁用' }}
+                  </n-tag>
+                  <n-tag v-if="wf.default_version" type="info" :size="isMobile ? 'small' : 'small'">
+                    v{{ wf.default_version }}
+                  </n-tag>
+                  <n-tag v-if="wf.schedule" type="warning" :size="isMobile ? 'small' : 'small'">
+                    ⏰ {{ wf.schedule }}
+                  </n-tag>
+                </n-space>
               </n-space>
             </template>
-            <template #header-extra>
+            <template #header-extra v-if="!isMobile">
               <n-space>
                 <n-button size="small" quaternary @click="handleExecutions(wf)">
                   <template #icon>
@@ -72,9 +96,80 @@
               </n-space>
             </template>
             <template #description>
-              <n-text depth="3">{{ wf.description || '暂无描述' }}</n-text>
+              <n-text depth="3" :style="{ fontSize: isMobile ? '12px' : '14px' }">
+                {{ wf.description || '暂无描述' }}
+              </n-text>
             </template>
           </n-thing>
+
+          <!-- 移动端操作按钮 -->
+          <template #suffix v-if="isMobile">
+            <n-space vertical style="width: 100%; margin-top: 12px;">
+              <n-button 
+                size="small" 
+                type="primary" 
+                block
+                @click="handleEdit(wf)"
+              >
+                <template #icon>
+                  <n-icon><CreateIcon /></n-icon>
+                </template>
+                编辑
+              </n-button>
+              <n-space>
+                <n-button 
+                  size="small" 
+                  type="warning" 
+                  @click="handleTrigger(wf)"
+                >
+                  <template #icon>
+                    <n-icon><PlayIcon /></n-icon>
+                  </template>
+                  执行
+                </n-button>
+                <n-button 
+                  size="small" 
+                  type="info" 
+                  @click="handleExecutions(wf)"
+                >
+                  <template #icon>
+                    <n-icon><ListIcon /></n-icon>
+                  </template>
+                  记录
+                </n-button>
+              </n-space>
+              <n-space>
+                <n-button 
+                  size="small" 
+                  @click="handleVersions(wf)"
+                >
+                  <template #icon>
+                    <n-icon><GitBranchIcon /></n-icon>
+                  </template>
+                  版本
+                </n-button>
+                <n-button 
+                  size="small" 
+                  @click="handleSchedule(wf)"
+                >
+                  <template #icon>
+                    <n-icon><ClockIcon /></n-icon>
+                  </template>
+                  定时
+                </n-button>
+                <n-button 
+                  size="small" 
+                  type="error" 
+                  @click="handleDelete(wf)"
+                >
+                  <template #icon>
+                    <n-icon><TrashIcon /></n-icon>
+                  </template>
+                  删除
+                </n-button>
+              </n-space>
+            </n-space>
+          </template>
         </n-list-item>
       </n-list>
     </n-card>
@@ -93,34 +188,39 @@
     />
 
     <!-- 输入参数对话框 -->
-    <n-modal v-model:show="showInputDialog" preset="dialog" title="输入参数" style="width: 600px">
+    <n-modal 
+      v-model:show="showInputDialog" 
+      preset="dialog" 
+      title="输入参数" 
+      :style="{ width: isMobile ? '95vw' : '600px', maxWidth: isMobile ? '95vw' : '600px' }"
+    >
       <n-alert v-if="getUsedInputs().length > 0" type="success" style="margin-bottom: 12px">
         <template #header>💡 检测到工作流需要以下输入参数</template>
-        <div style="font-size: 11px; line-height: 1.6;">
-          <n-space>
+        <div :style="{ fontSize: isMobile ? '12px' : '11px', lineHeight: 1.6 }">
+          <n-space :wrap="true">
             <n-tag v-for="input in getUsedInputs()" :key="input" type="info" size="small">
               inputs.{{ input }}
             </n-tag>
           </n-space>
         </div>
-        <div style="margin-top: 8px; font-size: 10px; color: #666;">
+        <div :style="{ marginTop: '8px', fontSize: isMobile ? '11px' : '10px', color: '#666' }">
           这些参数已在下方列出，请填写对应的值
         </div>
       </n-alert>
 
-      <n-form label-placement="left" label-width="120px">
+      <n-form :label-placement="isMobile ? 'top' : 'left'" :label-width="isMobile ? 'auto' : '120px'">
         <div v-for="(param, index) in inputParamsList" :key="index" style="margin-bottom: 12px">
-          <n-space align="center">
+          <n-space :vertical="isMobile" :align="isMobile ? 'stretch' : 'center'" style="width: 100%">
             <n-input
               v-model:value="param.name"
               placeholder="参数名"
-              style="width: 150px"
+              :style="{ width: isMobile ? '100%' : '150px' }"
               :disabled="param.required"
             />
             <n-input
               v-model:value="param.value"
               placeholder="参数值"
-              style="flex: 1"
+              :style="{ flex: 1, width: isMobile ? '100%' : 'auto' }"
             />
             <n-button
               v-if="!param.required"
@@ -145,7 +245,7 @@
       </n-alert>
       <n-alert type="info" style="margin-top: 12px">
         <template #header>💡 提示</template>
-        <div style="font-size: 11px; line-height: 1.6;">
+        <div :style="{ fontSize: isMobile ? '12px' : '11px', lineHeight: 1.6 }">
           • 参数值可以是字符串、数字、布尔值或JSON对象<br>
           • 字符串值建议用引号包裹，如："active"<br>
           • 数字直接输入，如：10<br>
@@ -162,7 +262,13 @@
     </n-modal>
 
     <!-- 版本管理对话框 -->
-    <n-modal v-model:show="showVersionsDialog" preset="card" title="版本管理" style="width: 800px" @after-leave="loadList">
+    <n-modal 
+      v-model:show="showVersionsDialog" 
+      preset="card" 
+      title="版本管理" 
+      :style="{ width: isMobile ? '95vw' : '800px', maxWidth: isMobile ? '95vw' : '800px' }"
+      @after-leave="loadList"
+    >
       <template #header-extra>
         <n-space>
           <n-button type="warning" size="small" @click="handleCreateVersion">创建副本</n-button>
@@ -230,10 +336,15 @@
     </n-modal>
 
     <!-- 执行记录对话框 -->
-    <n-modal v-model:show="showExecutionsDialog" preset="card" title="📋 执行记录" style="width: 900px; max-height: 80vh;">
+    <n-modal 
+      v-model:show="showExecutionsDialog" 
+      preset="card" 
+      title="📋 执行记录" 
+      :style="{ width: isMobile ? '95vw' : '900px', maxWidth: isMobile ? '95vw' : '900px', maxHeight: isMobile ? '90vh' : '80vh' }"
+    >
       <n-empty v-if="executions.length === 0" description="暂无执行记录" />
 
-      <n-scrollbar v-else style="max-height: 60vh;">
+      <n-scrollbar v-else :style="{ maxHeight: isMobile ? '70vh' : '60vh' }">
         <n-timeline>
           <n-timeline-item
             v-for="execution in executions"
@@ -241,27 +352,30 @@
             :type="execution.status === 'success' ? 'success' : (execution.status === 'failed' ? 'error' : 'info')"
           >
             <template #header>
-              <n-space align="center">
-                <n-text strong>执行 #{{ execution.id }}</n-text>
-                <n-tag :type="execution.status === 'success' ? 'success' : (execution.status === 'failed' ? 'error' : 'info')" size="small">
+              <n-space :vertical="isMobile" align="center">
+                <n-text strong :style="{ fontSize: isMobile ? '14px' : '16px' }">执行 #{{ execution.id }}</n-text>
+                <n-tag 
+                  :type="execution.status === 'success' ? 'success' : (execution.status === 'failed' ? 'error' : 'info')" 
+                  :size="isMobile ? 'small' : 'small'"
+                >
                   {{ execution.status === 'success' ? '成功' : (execution.status === 'failed' ? '失败' : '进行中') }}
                 </n-tag>
               </n-space>
             </template>
             <div style="margin-bottom: 8px;">
-              <n-text depth="3" style="font-size: 12px;">
+              <n-text depth="3" :style="{ fontSize: isMobile ? '11px' : '12px' }">
                 触发方式: {{ execution.triggered_by === 'manual' ? '手动' : (execution.triggered_by === 'schedule' ? '定时' : '系统') }} |
                 开始时间: {{ formatTime(execution.start_time) }}
                 <span v-if="execution.end_time"> | 结束时间: {{ formatTime(execution.end_time) }}</span>
               </n-text>
             </div>
             <div v-if="execution.inputs && Object.keys(execution.inputs).length > 0" style="margin-bottom: 8px;">
-              <n-text depth="2" style="font-size: 11px;">输入参数: {{ JSON.stringify(execution.inputs) }}</n-text>
+              <n-text depth="2" :style="{ fontSize: isMobile ? '10px' : '11px' }">输入参数: {{ JSON.stringify(execution.inputs) }}</n-text>
             </div>
             <div v-if="execution.error" style="margin-bottom: 8px;">
-              <n-alert type="error" size="small">{{ execution.error }}</n-alert>
+              <n-alert type="error" :size="isMobile ? 'small' : 'small'">{{ execution.error }}</n-alert>
             </div>
-            <n-space>
+            <n-space :vertical="isMobile">
               <n-button size="small" type="info" @click="handleViewNodeLogs(execution.id)">
                 文本日志
               </n-button>
@@ -279,12 +393,22 @@
     </n-modal>
 
     <!-- 节点执行日志对话框 -->
-    <n-modal v-model:show="showNodeLogsDialog" preset="card" title="📝 节点执行日志" style="width: 1000px; max-height: 85vh;">
+    <n-modal 
+      v-model:show="showNodeLogsDialog" 
+      preset="card" 
+      title="📝 节点执行日志" 
+      :style="{ width: isMobile ? '95vw' : '1000px', maxWidth: isMobile ? '95vw' : '1000px', maxHeight: isMobile ? '90vh' : '85vh' }"
+    >
       <n-empty v-if="nodeExecutions.length === 0" description="暂无节点执行记录" />
 
-      <n-scrollbar v-else style="max-height: 70vh;">
+      <n-scrollbar v-else :style="{ maxHeight: isMobile ? '75vh' : '70vh' }">
         <n-collapse accordion>
-          <n-collapse-item v-for="nodeExec in nodeExecutions" :key="nodeExec.id" :title="`${nodeExec.node_name} (${nodeExec.node_type})`">
+          <n-collapse-item 
+            v-for="nodeExec in nodeExecutions" 
+            :key="nodeExec.id" 
+            :title="`${nodeExec.node_name} (${nodeExec.node_type})`"
+            :style="{ fontSize: isMobile ? '12px' : '14px' }"
+          >
             <template #header-extra>
               <n-tag :type="nodeExec.status === 'success' ? 'success' : (nodeExec.status === 'failed' ? 'error' : 'info')" size="small">
                 {{ nodeExec.status === 'success' ? '成功' : (nodeExec.status === 'failed' ? '失败' : '进行中') }}
@@ -355,8 +479,13 @@
     </n-modal>
 
     <!-- 定时设置对话框 -->
-    <n-modal v-model:show="showScheduleDialog" preset="card" title="⏰ 定时设置" style="width: 600px">
-      <n-form label-placement="top" size="small">
+    <n-modal 
+      v-model:show="showScheduleDialog" 
+      preset="card" 
+      title="⏰ 定时设置" 
+      :style="{ width: isMobile ? '95vw' : '600px', maxWidth: isMobile ? '95vw' : '600px' }"
+    >
+      <n-form label-placement="top" :size="isMobile ? 'medium' : 'small'">
         <n-alert type="info" size="small" style="margin-bottom: 12px">
           <template #header>💡 定时设置说明</template>
           <div style="font-size: 11px; line-height: 1.6">
@@ -429,8 +558,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useBreakpoints } from '@vueuse/core'
 import WorkflowEditor from './WorkflowEditor.vue'
 import CronGenerator from '@/components/CronGenerator.vue'
 import {
@@ -442,6 +572,16 @@ import {
   PlayOutline as PlayIcon,
   TrashOutline as TrashIcon
 } from '@vicons/ionicons5'
+
+// 响应式断点
+const breakpoints = useBreakpoints({
+  mobile: 640,
+  tablet: 768,
+  laptop: 1024,
+})
+
+const isMobile = breakpoints.smaller('mobile')
+const isTablet = breakpoints.between('mobile', 'laptop')
 
 const router = useRouter()
 const loading = ref(false)
@@ -1008,5 +1148,108 @@ onMounted(() => loadList())
 </script>
 
 <style scoped>
-.workflow-page { height: 100%; }
+.workflow-page {
+  height: 100%;
+}
+
+.workflow-card {
+  width: 100%;
+}
+
+.workflow-list {
+  border-radius: 12px;
+}
+
+.workflow-list-item {
+  transition: background-color 0.2s ease;
+}
+
+.workflow-list-item:hover {
+  background-color: var(--n-color-modal);
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .workflow-card {
+    margin: 0 -8px;
+  }
+
+  .workflow-list {
+    border-radius: 8px;
+  }
+
+  .workflow-list-item {
+    padding: 12px;
+  }
+
+  /* 模态框样式优化 */
+  :deep(.n-dialog) {
+    border-radius: 12px;
+  }
+
+  :deep(.n-card) {
+    border-radius: 12px;
+  }
+
+  /* 时间线样式优化 */
+  :deep(.n-timeline-item-content) {
+    padding-left: 12px;
+  }
+
+  /* 按钮组样式优化 */
+  :deep(.n-space) {
+    gap: 8px !important;
+  }
+
+  /* 输入框样式优化 */
+  :deep(.n-input) {
+    font-size: 14px;
+  }
+
+  /* 标签样式优化 */
+  :deep(.n-tag) {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .workflow-list-item {
+    padding: 10px;
+  }
+
+  /* 更小的按钮和标签 */
+  :deep(.n-button--small-type) {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  :deep(.n-tag--small) {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+}
+
+/* 平板适配 */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .workflow-card {
+    margin: 0 -12px;
+  }
+
+  .workflow-list-item {
+    padding: 14px;
+  }
+}
+
+/* 深色模式适配 */
+:deep(.n-card) {
+  background-color: var(--n-color-card);
+}
+
+:deep(.n-list-item) {
+  background-color: var(--n-color-card);
+}
+
+:deep(.n-list-item:hover) {
+  background-color: var(--n-color-modal);
+}
 </style>

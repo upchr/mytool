@@ -1,99 +1,105 @@
 <template>
-  <n-card title="固定资产管理">
+  <n-card title="固定资产管理" class="asset-page">
     <template #header-extra>
-      <n-space align="center">
-        <n-tag type="info" size="small">{{ stats.total || 0 }} 个资产</n-tag>
-        <n-tag type="success" size="small">¥{{ (stats.total_value || 0).toLocaleString() }}</n-tag>
+      <n-space :align="'center'" :size="isMobile ? 'small' : 'medium'">
+        <n-tag type="info" :size="isMobile ? 'tiny' : 'small'">{{ stats.total || 0 }} 个资产</n-tag>
+        <n-tag type="success" :size="isMobile ? 'tiny' : 'small'">¥{{ (stats.total_value || 0).toLocaleString() }}</n-tag>
       </n-space>
     </template>
 
     <!-- 顶部统计卡片 -->
-    <n-grid :x-gap="16" :y-gap="16" :cols="4" style="margin-bottom: 16px">
+    <n-grid
+      :x-gap="isMobile ? 8 : 16"
+      :y-gap="isMobile ? 8 : 16"
+      :cols="isMobile ? 2 : (isTablet ? 2 : 4)"
+      style="margin-bottom: 16px"
+      responsive="screen"
+    >
       <n-gi>
         <n-statistic label="总资产数量" :value="stats.total || 0">
           <template #prefix>
-            <n-icon size="18" color="#2080f0"><CubeOutline /></n-icon>
+            <n-icon :size="isMobile ? 16 : 18" color="#2080f0"><CubeOutline /></n-icon>
           </template>
           <template #suffix>
-            <span style="font-size: 14px; color: #909399">件</span>
+            <span :style="{fontSize: isMobile ? '12px' : '14px', color: '#909399'}">件</span>
           </template>
         </n-statistic>
       </n-gi>
       <n-gi>
         <n-statistic label="总资产价值" :value="stats.total_value || 0">
           <template #prefix>
-            <n-icon size="18" color="#18a058"><CashOutline /></n-icon>
+            <n-icon :size="isMobile ? 16 : 18" color="#18a058"><CashOutline /></n-icon>
           </template>
           <template #suffix>
-            <span style="font-size: 14px; color: #909399">元</span>
+            <span :style="{fontSize: isMobile ? '12px' : '14px', color: '#909399'}">元</span>
           </template>
         </n-statistic>
       </n-gi>
       <n-gi>
         <n-statistic label="日均成本总和" :value="stats.daily_cost_sum || 0">
           <template #prefix>
-              <n-icon size="18" color="#f0a020"><TrendingUpOutline /></n-icon>
+              <n-icon :size="isMobile ? 16 : 18" color="#f0a020"><TrendingUpOutline /></n-icon>
           </template>
           <template #suffix>
-            <span style="font-size: 14px; color: #909399">元/天</span>
+            <span :style="{fontSize: isMobile ? '12px' : '14px', color: '#909399'}">元/天</span>
           </template>
         </n-statistic>
       </n-gi>
       <n-gi>
         <n-statistic label="已报废资产" :value="stats.scrapped || 0">
           <template #prefix>
-            <n-icon size="18" color="#d03050"><TrashOutline /></n-icon>
+            <n-icon :size="isMobile ? 16 : 18" color="#d03050"><TrashOutline /></n-icon>
           </template>
           <template #suffix>
-            <span style="font-size: 14px; color: #909399">件</span>
+            <span :style="{fontSize: isMobile ? '12px' : '14px', color: '#909399'}">件</span>
           </template>
         </n-statistic>
       </n-gi>
     </n-grid>
 
     <!-- 图表展示 -->
-    <n-space vertical style="margin-bottom: 16px">
+    <n-space vertical :size="isMobile ? 'small' : 'medium'" style="margin-bottom: 16px">
       <n-card size="small" title="资产类别分布">
         <template #header-extra>
-          <n-tag type="info" size="small">饼图</n-tag>
+          <n-tag type="info" :size="isMobile ? 'tiny' : 'small'">饼图</n-tag>
         </template>
         <n-spin :show="chartLoading">
-          <div ref="categoryChartRef" style="height: 300px"></div>
-          <n-empty v-if="!chartLoading && !categoryChart" description="暂无数据" style="height: 300px" />
+          <div ref="categoryChartRef" :style="{height: isMobile ? '250px' : '300px'}"></div>
+          <n-empty v-if="!chartLoading && !categoryChart" description="暂无数据" :style="{height: isMobile ? '250px' : '300px'}" />
         </n-spin>
       </n-card>
-      <n-grid :x-gap="16" :cols="2">
+      <n-grid :x-gap="isMobile ? 8 : 16" :cols="isMobile ? 1 : 2">
         <n-gi>
           <n-card size="small" title="年度购买趋势">
             <template #header-extra>
-              <n-tag type="info" size="small">柱状图</n-tag>
+              <n-tag type="info" :size="isMobile ? 'tiny' : 'small'">柱状图</n-tag>
             </template>
             <n-spin :show="chartLoading">
-              <div ref="yearTrendChartRef" style="height: 300px"></div>
-              <n-empty v-if="!chartLoading && !yearTrendChart" description="暂无数据" style="height: 300px" />
+              <div ref="yearTrendChartRef" :style="{height: isMobile ? '250px' : '300px'}"></div>
+              <n-empty v-if="!chartLoading && !yearTrendChart" description="暂无数据" :style="{height: isMobile ? '250px' : '300px'}" />
             </n-spin>
           </n-card>
         </n-gi>
         <n-gi>
           <n-card size="small" title="价值排行榜">
             <template #header-extra>
-              <n-tag type="warning" size="small">TOP 10</n-tag>
+              <n-tag type="warning" :size="isMobile ? 'tiny' : 'small'">TOP 10</n-tag>
             </template>
             <n-spin :show="loading">
-              <n-list bordered style="max-height: 300px; overflow-y: auto">
+              <n-list bordered :style="{maxHeight: isMobile ? '250px' : '300px', overflowY: 'auto'}">
                 <n-list-item v-for="(item, index) in topValueAssets" :key="item.id">
                   <template #prefix>
-                    <n-tag :type="index < 3 ? 'warning' : 'default'" :bordered="false">
+                    <n-tag :type="index < 3 ? 'warning' : 'default'" :bordered="false" :size="isMobile ? 'tiny' : 'small'">
                       {{ index + 1 }}
                     </n-tag>
                   </template>
                   <n-space justify="space-between" style="width: 100%">
-                    <span>{{ item.name }}</span>
-                    <span style="color: #f0a020; font-weight: bold">¥{{ item.price.toLocaleString() }}</span>
+                    <n-text :style="{fontSize: isMobile ? '12px' : '14px'}">{{ item.name }}</n-text>
+                    <n-text :style="{color: '#f0a020', fontWeight: 'bold', fontSize: isMobile ? '12px' : '14px'}">¥{{ item.price.toLocaleString() }}</n-text>
                   </n-space>
                 </n-list-item>
                 <n-list-item v-if="topValueAssets.length === 0">
-                  <n-empty description="暂无数据" size="small" />
+                  <n-empty description="暂无数据" :size="isMobile ? 'small' : 'medium'" />
                 </n-list-item>
               </n-list>
             </n-spin>
@@ -103,72 +109,328 @@
     </n-space>
 
     <!-- 顶部工具栏 -->
-    <n-space justify="space-between" style="margin-bottom: 16px">
-      <n-space>
-        <n-input
-            v-model:value="searchKeyword"
-            placeholder="搜索名称、备注"
-            clearable
-            style="width: 200px"
-            @keyup.enter="handleSearch"
-        >
-          <template #prefix>
-            <n-icon><SearchOutline /></n-icon>
-          </template>
-        </n-input>
-        <n-select
-            v-model:value="filterCategory"
-            placeholder="类别筛选"
-            clearable
-            style="width: 120px"
-            :options="categoryOptions"
-            @update:value="loadAssets"
-        />
-        <n-select
-            v-model:value="filterStatus"
-            placeholder="状态筛选"
-            clearable
-            style="width: 100px"
-            :options="statusOptions"
-            @update:value="loadAssets"
-        />
-        <n-button quaternary @click="resetFilters">
-          <template #icon>
-            <n-icon><RefreshOutline /></n-icon>
-          </template>
-          重置
-        </n-button>
-      </n-space>
-      <n-space>
-        <n-button type="primary" @click="handleAdd">
-          <template #icon>
-            <n-icon><AddOutline /></n-icon>
-          </template>
-          添加资产
-        </n-button>
-        <n-button
-            type="error"
-            @click="deleteAll"
-            :disabled="checkedRowKeys.length === 0"
-        >
-          <template #icon>
-            <n-icon><TrashOutline /></n-icon>
-          </template>
-          批量删除 ({{ checkedRowKeys.length }})
-        </n-button>
-        <n-button
-            type="warning"
-            @click="batchScrap"
-            :disabled="checkedRowKeys.length === 0"
-        >
-          <template #icon>
-            <n-icon><StopCircleOutline /></n-icon>
-          </template>
-          批量报废 ({{ checkedRowKeys.length }})
-        </n-button>
-      </n-space>
-    </n-space>
 
+        <div class="toolbar">
+
+          <div class="toolbar-filters">
+
+            <n-space v-if="isMobile" vertical :size="'small'" :wrap="true" style="width: 100%">
+
+              <n-input
+
+                  v-model:value="searchKeyword"
+
+                  placeholder="搜索名称、备注"
+
+                  clearable
+
+                  style="width: 100%"
+
+                  size="medium"
+
+                  @keyup.enter="handleSearch"
+
+              >
+
+                <template #prefix>
+
+                  <n-icon><SearchOutline /></n-icon>
+
+                </template>
+
+              </n-input>
+
+              <n-select
+
+                  v-model:value="filterCategory"
+
+                  placeholder="类别筛选"
+
+                  clearable
+
+                  style="width: 100%"
+
+                  size="medium"
+
+                  :options="categoryOptions"
+
+                  @update:value="loadAssets"
+
+              />
+
+              <n-select
+
+                  v-model:value="filterStatus"
+
+                  placeholder="状态筛选"
+
+                  clearable
+
+                  style="width: 100%"
+
+                  size="medium"
+
+                  :options="statusOptions"
+
+                  @update:value="loadAssets"
+
+              />
+
+              <n-button
+
+                quaternary
+
+                size="medium"
+
+                @click="resetFilters"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><RefreshOutline /></n-icon>
+
+                </template>
+
+                重置
+
+              </n-button>
+
+            </n-space>
+
+            <n-space v-else :size="'medium'">
+
+              <n-input
+
+                  v-model:value="searchKeyword"
+
+                  placeholder="搜索名称、备注"
+
+                  clearable
+
+                  style="width: 200px"
+
+                  size="small"
+
+                  @keyup.enter="handleSearch"
+
+              >
+
+                <template #prefix>
+
+                  <n-icon><SearchOutline /></n-icon>
+
+                </template>
+
+              </n-input>
+
+              <n-select
+
+                  v-model:value="filterCategory"
+
+                  placeholder="类别筛选"
+
+                  clearable
+
+                  style="width: 120px"
+
+                  size="small"
+
+                  :options="categoryOptions"
+
+                  @update:value="loadAssets"
+
+              />
+
+              <n-select
+
+                  v-model:value="filterStatus"
+
+                  placeholder="状态筛选"
+
+                  clearable
+
+                  style="width: 100px"
+
+                  size="small"
+
+                  :options="statusOptions"
+
+                  @update:value="loadAssets"
+
+              />
+
+              <n-button
+
+                quaternary
+
+                size="small"
+
+                @click="resetFilters"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><RefreshOutline /></n-icon>
+
+                </template>
+
+                重置
+
+              </n-button>
+
+            </n-space>
+
+          </div>
+
+          <div class="toolbar-actions">
+
+            <n-space v-if="isMobile" :size="'small'" :wrap="true" style="width: 100%">
+
+              <n-button 
+
+                type="primary" 
+
+                size="medium"
+
+                @click="handleAdd"
+
+                style="flex: 1"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><AddOutline /></n-icon>
+
+                </template>
+
+                添加
+
+              </n-button>
+
+              <n-button
+
+                  type="error"
+
+                  size="medium"
+
+                  @click="deleteAll"
+
+                  :disabled="checkedRowKeys.length === 0"
+
+                  style="flex: 1"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><TrashOutline /></n-icon>
+
+                </template>
+
+                ({{ checkedRowKeys.length }})
+
+              </n-button>
+
+              <n-button
+
+                  type="warning"
+
+                  size="medium"
+
+                  @click="batchScrap"
+
+                  :disabled="checkedRowKeys.length === 0"
+
+                  style="flex: 1"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><StopCircleOutline /></n-icon>
+
+                </template>
+
+                ({{ checkedRowKeys.length }})
+
+              </n-button>
+
+            </n-space>
+
+            <n-space v-else :size="'medium'">
+
+              <n-button 
+
+                type="primary" 
+
+                size="small"
+
+                @click="handleAdd"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><AddOutline /></n-icon>
+
+                </template>
+
+                添加资产
+
+              </n-button>
+
+              <n-button
+
+                  type="error"
+
+                  size="small"
+
+                  @click="deleteAll"
+
+                  :disabled="checkedRowKeys.length === 0"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><TrashOutline /></n-icon>
+
+                </template>
+
+                批量删除 ({{ checkedRowKeys.length }})
+
+              </n-button>
+
+              <n-button
+
+                  type="warning"
+
+                  size="small"
+
+                  @click="batchScrap"
+
+                  :disabled="checkedRowKeys.length === 0"
+
+              >
+
+                <template #icon>
+
+                  <n-icon><StopCircleOutline /></n-icon>
+
+                </template>
+
+                批量报废 ({{ checkedRowKeys.length }})
+
+              </n-button>
+
+            </n-space>
+
+          </div>
+
+        </div>
     <!-- 数据表格 -->
     <n-data-table
         v-model:checked-row-keys="checkedRowKeys"
@@ -178,7 +440,10 @@
         :pagination="pagination"
         :bordered="false"
         :row-key="row => row.id"
-        :scroll-x="1400"
+        :scroll-x="isMobile ? 500 : 1400"
+        :size="isMobile ? 'small' : 'medium'"
+        :max-height="isMobile ? 500 : undefined"
+        :virtual-scroll="isMobile"
         remote
     />
 
@@ -200,9 +465,9 @@
     >
       <template #action="{ formData }">
         <n-space justify="end">
-          <n-button size="small" @click="handleCancel">取消</n-button>
+          <n-button :size="isMobile ? 'medium' : 'small'" @click="handleCancel">取消</n-button>
           <n-button
-              size="small"
+              :size="isMobile ? 'medium' : 'small'"
               type="success"
               :loading="submitting"
               @click="handleSubmit(formData, true)"
@@ -216,7 +481,8 @@
 </template>
 
 <script setup>
-import {h, onMounted, ref, reactive, computed, nextTick} from "vue"
+import {h, onMounted, ref, reactive, computed, nextTick, onUnmounted, watch} from "vue"
+import {useBreakpoints} from '@vueuse/core'
 import {NButton, NTag, NSpace, NInput, NSelect, NStatistic, NGrid, NGi, NList, NListItem, NEmpty} from "naive-ui"
 import {
   AddOutline,
@@ -232,6 +498,17 @@ import {
 import DialogForm from "@/components/DialogForm.vue"
 import * as assetApi from "@/api/asset"
 import * as echarts from 'echarts'
+
+// 响应式断点
+const breakpoints = useBreakpoints({
+  mobile: 640,
+  tablet: 768,
+  laptop: 1024,
+  desktop: 1280
+})
+
+const isMobile = breakpoints.smaller('mobile')
+const isTablet = breakpoints.between('mobile', 'laptop')
 
 // ========== 状态定义 ==========
 const loading = ref(false)
@@ -286,156 +563,243 @@ const statusOptions = [
 ]
 
 // ========== 表格列定义 ==========
-const columns = [
-  {
-    type: "selection",
-    width: 40
-  },
-  {
-    title: "ID",
-    key: "id",
-    width: 80,
-    sorter: (a, b) => a.id - b.id
-  },
-  {
-    title: "资产名称",
-    key: "name",
-    width: 150,
-    ellipsis: {tooltip: true}
-  },
-  {
-    title: "类别",
-    key: "category",
-    width: 100,
-    render(row) {
-      const categoryMap = {
-        electronics: {label: '电子产品', color: '#18a058'},
-        home: {label: '家居用品', color: '#2080f0'},
-        office: {label: '办公设备', color: '#f0a020'},
-        vehicle: {label: '交通工具', color: '#d03050'},
-        other: {label: '其他', color: '#909399'}
+const columns = computed(() => {
+  const allColumns = [
+    {
+      type: "selection",
+      width: isMobile.value ? 35 : 40
+    },
+    {
+      title: "ID",
+      key: "id",
+      width: 60,
+      sorter: (a, b) => a.id - b.id,
+      hidden: true // 移动端和桌面端都隐藏ID
+    },
+    {
+      title: "资产信息",
+      key: "asset_info",
+      width: isMobile.value ? 200 : 150,
+      ellipsis: {tooltip: true},
+      render(row) {
+        const categoryMap = {
+          electronics: {label: '电子产品', color: '#18a058', icon: '📱'},
+          home: {label: '家居用品', color: '#2080f0', icon: '🏠'},
+          office: {label: '办公设备', color: '#f0a020', icon: '💼'},
+          vehicle: {label: '交通工具', color: '#d03050', icon: '🚗'},
+          other: {label: '其他', color: '#909399', icon: '📦'}
+        }
+        const info = categoryMap[row.category] || {label: row.category || '未分类', color: 'default', icon: '📦'}
+        
+        if (isMobile.value) {
+          // 移动端：紧凑的资产信息展示
+          return h('div', {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }
+          }, [
+            h('div', {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 'bold',
+                fontSize: '13px'
+              }
+            }, [
+              h('span', info.icon),
+              h('span', { 
+                style: { 
+                  flex: 1, 
+                  overflow: 'hidden', 
+                  textOverflow: 'ellipsis', 
+                  whiteSpace: 'nowrap' 
+                } 
+              }, row.name || '未命名')
+            ]),
+            h('div', {
+              style: {
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                color: '#909399'
+              }
+            }, [
+              h(NTag, {
+                type: 'info',
+                bordered: false,
+                size: 'tiny',
+                style: { backgroundColor: info.color + '20', color: info.color }
+              }, { default: () => info.label }),
+              h('span', `¥${(row.price || 0).toLocaleString()}`)
+            ])
+          ])
+        } else {
+          // 桌面端：名称和类别分开显示
+          return h('div', {
+            style: {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '4px'
+            }
+          }, [
+            h('span', { style: { fontWeight: 'bold' } }, row.name || '未命名'),
+            h(NTag, {
+              type: 'info',
+              bordered: false,
+              size: 'small',
+              style: { backgroundColor: info.color + '20', color: info.color }
+            }, { default: () => info.label })
+          ])
+        }
       }
-      const info = categoryMap[row.category] || {label: row.category, color: 'default'}
-      return h(NTag, {
-        type: 'info',
-        bordered: false,
-        style: {backgroundColor: info.color + '20', color: info.color}
-      }, {default: () => info.label})
-    }
-  },
-  {
-    title: "购买价格",
-    key: "price",
-    width: 100,
-    render(row) {
-      return `¥${row.price.toLocaleString()}`
-    }
-  },
-  {
-    title: "购买日期",
-    key: "purchase_date",
-    width: 120,
-    render(row) {
-      return new Date(row.purchase_date).toLocaleDateString()
-    }
-  },
-  {
-    title: "使用天数",
-    key: "usage_days",
-    width: 90,
-    render(row) {
-      return h('span', {
-        style: {color: row.usage_days > 365 ? '#18a058' : '#909399'}
-      }, `${row.usage_days} 天`)
-    }
-  },
-  {
-    title: "日均成本",
-    key: "daily_cost",
-    width: 100,
-    render(row) {
-      return h('span', {
-        style: {color: '#f0a020', fontWeight: 'bold'}
-      }, `¥${row.daily_cost.toFixed(2)}`)
-    }
-  },
-  {
-    title: "状态",
-    key: "status",
-    width: 80,
-    render(row) {
-      return h(NTag, {
-        type: row.status === 'active' ? 'success' : 'default',
-        bordered: false
-      }, {default: () => row.status === 'active' ? '使用中' : '已报废'})
-    }
-  },
-  {
-    title: "质保",
-    key: "warranty",
-    width: 100,
-    render(row) {
-      if (!row.warranty_months) return '-'
-      if (row.is_warranty_expired) {
-        return h(NTag, {type: 'error', bordered: false}, {default: () => '已过期'})
+    },
+    {
+      title: "购买信息",
+      key: "purchase_info",
+      width: isMobile.value ? 130 : 120,
+      hidden: isMobile.value,
+      render(row) {
+        const purchaseDate = row.purchase_date ? new Date(row.purchase_date).toLocaleDateString() : '-'
+        const usageDays = row.usage_days || 0
+        return h('div', {
+          style: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            fontSize: '12px'
+          }
+        }, [
+          h('span', { style: { color: '#666' } }, purchaseDate),
+          h('span', { style: { color: '#909399' } }, `${usageDays} 天`)
+        ])
       }
-      if (row.remaining_warranty_days && row.remaining_warranty_days <= 30) {
-        return h(NTag, {type: 'warning', bordered: false}, {default: () => `${row.remaining_warranty_days}天`})
+    },
+    {
+      title: "日均成本",
+      key: "daily_cost",
+      width: isMobile.value ? 100 : 100,
+      render(row) {
+        const cost = row.daily_cost || 0
+        return h('span', {
+          style: {
+            color: '#f0a020', 
+            fontWeight: 'bold', 
+            fontSize: isMobile.value ? '12px' : '14px'
+          }
+        }, `¥${cost.toFixed(2)}`)
       }
-      return h(NTag, {type: 'success', bordered: false}, {default: () => `${row.remaining_warranty_days}天`})
+    },
+    {
+      title: "状态",
+      key: "status",
+      width: isMobile.value ? 70 : 80,
+      render(row) {
+        const statusConfig = {
+          active: { type: 'success', label: '使用中', icon: '✅' },
+          scrapped: { type: 'default', label: '已报废', icon: '❌' }
+        }
+        const config = statusConfig[row.status] || statusConfig.active
+        
+        if (isMobile.value) {
+          return h(NTag, {
+            type: config.type,
+            bordered: false,
+            size: 'tiny'
+          }, { default: () => config.icon })
+        } else {
+          return h(NTag, {
+            type: config.type,
+            bordered: false,
+            size: 'medium'
+          }, { default: () => config.label })
+        }
+      }
+    },
+    {
+      title: "质保",
+      key: "warranty",
+      width: isMobile.value ? 60 : 100,
+      render(row) {
+        const warrantyMonths = row.warranty_months || 0
+        if (!warrantyMonths) return '-'
+        
+        const isExpired = row.is_warranty_expired || false
+        const remainingDays = row.remaining_warranty_days || 0
+        
+        if (isExpired) {
+          return h(NTag, { 
+            type: 'error', 
+            bordered: false, 
+            size: isMobile.value ? 'tiny' : 'small'
+          }, { default: () => isMobile.value ? '❌' : '已过期' })
+        }
+        if (remainingDays && remainingDays <= 30) {
+          return h(NTag, { 
+            type: 'warning', 
+            bordered: false, 
+            size: isMobile.value ? 'tiny' : 'small'
+          }, { default: () => isMobile.value ? `⚠️${remainingDays}` : `${remainingDays}天` })
+        }
+        return h(NTag, { 
+          type: 'success', 
+          bordered: false, 
+          size: isMobile.value ? 'tiny' : 'small'
+        }, { default: () => isMobile.value ? `✓${remainingDays}` : `${remainingDays}天` })
+      }
+    },
+    {
+      title: "操作",
+      key: "actions",
+      width: isMobile.value ? 150 : 200,
+      fixed: "right",
+      render(row) {
+        return h(NSpace, { 
+          size: isMobile.value ? 'tiny' : 'small',
+          style: { display: 'flex', flexWrap: 'nowrap' }
+        }, {
+          default: () => [
+            h(NButton, {
+              strong: true,
+              tertiary: true,
+              size: isMobile.value ? 'tiny' : 'small',
+              type: 'primary',
+              onClick: () => handleEdit(row)
+            }, {
+              icon: () => h(CreateOutline),
+              default: () => isMobile.value ? '' : '编辑'
+            }),
+            row.status === 'active' ? h(NButton, {
+              strong: true,
+              tertiary: true,
+              size: isMobile.value ? 'tiny' : 'small',
+              type: "warning",
+              onClick: () => handleScrap(row)
+            }, {
+              icon: () => h(StopCircleOutline),
+              default: () => isMobile.value ? '' : '报废'
+            }) : null,
+            h(NButton, {
+              strong: true,
+              tertiary: true,
+              size: isMobile.value ? 'tiny' : 'small',
+              type: "error",
+              onClick: () => handleDelete(row)
+            }, {
+              icon: () => h(TrashOutline),
+              default: () => isMobile.value ? '' : '删除'
+            })
+          ]
+        })
+      }
     }
-  },
-  {
-    title: "备注",
-    key: "description",
-    width: 150,
-    ellipsis: {tooltip: true},
-    render(row) {
-      return row.description || '-'
-    }
-  },
-  {
-    title: "操作",
-    key: "actions",
-    width: 200,
-    fixed: "right",
-    render(row) {
-      return h(NSpace, {size: 'small'}, {
-        default: () => [
-          h(NButton, {
-            strong: true,
-            tertiary: true,
-            size: "small",
-            onClick: () => handleEdit(row)
-          }, {
-            icon: () => h(CreateOutline),
-            default: () => "编辑"
-          }),
-          row.status === 'active' ? h(NButton, {
-            strong: true,
-            tertiary: true,
-            size: "small",
-            type: "warning",
-            onClick: () => handleScrap(row)
-          }, {
-            icon: () => h(StopCircleOutline),
-            default: () => "报废"
-          }) : null,
-          h(NButton, {
-            strong: true,
-            tertiary: true,
-            size: "small",
-            type: "error",
-            onClick: () => handleDelete(row)
-          }, {
-            icon: () => h(TrashOutline),
-            default: () => "删除"
-          })
-        ]
-      })
-    }
-  }
-]
+  ]
+
+  return allColumns.filter(col => !col.hidden)
+})
 
 // ========== 表单配置 ==========
 const dialogRef = ref(null)
@@ -456,7 +820,7 @@ const defaultFormData = {
   name: '',
   category: 'electronics',
   price: 0,
-  purchase_date: new Date().getTime(),
+  purchase_date: new Date().toISOString().split('T')[0],
   description: '',
   image_url: '',
   warranty_months: 0
@@ -551,7 +915,7 @@ const formRules = {
     {type: 'number', min: 0.01, message: '价格必须大于0', trigger: ['blur', 'change']}
   ],
   purchase_date: [
-    {required: true, type: 'date', message: '请选择购买日期', trigger: ['blur', 'change']}
+    {required: true, message: '请选择购买日期', trigger: ['blur', 'change']}
   ]
 }
 
@@ -644,15 +1008,18 @@ const updateCategoryChart = (data) => {
       formatter: '{b}: {c}件 ({d}%)'
     },
     legend: {
-      orient: 'vertical',
-      right: 10,
-      top: 'center'
+      orient: isMobile.value ? 'horizontal' : 'vertical',
+      right: isMobile ? 'center' : 10,
+      top: isMobile ? 'bottom' : 'center',
+      textStyle: {
+        fontSize: isMobile.value ? 11 : 12
+      }
     },
     series: [
       {
         name: '资产类别',
         type: 'pie',
-        radius: ['40%', '70%'],
+        radius: isMobile.value ? ['30%', '60%'] : ['40%', '70%'],
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
@@ -660,18 +1027,20 @@ const updateCategoryChart = (data) => {
           borderWidth: 2
         },
         label: {
-          show: false,
-          position: 'center'
+          show: isMobile.value,
+          position: 'outside',
+          fontSize: isMobile.value ? 10 : 12,
+          formatter: '{b}: {d}%'
         },
         emphasis: {
           label: {
             show: true,
-            fontSize: 20,
+            fontSize: isMobile.value ? 14 : 20,
             fontWeight: 'bold'
           }
         },
         labelLine: {
-          show: false
+          show: isMobile.value
         },
         data: data.map(item => ({
           name: item.category,
@@ -706,28 +1075,42 @@ const updateYearTrendChart = (data) => {
       }
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
+      left: isMobile.value ? '5%' : '3%',
+      right: isMobile.value ? '5%' : '4%',
+      bottom: isMobile.value ? '10%' : '3%',
+      top: '10%',
       containLabel: true
     },
     xAxis: {
       type: 'category',
       data: sortedData.map(item => item.year),
       axisLabel: {
-        rotate: 45
+        rotate: isMobile.value ? 45 : 0,
+        fontSize: isMobile.value ? 10 : 12
       }
     },
     yAxis: [
       {
         type: 'value',
         name: '数量',
-        position: 'left'
+        position: 'left',
+        axisLabel: {
+          fontSize: isMobile.value ? 10 : 12
+        }
       },
       {
         type: 'value',
         name: '金额（元）',
-        position: 'right'
+        position: 'right',
+        axisLabel: {
+          fontSize: isMobile.value ? 10 : 12,
+          formatter: (value) => {
+            if (value >= 10000) {
+              return (value / 10000).toFixed(1) + '万'
+            }
+            return value
+          }
+        }
       }
     ],
     series: [
@@ -737,7 +1120,8 @@ const updateYearTrendChart = (data) => {
         data: sortedData.map(item => item.count),
         itemStyle: {
           color: '#18a058'
-        }
+        },
+        barWidth: isMobile.value ? '40%' : '60%'
       },
       {
         name: '金额',
@@ -746,7 +1130,8 @@ const updateYearTrendChart = (data) => {
         data: sortedData.map(item => item.value),
         itemStyle: {
           color: '#f0a020'
-        }
+        },
+        symbolSize: isMobile.value ? 6 : 8
       }
     ]
   }
@@ -850,15 +1235,19 @@ const batchScrapAssets = async (ids) => {
 // ========== 事件处理 ==========
 const handleAdd = () => {
   dialogType.value = 'add'
-  formData.value = {...defaultFormData}
+  formData.value = {
+    ...defaultFormData,
+    purchase_date: new Date().toISOString().split('T')[0]
+  }
   showDialog.value = true
 }
 
 const handleEdit = (row) => {
   dialogType.value = 'edit'
+  const purchaseDate = row.purchase_date ? new Date(row.purchase_date) : new Date()
   formData.value = {
     ...row,
-    purchase_date: row.purchase_date ? new Date(row.purchase_date).toISOString().split('T')[0] : ''
+    purchase_date: purchaseDate.toISOString().split('T')[0]
   }
   showDialog.value = true
 }
@@ -947,7 +1336,10 @@ const handlePageSizeChange = (pageSize) => {
 
 const handleCancel = () => {
   showDialog.value = false
-  formData.value = {...defaultFormData}
+  formData.value = {
+    ...defaultFormData,
+    purchase_date: new Date().toISOString().split('T')[0]
+  }
 }
 
 const handleSubmit = async (data, validate = false) => {
@@ -969,6 +1361,26 @@ const handleSubmit = async (data, validate = false) => {
   }
 }
 
+// 监听断点变化，重新渲染图表
+watch(isMobile, async () => {
+  if (categoryChart) {
+    try {
+      const distribution = await assetApi.getCategoryDistribution()
+      updateCategoryChart(distribution)
+    } catch (error) {
+      console.error('重新加载类别分布失败:', error)
+    }
+  }
+  if (yearTrendChart) {
+    try {
+      const trend = await assetApi.getYearTrend(10)
+      updateYearTrendChart(trend)
+    } catch (error) {
+      console.error('重新加载年度趋势失败:', error)
+    }
+  }
+})
+
 // ========== 初始化 ==========
 onMounted(async () => {
   await Promise.all([
@@ -980,16 +1392,178 @@ onMounted(async () => {
   await initCharts()
 
   // 监听窗口大小变化，调整图表
-  window.addEventListener('resize', () => {
-    categoryChart?.resize()
-    yearTrendChart?.resize()
-  })
+  window.addEventListener('resize', handleResize)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  categoryChart?.dispose()
+  yearTrendChart?.dispose()
+})
+
+const handleResize = () => {
+  categoryChart?.resize()
+  yearTrendChart?.resize()
+}
 </script>
 
 <style scoped>
 :deep(.n-statistic .n-statistic-value) {
   font-size: 24px;
   font-weight: bold;
+}
+
+/* 工具栏样式 */
+.toolbar {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+
+.toolbar-filters {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar-actions {
+  flex-shrink: 0;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .toolbar {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .toolbar-filters,
+  .toolbar-actions {
+    width: 100%;
+  }
+
+  .toolbar-actions :deep(.n-space) {
+    display: flex;
+    width: 100%;
+  }
+
+  .toolbar-actions :deep(.n-space-item) {
+    display: flex;
+    flex: 1;
+  }
+
+  :deep(.n-statistic .n-statistic-value) {
+    font-size: 20px;
+  }
+
+  :deep(.n-statistic .n-statistic-label) {
+    font-size: 12px;
+  }
+
+  :deep(.n-statistic .n-statistic-value__content) {
+    font-size: 20px;
+  }
+
+  :deep(.n-statistic .n-statistic-value__suffix) {
+    font-size: 12px;
+  }
+
+  :deep(.n-data-table) {
+    font-size: 13px;
+  }
+
+  :deep(.n-data-table th) {
+    font-size: 12px;
+    padding: 8px 6px;
+    white-space: nowrap;
+  }
+
+  :deep(.n-data-table td) {
+    padding: 8px 6px;
+  }
+
+  :deep(.n-data-table .n-data-table-td) {
+    vertical-align: top;
+  }
+
+  :deep(.n-data-table .n-checkbox) {
+    padding: 0;
+  }
+
+  :deep(.n-data-table .n-checkbox-box) {
+    border-radius: 3px;
+  }
+
+  :deep(.n-card) {
+    border-radius: 8px;
+  }
+
+  :deep(.n-pagination) {
+    flex-wrap: wrap;
+  }
+
+  :deep(.n-pagination .n-pagination-item) {
+    min-width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  :deep(.n-statistic .n-statistic-value) {
+    font-size: 18px;
+  }
+
+  :deep(.n-statistic .n-statistic-label) {
+    font-size: 11px;
+  }
+
+  :deep(.n-statistic .n-statistic-value__content) {
+    font-size: 18px;
+  }
+
+  :deep(.n-data-table) {
+    font-size: 12px;
+  }
+
+  :deep(.n-data-table th) {
+    font-size: 11px;
+    padding: 6px 4px;
+    white-space: nowrap;
+  }
+
+  :deep(.n-data-table td) {
+    padding: 6px 4px;
+  }
+
+  :deep(.n-data-table .n-data-table-td) {
+    vertical-align: top;
+  }
+}
+
+/* 横屏模式优化 */
+@media (max-width: 768px) and (orientation: landscape) {
+  .toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .toolbar-filters {
+    flex: 1;
+  }
+
+  .toolbar-actions {
+    flex-shrink: 0;
+  }
+
+  :deep(.n-grid) {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+
+  :deep(.n-statistic .n-statistic-value) {
+    font-size: 18px;
+  }
 }
 </style>

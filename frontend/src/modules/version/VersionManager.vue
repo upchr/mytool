@@ -584,10 +584,6 @@ onMounted(async () => {
     margin: 4px;
   }
 
-  .n-button {
-    font-size: 13px;
-    padding: 8px 12px;
-  }
 
   .n-code {
     font-size: 11px;

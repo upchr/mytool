@@ -2,52 +2,61 @@
   <div class="workflow-execution-log">
     <!-- 顶部工具栏 -->
     <div class="toolbar">
-      <n-space align="center">
-        <n-button quaternary @click="goBack">
-          <template #icon>
-            <n-icon><ArrowBackIcon /></n-icon>
-          </template>
-          返回
-        </n-button>
-        <n-divider vertical />
-        <n-icon size="20" color="#18a058"><DocumentIcon /></n-icon>
-        <n-text strong>{{ workflowName }}</n-text>
-        <n-divider vertical />
-        <n-tag :type="executionStatus === 'success' ? 'success' : (executionStatus === 'failed' ? 'error' : 'info')" size="medium">
-          <template #icon>
-            <n-icon v-if="executionStatus === 'success'"><CheckmarkCircleIcon /></n-icon>
-            <n-icon v-else-if="executionStatus === 'failed'"><CloseCircleIcon /></n-icon>
-            <n-icon v-else><TimeIcon /></n-icon>
-          </template>
-          {{ executionStatus === 'success' ? '执行成功' : (executionStatus === 'failed' ? '执行失败' : '执行中') }}
-        </n-tag>
-        <n-divider vertical />
-        <n-space align="center" size="small">
-          <n-icon size="16" color="#666"><TimeIcon /></n-icon>
-          <n-text depth="3" style="font-size: 12px;">
-            开始: {{ formatTime(execution.start_time) }}
-            <span v-if="execution.end_time"> | 结束: {{ formatTime(execution.end_time) }}</span>
-          </n-text>
+      <n-space :vertical="isMobile" :align="isMobile ? 'start' : 'center'" style="width: 100%">
+        <n-space align="center" :wrap="true">
+          <n-button quaternary :size="isMobile ? 'medium' : 'small'" @click="goBack">
+            <template #icon>
+              <n-icon :size="isMobile ? 20 : 16"><ArrowBackIcon /></n-icon>
+            </template>
+            <span v-if="!isMobile">返回</span>
+          </n-button>
+          <n-divider v-if="!isMobile" vertical />
+          <n-icon :size="isMobile ? 18 : 20" color="#18a058"><DocumentIcon /></n-icon>
+          <n-text strong :style="{ fontSize: isMobile ? '14px' : '16px' }">{{ workflowName }}</n-text>
         </n-space>
-        <n-divider vertical />
-        <n-button quaternary @click="zoomIn">
-          <template #icon>
-            <n-icon><AddIcon /></n-icon>
-          </template>
-          放大
-        </n-button>
-        <n-button quaternary @click="zoomOut">
-          <template #icon>
-            <n-icon><RemoveIcon /></n-icon>
-          </template>
-          缩小
-        </n-button>
-        <n-button quaternary @click="fitView">
-          <template #icon>
-            <n-icon><ExpandIcon /></n-icon>
-          </template>
-          适应
-        </n-button>
+
+        <n-space :vertical="isMobile" :wrap="true" :size="isMobile ? 8 : 0" style="width: 100%">
+          <n-tag 
+            :type="executionStatus === 'success' ? 'success' : (executionStatus === 'failed' ? 'error' : 'info')" 
+            :size="isMobile ? 'small' : 'medium'"
+          >
+            <template #icon>
+              <n-icon :size="isMobile ? 16 : 18">
+                <component :is="executionStatus === 'success' ? CheckmarkCircleIcon : (executionStatus === 'failed' ? CloseCircleIcon : TimeIcon)" />
+              </n-icon>
+            </template>
+            {{ executionStatus === 'success' ? '执行成功' : (executionStatus === 'failed' ? '执行失败' : '执行中') }}
+          </n-tag>
+
+          <n-space align="center" size="small">
+            <n-icon :size="isMobile ? 14 : 16" color="#666"><TimeIcon /></n-icon>
+            <n-text depth="3" :style="{ fontSize: isMobile ? '11px' : '12px' }">
+              开始: {{ formatTime(execution.start_time) }}
+              <span v-if="execution.end_time"> | 结束: {{ formatTime(execution.end_time) }}</span>
+            </n-text>
+          </n-space>
+
+          <n-space v-if="!isMobile" align="center" size="small">
+            <n-button quaternary size="small" @click="zoomIn">
+              <template #icon>
+                <n-icon><AddIcon /></n-icon>
+              </template>
+              放大
+            </n-button>
+            <n-button quaternary size="small" @click="zoomOut">
+              <template #icon>
+                <n-icon><RemoveIcon /></n-icon>
+              </template>
+              缩小
+            </n-button>
+            <n-button quaternary size="small" @click="fitView">
+              <template #icon>
+                <n-icon><ExpandIcon /></n-icon>
+              </template>
+              适应
+            </n-button>
+          </n-space>
+        </n-space>
       </n-space>
     </div>
 
@@ -60,7 +69,7 @@
           :min-zoom="0.2"
           :max-zoom="4"
           :fit-view-on-init="true"
-          :fit-view-options="{ padding: 0.2, minZoom: 0.2, maxZoom: 1 }"
+          :fit-view-options="{ padding: isMobile ? 0.4 : 0.2, minZoom: 0.2, maxZoom: 1 }"
           @node-click="onNodeClick"
           @edge-click="onEdgeClick"
           :nodes-draggable="false"
@@ -68,7 +77,7 @@
           :elements-selectable="false"
         >
           <Background />
-          <Controls />
+          <Controls v-if="isMobile" />
 
           <template #node-start="props">
             <div 
@@ -357,6 +366,7 @@
 <script setup>
 import { ref, computed, onMounted, h } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useBreakpoints } from '@vueuse/core'
 import { VueFlow, useVueFlow, Handle, Position } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -376,6 +386,16 @@ import '@vue-flow/core/dist/theme-default.css'
 const router = useRouter()
 const route = useRoute()
 const { zoomIn, zoomOut, fitView } = useVueFlow()
+
+// 响应式断点
+const breakpoints = useBreakpoints({
+  mobile: 640,
+  tablet: 768,
+  laptop: 1024,
+})
+
+const isMobile = breakpoints.smaller('mobile')
+const isTablet = breakpoints.between('mobile', 'laptop')
 
 const workflowId = computed(() => route.query.workflowId)
 const executionId = computed(() => route.query.executionId ? parseInt(route.query.executionId) : null)
@@ -618,6 +638,146 @@ onMounted(() => {
   border-left: 1px solid #e0e0e0;
   overflow-y: auto;
   padding: 16px;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .toolbar {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .editor-body {
+    flex-direction: column;
+  }
+
+  .canvas {
+    flex: 1;
+    min-height: 50vh;
+  }
+
+  .right-panel {
+    width: 100%;
+    max-height: 50vh;
+    border-left: none;
+    border-top: 1px solid #e0e0e0;
+    padding: 12px;
+  }
+
+  /* 节点样式优化 */
+  .wf-node {
+    padding: 6px 10px;
+    min-width: 80px;
+    max-width: 140px;
+  }
+
+  .wf-node .content {
+    font-size: 12px;
+  }
+
+  .wf-node .status-badge :deep(.n-tag) {
+    font-size: 10px;
+    padding: 1px 4px;
+    height: 18px;
+    line-height: 16px;
+  }
+
+  /* 描述列表优化 */
+  :deep(.n-descriptions) {
+    font-size: 12px;
+  }
+
+  :deep(.n-descriptions-item__label) {
+    font-size: 11px;
+  }
+
+  /* 折叠面板优化 */
+  :deep(.n-collapse-item__header) {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  :deep(.n-collapse-item__content) {
+    padding: 10px;
+  }
+
+  /* 时间线优化 */
+  :deep(.n-timeline-item) {
+    padding-bottom: 16px;
+  }
+
+  :deep(.n-timeline-item-content) {
+    padding-left: 12px;
+  }
+
+  /* 按钮优化 */
+  :deep(.n-button) {
+    font-size: 13px;
+  }
+
+  /* 标签优化 */
+  :deep(.n-tag) {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    padding: 10px;
+  }
+
+  .right-panel {
+    padding: 10px;
+  }
+
+  .wf-node {
+    padding: 4px 8px;
+    min-width: 70px;
+    max-width: 120px;
+  }
+
+  .wf-node .content {
+    font-size: 11px;
+  }
+
+  /* 更小的间距 */
+  :deep(.n-space) {
+    gap: 4px !important;
+  }
+
+  /* 描述列表更紧凑 */
+  :deep(.n-descriptions-item) {
+    padding: 6px 0;
+  }
+}
+
+/* 平板适配 */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .right-panel {
+    width: 350px;
+  }
+
+  .wf-node {
+    min-width: 90px;
+    max-width: 150px;
+  }
+}
+
+/* 深色模式适配 */
+:deep(.n-card) {
+  background-color: var(--n-color-card);
+}
+
+:deep(.vue-flow__node) {
+  background-color: var(--n-color-card);
+}
+
+:deep(.vue-flow__edge-path) {
+  stroke: var(--n-border-color);
+}
+
+:deep(.vue-flow__background) {
+  background-color: var(--n-color-target);
 }
 
 .wf-node {
