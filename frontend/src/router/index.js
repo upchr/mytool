@@ -77,28 +77,10 @@ const routeLabels = [
         key: 'notes'
     },
     {
-        path: '/nodes',
-        label: '节点管理',
-        icon: PCIcon,
-        key: 'nodes'
-    },
-    {
         path: '/notify',
         label: '消息通知',
         icon: NotifyIcon,
         key: 'notify'
-    },
-    {
-        path: '/jobs',
-        label: '任务管理',
-        icon: ClockIcon,
-        key: 'jobs'
-    },
-    {
-        path: '/asset',
-        label: '固定资产',
-        icon: AssetIcon,
-        key: 'asset'
     },
     {
         path: '/workflows',
@@ -107,29 +89,16 @@ const routeLabels = [
         key: 'workflows'
     },
     {
-        label: 'AI 助手',
-        icon: AiIcon,
-        key: 'ai-chat',
-        children: [
-            {
-                path: '/ai-chat',
-                label: 'AI 聊天',
-                icon: AiIcon,
-                key: 'ai-chat-main'
-            },
-            {
-                path: '/ai-config',
-                label: 'AI 配置',
-                icon: ConfigIcon,
-                key: 'ai-config'
-            },
-            {
-                path: '/ai-knowledge',
-                label: '知识库管理',
-                icon: KnowledgeIcon,
-                key: 'ai-knowledge'
-            }
-        ]
+        path: '/nodes',
+        label: '节点管理',
+        icon: PCIcon,
+        key: 'nodes'
+    },
+    {
+        path: '/jobs',
+        label: '任务管理',
+        icon: ClockIcon,
+        key: 'jobs'
     },
     {
         label: '证书管理',
@@ -163,6 +132,39 @@ const routeLabels = [
 
         ]
     },
+
+    {
+        path: '/asset',
+        label: '固定资产',
+        icon: AssetIcon,
+        key: 'asset'
+    },
+    {
+        label: 'AI 助手',
+        icon: AiIcon,
+        key: 'ai-chat',
+        children: [
+            {
+                path: '/ai-chat',
+                label: 'AI 聊天',
+                icon: AiIcon,
+                key: 'ai-chat-main'
+            },
+            {
+                path: '/ai-config',
+                label: 'AI 配置',
+                icon: ConfigIcon,
+                key: 'ai-config'
+            },
+            {
+                path: '/ai-knowledge',
+                label: '知识库管理',
+                icon: KnowledgeIcon,
+                key: 'ai-knowledge'
+            }
+        ]
+    },
+
     {
         label: '系统管理',  // 另一个父菜单
         icon: AboutIcon,

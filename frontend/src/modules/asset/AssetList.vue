@@ -6,7 +6,7 @@
         <n-tag type="success" size="small">¥{{ (stats.total_value || 0).toLocaleString() }}</n-tag>
       </n-space>
     </template>
-    
+
     <!-- 顶部统计卡片 -->
     <n-grid :x-gap="16" :y-gap="16" :cols="4" style="margin-bottom: 16px">
       <n-gi>
@@ -22,10 +22,7 @@
       <n-gi>
         <n-statistic label="总资产价值" :value="stats.total_value || 0">
           <template #prefix>
-            <n-space align="center" :size="4">
-              <n-icon size="18" color="#18a058"><CashOutline /></n-icon>
-              <span>¥</span>
-            </n-space>
+            <n-icon size="18" color="#18a058"><CashOutline /></n-icon>
           </template>
           <template #suffix>
             <span style="font-size: 14px; color: #909399">元</span>
@@ -35,10 +32,7 @@
       <n-gi>
         <n-statistic label="日均成本总和" :value="stats.daily_cost_sum || 0">
           <template #prefix>
-            <n-space align="center" :size="4">
               <n-icon size="18" color="#f0a020"><TrendingUpOutline /></n-icon>
-              <span>¥</span>
-            </n-space>
           </template>
           <template #suffix>
             <span style="font-size: 14px; color: #909399">元/天</span>
@@ -225,9 +219,9 @@
 import {h, onMounted, ref, reactive, computed, nextTick} from "vue"
 import {NButton, NTag, NSpace, NInput, NSelect, NStatistic, NGrid, NGi, NList, NListItem, NEmpty} from "naive-ui"
 import {
-  AddOutline, 
-  TrashOutline, 
-  SearchOutline, 
+  AddOutline,
+  TrashOutline,
+  SearchOutline,
   StopCircleOutline,
   RefreshOutline,
   CubeOutline,

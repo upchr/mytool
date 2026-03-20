@@ -11,7 +11,7 @@
 
       <n-alert type="info" style="margin-bottom: 16px">
         <template #header>什么是工作流？</template>
-        工作流可以串联多个任务按顺序执行，支持条件判断、等待、通知等节点。点击「新建」进入可视化编辑器。
+        接入节点管理、任务管理、证书管理、消息通知多个模块。可以串联多个任务按顺序执行，支持条件判断、等待、通知等节点。点击「新建」进入可视化编辑器。
       </n-alert>
 
       <n-empty v-if="!loading && list.length === 0">
@@ -26,18 +26,18 @@
             <template #header>
               <n-space>
                 <n-text strong>{{ wf.name }}</n-text>
-                <n-tag :type="wf.is_active ? 'success' : 'default'" size="small">{{ wf.is_active ? '启用' : '禁用' }}</n-tag>
+                <n-tag :type="wf.is_active ? 'success' : 'error'" size="small">{{ wf.is_active ? '启用' : '禁用' }}</n-tag>
                 <n-tag v-if="wf.default_version" type="info" size="small">v{{ wf.default_version }}</n-tag>
                 <n-tag v-if="wf.schedule" type="warning" size="small">⏰ {{ wf.schedule }}</n-tag>
               </n-space>
             </template>
             <template #header-extra>
               <n-space>
-                <n-button size="small" quaternary @click="handleSchedule(wf)">
+                <n-button size="small" quaternary @click="handleExecutions(wf)">
                   <template #icon>
-                    <n-icon><ClockIcon /></n-icon>
+                    <n-icon><ListIcon /></n-icon>
                   </template>
-                  定时
+                  执行记录
                 </n-button>
                 <n-button size="small" quaternary @click="handleVersions(wf)">
                   <template #icon>
@@ -45,23 +45,23 @@
                   </template>
                   版本
                 </n-button>
-                <n-button size="small" quaternary @click="handleExecutions(wf)">
+                <n-button size="small" quaternary @click="handleSchedule(wf)">
                   <template #icon>
-                    <n-icon><ListIcon /></n-icon>
+                    <n-icon><ClockIcon /></n-icon>
                   </template>
-                  执行记录
+                  定时
+                </n-button>
+                <n-button size="small" type="warning" @click="handleTrigger(wf)">
+                  <template #icon>
+                    <n-icon><PlayIcon /></n-icon>
+                  </template>
+                  执行
                 </n-button>
                 <n-button size="small" type="primary" @click="handleEdit(wf)">
                   <template #icon>
                     <n-icon><CreateIcon /></n-icon>
                   </template>
                   编辑
-                </n-button>
-                <n-button size="small" type="success" @click="handleTrigger(wf)">
-                  <template #icon>
-                    <n-icon><PlayIcon /></n-icon>
-                  </template>
-                  执行
                 </n-button>
                 <n-button size="small" type="error" @click="handleDelete(wf)">
                   <template #icon>
@@ -165,7 +165,7 @@
     <n-modal v-model:show="showVersionsDialog" preset="card" title="版本管理" style="width: 800px" @after-leave="loadList">
       <template #header-extra>
         <n-space>
-          <n-button type="primary" size="small" @click="handleCreateVersion">创建新版本</n-button>
+          <n-button type="warning" size="small" @click="handleCreateVersion">创建副本</n-button>
         </n-space>
       </template>
 
@@ -262,11 +262,11 @@
               <n-alert type="error" size="small">{{ execution.error }}</n-alert>
             </div>
             <n-space>
-              <n-button size="small" type="primary" @click="handleViewNodeLogs(execution.id)">
-                查看节点执行日志
+              <n-button size="small" type="info" @click="handleViewNodeLogs(execution.id)">
+                文本日志
               </n-button>
-              <n-button size="small" type="info" @click="handleViewGraphLog(execution)">
-                查看图形化日志
+              <n-button size="small" type="warning" @click="handleViewGraphLog(execution)">
+                图形日志
               </n-button>
             </n-space>
           </n-timeline-item>

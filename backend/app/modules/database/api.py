@@ -16,11 +16,14 @@ router = APIRouter(prefix="/database", tags=["database"])
 MODULE_TABLES = {
     "systemconfig": {"label":"系统用户","tables":["system_config"]},
     "notes": {"label":"便签管理","tables":["notes"]},
-    "nodes": {"label":"节点管理","tables":["nodes"]},
-    "jobs": {"label":"任务管理","tables":["cron_jobs", "job_executions"]},
-    "credentials": {"label":"凭据管理","tables":["credential_templates"]},
     "notifications": {"label":"消息通知","tables":["notification_services", "notification_settings"]},
+    "workflow": {"label":"工作流","tables":["workflows","workflow_executions","workflow_node_executions","workflow_versions"]},
+    "nodes": {"label":"节点管理","tables":["nodes"]},
+    "credentials": {"label":"凭据管理","tables":["credential_templates"]},
+    "jobs": {"label":"任务管理","tables":["cron_jobs", "job_executions"]},
     "ssl": {"label":"证书管理","tables":["ssl_dns_auth","ssl_applications","ssl_application_executions","ssl_certificates","ssl_download_logs"]},
+    "asset": {"label":"固定资产","tables":["asset"]},
+    "ai": {"label":"AI助手 ","tables":["ai_conversations","ai_messages","ai_config","ai_knowledge_base","ai_knowledge_document","ai_knowledge_chunk"]},
     # 添加更多模块...
 }
 
