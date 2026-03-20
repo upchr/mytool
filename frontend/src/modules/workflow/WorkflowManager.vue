@@ -77,7 +77,7 @@
           这些参数已在下方列出，请填写对应的值
         </div>
       </n-alert>
-      
+
       <n-form label-placement="left" label-width="120px">
         <div v-for="(param, index) in inputParamsList" :key="index" style="margin-bottom: 12px">
           <n-space align="center">
@@ -104,12 +104,12 @@
             <n-tag v-else type="warning" size="small">必需</n-tag>
           </n-space>
         </div>
-        
+
         <n-button @click="addParam" type="primary" dashed style="width: 100%; margin-top: 8px">
           + 添加参数
         </n-button>
       </n-form>
-      
+
       <n-alert v-if="inputParamsError" type="error" style="margin-top: 12px">
         {{ inputParamsError }}
       </n-alert>
@@ -122,7 +122,7 @@
           • 布尔值输入：true 或 false
         </div>
       </n-alert>
-      
+
       <template #action>
         <n-space>
           <n-button @click="showInputDialog = false">取消</n-button>
@@ -220,7 +220,7 @@
             </template>
             <div style="margin-bottom: 8px;">
               <n-text depth="3" style="font-size: 12px;">
-                触发方式: {{ execution.triggered_by === 'manual' ? '手动' : (execution.triggered_by === 'schedule' ? '定时' : '系统') }} | 
+                触发方式: {{ execution.triggered_by === 'manual' ? '手动' : (execution.triggered_by === 'schedule' ? '定时' : '系统') }} |
                 开始时间: {{ formatTime(execution.start_time) }}
                 <span v-if="execution.end_time"> | 结束时间: {{ formatTime(execution.end_time) }}</span>
               </n-text>
@@ -260,7 +260,7 @@
                 {{ nodeExec.status === 'success' ? '成功' : (nodeExec.status === 'failed' ? '失败' : '进行中') }}
               </n-tag>
             </template>
-            
+
             <div style="padding: 12px; background: #f5f5f5; border-radius: 4px; margin-bottom: 12px;">
               <n-descriptions :column="2" size="small" bordered>
                 <n-descriptions-item label="节点ID">{{ nodeExec.node_id }}</n-descriptions-item>
@@ -272,16 +272,16 @@
                 </n-descriptions-item>
               </n-descriptions>
             </div>
-            
+
             <div v-if="nodeExec.output" style="margin-bottom: 12px;">
               <n-text depth="2" style="font-size: 12px; font-weight: bold;">输出:</n-text>
               <n-code :code="nodeExec.output" language="text" :word-wrap="true" style="margin-top: 4px;" />
             </div>
-            
+
             <div v-if="nodeExec.error" style="margin-bottom: 12px;">
               <n-alert type="error" size="small" title="错误信息">{{ nodeExec.error }}</n-alert>
             </div>
-            
+
             <div v-if="nodeExec.logs && nodeExec.logs.length > 0">
               <n-text depth="2" style="font-size: 12px; font-weight: bold; margin-bottom: 8px;">执行日志:</n-text>
               <n-timeline size="small">
@@ -291,7 +291,7 @@
                   :type="getLogType(log.type)"
                   :time="log.timestamp"
                 >
-                  <div 
+                  <div
                     style="padding: 4px 8px; background: #fafafa; border-radius: 4px; border-left: 3px solid #ccc;"
                     :style="{
                       'border-left-color': getLogBorderColor(log.type),
@@ -301,8 +301,8 @@
                     <n-tag :type="getLogType(log.type)" size="tiny" style="margin-right: 8px;">
                       {{ getLogTypeLabel(log.type) }}
                     </n-tag>
-                    <n-text 
-                      depth="3" 
+                    <n-text
+                      depth="3"
                       style="font-size: 12px;"
                       :style="{
                         'font-weight': isNodeInfoLog(log.message) ? 'bold' : 'normal',
@@ -345,10 +345,10 @@
             </div>
           </div>
         </n-alert>
-        
+
         <n-form-item label="Cron 表达式">
-          <n-input 
-            v-model:value="editingSchedule" 
+          <n-input
+            v-model:value="editingSchedule"
             placeholder="* * * * *【分 时 日 月 周】"
           >
             <template #suffix>
@@ -366,17 +366,17 @@
             @close="showCronGenerator = false"
           />
         </n-form-item>
-        
+
         <n-form-item label="常用表达式">
           <n-space vertical style="width: 100%">
-            <n-select 
+            <n-select
               :options="scheduleExamples"
               placeholder="选择示例"
               @update:value="(val) => { editingSchedule = val }"
             />
           </n-space>
         </n-form-item>
-        
+
         <n-form-item label="启用定时任务">
           <n-switch v-model:value="editingWorkflowActive">
             <template #checked>停用</template>
@@ -387,7 +387,7 @@
           </div>
         </n-form-item>
       </n-form>
-      
+
       <template #footer>
         <n-space justify="end">
           <n-button @click="showScheduleDialog = false">取消</n-button>
@@ -482,10 +482,10 @@ const handleEdit = async (wf) => {
     // 获取工作流的默认版本
     const r = await window.$request.get(`/workflows/${wf.workflow_id}/versions`)
     const versions = r.items || r || []
-    
+
     // 找到默认版本
     const defaultVersion = versions.find(v => v.is_default)
-    
+
     if (defaultVersion) {
       // 加载默认版本的数据
       current.value = {
@@ -503,7 +503,7 @@ const handleEdit = async (wf) => {
       currentWorkflowName.value = wf.name || ''
       currentEditingVersion.value = null
     }
-    
+
     showEditor.value = true
   } catch (e) {
     window.$message.error('加载工作流失败')
@@ -526,20 +526,20 @@ const handleDelete = async (wf) => {
 
 const handleTrigger = async (wf) => {
   inputParamsError.value = ''
-  
+
   try {
     // 获取工作流的默认版本数据
     const r = await window.$request.get(`/workflows/${wf.workflow_id}/versions`)
     const versions = r.items || r || []
     const defaultVersion = versions.find(v => v.is_default)
-    
+
     // 使用默认版本的数据，如果没有默认版本则使用工作流数据
     const workflowData = defaultVersion ? {
       ...wf,
       nodes: defaultVersion.nodes || [],
       edges: defaultVersion.edges || []
     } : wf
-    
+
     // 获取任务列表，用于分析任务命令中的占位符
     let jobs = []
     try {
@@ -548,21 +548,21 @@ const handleTrigger = async (wf) => {
     } catch (e) {
       console.warn('获取任务列表失败', e)
     }
-    
+
     // 设置当前工作流
     current.value = workflowData
-    
+
     // 分析工作流中使用的输入参数
     const inputs = analyzeWorkflowInputs(workflowData, jobs)
     usedInputs.value = inputs
-    
+
     // 生成输入参数列表
     inputParamsList.value = inputs.map(input => ({
       name: input,
       value: '',
       required: true
     }))
-    
+
     showInputDialog.value = true
   } catch (e) {
     window.$message.error('加载工作流失败')
@@ -572,12 +572,12 @@ const handleTrigger = async (wf) => {
 // 分析工作流中使用的输入参数
 const analyzeWorkflowInputs = (workflow, jobs = []) => {
   const inputs = new Set()
-  
+
   // 遍历所有节点
   const nodes = workflow.nodes || []
   nodes.forEach(node => {
     const config = node.config || {}
-    
+
     // 根据节点类型分析不同的配置字段
     if (node.type === 'condition') {
       // 条件节点：分析表达式
@@ -612,7 +612,7 @@ const analyzeWorkflowInputs = (workflow, jobs = []) => {
       // 通知节点：分析标题和内容
       const title = config.title || ''
       const content = config.content || ''
-      
+
       // 分析标题
       const titleMatches = title.match(/\{\{inputs\.(\w+)\}\}/g)
       if (titleMatches) {
@@ -623,7 +623,7 @@ const analyzeWorkflowInputs = (workflow, jobs = []) => {
           }
         })
       }
-      
+
       // 分析内容
       const contentMatches = content.match(/\{\{inputs\.(\w+)\}\}/g)
       if (contentMatches) {
@@ -636,7 +636,7 @@ const analyzeWorkflowInputs = (workflow, jobs = []) => {
       }
     }
   })
-  
+
   return Array.from(inputs)
 }
 
@@ -655,18 +655,18 @@ const confirmTrigger = async () => {
         }
       }
     })
-    
+
     // 检查必需参数是否已填写
     const missingRequired = inputParamsList.value
       .filter(p => p.required && (!p.name || p.value === ''))
       .map(p => p.name)
-    
+
     if (missingRequired.length > 0) {
       inputParamsError.value = `以下必需参数未填写：${missingRequired.join(', ')}`
       return
     }
-    
-    await window.$request.post('/workflows/trigger', { 
+
+    await window.$request.post('/workflows/trigger', {
       workflow_id: current.value.workflow_id,
       inputs: inputs
     })
@@ -690,7 +690,7 @@ const onSave = async (data) => {
       })
       return
     }
-    
+
     // 如果有警告，提示用户
     if (validation.warnings.length > 0) {
       const proceed = await new Promise((resolve) => {
@@ -703,7 +703,7 @@ const onSave = async (data) => {
           onNegativeClick: () => resolve(false)
         })
       })
-      
+
       if (!proceed) return
     }
     const payload = {
@@ -722,7 +722,7 @@ const onSave = async (data) => {
       await window.$request.post('/workflows', payload)
     }
     window.$message.success('保存成功')
-    
+
     // 弹框询问是否继续编辑
     window.$dialog.success({
       title: '保存成功',
@@ -761,13 +761,13 @@ const handleSchedule = (wf) => {
 
 const handleSaveSchedule = async () => {
   if (!editingWorkflow.value) return
-  
+
   try {
     await window.$request.put(`/workflows/${editingWorkflow.value.workflow_id}`, {
       schedule: editingSchedule.value || null,
       is_active: editingWorkflowActive.value
     })
-    
+
     window.$message.success('定时设置已保存')
     showScheduleDialog.value = false
     loadList()
@@ -802,9 +802,9 @@ const handleCreateVersion = async () => {
   try {
     // 直接创建新版本（从默认版本复制）
     await window.$request.post(`/workflows/${current.value.workflow_id}/versions`)
-    
+
     window.$message.success('版本创建成功')
-    
+
     // 重新加载版本列表
     const r2 = await window.$request.get(`/workflows/${current.value.workflow_id}/versions`)
     versions.value = r2.items || r2 || []
@@ -817,7 +817,7 @@ const handleSetDefaultVersion = async (version) => {
   try {
     await window.$request.put(`/workflows/${current.value.workflow_id}/versions/${version.id}/default`)
     window.$message.success('默认版本设置成功')
-    
+
     // 重新加载版本列表
     const r = await window.$request.get(`/workflows/${current.value.workflow_id}/versions`)
     versions.value = r.items || r || []
@@ -828,11 +828,11 @@ const handleSetDefaultVersion = async (version) => {
 
 const handleEditVersion = async (version) => {
   showVersionsDialog.value = false
-  
+
   try {
     // 获取工作流信息
     const workflow = await window.$request.get(`/workflows/${current.value.workflow_id}`)
-    
+
     current.value = {
       workflow_id: current.value.workflow_id,
       name: workflow.name,
@@ -859,11 +859,11 @@ const calculateDuration = (startTime, endTime) => {
   const start = new Date(startTime)
   const end = new Date(endTime)
   const diff = end - start
-  
+
   const seconds = Math.floor(diff / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
-  
+
   if (hours > 0) {
     return `${hours}小时${minutes % 60}分钟`
   } else if (minutes > 0) {

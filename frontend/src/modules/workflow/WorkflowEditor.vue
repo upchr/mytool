@@ -12,6 +12,8 @@
           @update:value="onWorkflowNameChange"
         />
         <n-divider vertical />
+        <n-button @click="showScheduleDialog = true">⏰ 定时设置</n-button>
+        <n-divider vertical />
         <n-button @click="handleUndo" :disabled="!canUndo">↩ 撤销</n-button>
         <n-button @click="handleRedo" :disabled="!canRedo">↪ 重做</n-button>
         <n-divider vertical />
@@ -394,6 +396,98 @@
         </n-card>
       </div>
     </div>
+
+    <!-- 定时设置对话框 -->
+    <n-modal v-model:show="showScheduleDialog" preset="card" title="⏰ 定时设置" style="width: 600px">
+      <n-form label-placement="left" label-width="auto">
+        <n-form-item label="分钟">
+          <n-select
+            v-model:value="scheduleMinute"
+            :options="minuteOptions"
+            @update:value="updateSchedule"
+          />
+          <n-input v-if="scheduleMinute === 'custom'" v-model:value="customMinute" placeholder="输入分钟值" @input="updateSchedule" />
+        </n-form-item>
+        <n-form-item label="小时">
+          <n-select
+            v-model:value="scheduleHour"
+            :options="hourOptions"
+            @update:value="updateSchedule"
+          />
+          <n-input v-if="scheduleHour === 'custom'" v-model:value="customHour" placeholder="输入小时值" @input="updateSchedule" />
+        </n-form-item>
+        <n-form-item label="日期（天）">
+          <n-select
+            v-model:value="scheduleDay"
+            :options="dayOptions"
+            @update:value="updateSchedule"
+          />
+          <n-input v-if="scheduleDay === 'custom'" v-model:value="customDay" placeholder="输入日期值" @input="updateSchedule" />
+        </n-form-item>
+        <n-form-item label="月份">
+          <n-select
+            v-model:value="scheduleMonth"
+            :options="monthOptions"
+            @update:value="updateSchedule"
+          />
+          <n-input v-if="scheduleMonth === 'custom'" v-model:value="customMonth" placeholder="输入月份值" @input="updateSchedule" />
+        </n-form-item>
+        <n-form-item label="星期（1=星期一）">
+          <n-select
+            v-model:value="scheduleWeekday"
+            :options="weekdayOptions"
+            @update:value="updateSchedule"
+          />
+          <n-input v-if="scheduleWeekday === 'custom'" v-model:value="customWeekday" placeholder="输入星期值" @input="updateSchedule" />
+        </n-form-item>
+      </n-form>
+
+      <n-space vertical>
+        <n-split
+          direction="horizontal"
+          style="height: 200px"
+          :default-size="0.4"
+          :resize-trigger-size="16"
+          :min="0.25"
+          :max="0.75"
+        >
+          <template #1>
+            <n-card title="当前表达式" size="small" hoverable>
+              <n-tag type="info">
+                {{ scheduleExpression }}
+              </n-tag>
+            </n-card>
+          </template>
+          <template #2>
+            <n-card title="执行时间预览" size="small" hoverable>
+              <div v-for="(time, index) in schedulePreviewTimes" :key="index" class="time-item">
+                {{ formatDate(time.next_run) }}
+              </div>
+            </n-card>
+          </template>
+          <template #resize-trigger>
+            <div
+              :style="{
+                height: '100%',
+                backgroundColor: '#a9d7dd',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderRadius: '8px',
+              }"
+            >
+              <n-icon color="white" :size="16">
+                <SwapHorizontalIcon />
+              </n-icon>
+            </div>
+          </template>
+        </n-split>
+        <n-space justify="end">
+          <n-button @click="showScheduleDialog = false">取消</n-button>
+          <n-button type="primary" @click="saveSchedule">保存</n-button>
+        </n-space>
+      </n-space>
+    </n-modal>
   </div>
 </template>
 
@@ -402,14 +496,16 @@ import { ref, onMounted, computed, watch, h } from 'vue'
 import { VueFlow, useVueFlow, Position, Handle } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
+import { SwapHorizontal as SwapHorizontalIcon } from '@vicons/ionicons5'
 
 const props = defineProps({
   workflowId: String,
   workflowName: String,
+  schedule: String,
   initialData: { type: Object, default: () => ({ nodes: [], edges: [] }) }
 })
 
-const emit = defineEmits(['save', 'trigger', 'back', 'update:workflowName'])
+const emit = defineEmits(['save', 'trigger', 'back', 'update:workflowName', 'update:schedule'])
 
 const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes } = useVueFlow()
 
@@ -424,6 +520,104 @@ let nodeCounter = ref(1)
 
 // 工作流名称（内部状态）
 const currentWorkflowName = ref(props.workflowName || '新工作流')
+const currentSchedule = ref(props.schedule || '')
+const showScheduleDialog = ref(false)
+
+// 定时设置相关状态
+const scheduleMinute = ref('0')
+const scheduleHour = ref('0')
+const scheduleDay = ref('*')
+const scheduleMonth = ref('*')
+const scheduleWeekday = ref('*')
+const customMinute = ref('')
+const customHour = ref('')
+const customDay = ref('')
+const customMonth = ref('')
+const customWeekday = ref('')
+const schedulePreviewTimes = ref([])
+
+// 定时设置选项
+const minuteOptions = [
+  { label: '整分', value: '0' },
+  { label: '每分钟 *', value: '*' },
+  { label: '每 5 分钟', value: '*/5' },
+  { label: '每 15 分钟', value: '*/15' },
+  { label: '自定义', value: 'custom' }
+]
+
+const hourOptions = [
+  { label: '0点', value: '0' },
+  { label: '每小时 *', value: '*' },
+  { label: '每 6 小时', value: '*/6' },
+  { label: '每 12 小时', value: '*/12' },
+  { label: '上午 8 点', value: '8' },
+  { label: '下午 6 点', value: '18' },
+  { label: '自定义', value: 'custom' }
+]
+
+const dayOptions = [
+  { label: '每天 *', value: '*' },
+  { label: '每月 1 日', value: '1' },
+  { label: '每月 1-5 日', value: '1-5' },
+  { label: '每月最后一天', value: 'L' },
+  { label: '自定义', value: 'custom' }
+]
+
+const monthOptions = [
+  { label: '每月 *', value: '*' },
+  { label: '1 月', value: '1' },
+  { label: '12 月', value: '12' },
+  { label: '每季度', value: '*/3' },
+  { label: '每半年', value: '*/6' },
+  { label: '自定义', value: 'custom' }
+]
+
+const weekdayOptions = [
+  { label: '每天 *', value: '*' },
+  { label: '周一', value: '1' },
+  { label: '周日', value: '7' },
+  { label: '周一到周五', value: '1-5' },
+  { label: '周一和周五', value: '1,5' },
+  { label: '自定义', value: 'custom' }
+]
+
+// 计算属性：Cron 表达式
+const scheduleExpression = computed(() => {
+  const m = scheduleMinute.value === 'custom' ? customMinute.value : scheduleMinute.value
+  const h = scheduleHour.value === 'custom' ? customHour.value : scheduleHour.value
+  const d = scheduleDay.value === 'custom' ? customDay.value : scheduleDay.value
+  const mo = scheduleMonth.value === 'custom' ? customMonth.value : scheduleMonth.value
+  const w = scheduleWeekday.value === 'custom' ? customWeekday.value : scheduleWeekday.value
+
+  return `${m} ${h} ${d} ${mo} ${w}`
+})
+
+// 格式化日期
+const formatDate = (isoString) => {
+  const date = new Date(isoString)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+// 更新定时设置
+const updateSchedule = async (value) => {
+  if (value === '' || value === 'custom') {
+    console.log('空值，不处理')
+    return
+  }
+  try {
+    const res = await window.$request.post('/cron/jobs/crons', { cron: scheduleExpression.value })
+    schedulePreviewTimes.value = res
+  } catch (error) {
+    window.$message.error('执行时间预览api调用错误')
+  }
+}
 
 // 工作流名称变化
 const onWorkflowNameChange = (value) => {
@@ -462,6 +656,14 @@ const edgeConditionOptions = [
   { label: '节点成功时执行', value: 'success' },
   { label: '节点失败时执行', value: 'failed' }
 ]
+
+// 定时设置相关
+const saveSchedule = () => {
+  currentSchedule.value = scheduleExpression.value
+  emit('update:schedule', currentSchedule.value)
+  showScheduleDialog.value = false
+  window.$message.success('定时设置已保存')
+}
 
 // 计算前置节点选项
 const previousNodes = computed(() => {
@@ -751,6 +953,32 @@ onMounted(() => {
   saveToHistory()
 })
 
+// 监听 schedule 属性变化
+watch(() => props.schedule, (newSchedule) => {
+  if (!newSchedule) {
+    return
+  }
+  try {
+    const parts = newSchedule.split(' ')
+    if (parts.length === 5) {
+      scheduleMinute.value = parts[0]
+      scheduleHour.value = parts[1]
+      scheduleDay.value = parts[2]
+      scheduleMonth.value = parts[3]
+      scheduleWeekday.value = parts[4]
+    }
+  } catch (e) {
+    console.error('加载 cron 表达式失败:', e)
+  }
+}, { immediate: true })
+
+// 监听定时设置对话框显示状态
+watch(() => showScheduleDialog.value, (newVal) => {
+  if (newVal === true) {
+    updateSchedule()
+  }
+})
+
 // 保存当前状态到历史记录
 const saveToHistory = () => {
   const state = {
@@ -1012,6 +1240,10 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
 .wf-node.or { border-color: #eb2f96; }
 .wf-node.start { border-color: #52c41a; background: #f6ffed; }
 .wf-node.end { border-color: #ff4d4f; background: #fff1f0; }
+
+.time-item {
+  margin: 4px 0;
+}
 </style>
 
 <style>
