@@ -186,14 +186,19 @@ class CPEMonitorService:
                     if not client.is_logged_in():
                         success, msg = client.login()
                         if not success:
-                            logger.warning(f"登录失败: {msg}")
-                            time.sleep(60)
+                            # 判断是否被其他用户挤掉
+                            if "已有用户在其他地方登录" in msg or "其他地方登录" in msg:
+                                logger.warning(f"被其他用户挤掉登录，等待 10 分钟后再尝试: {msg}")
+                                time.sleep(600)  # 等待10分钟，给用户浏览器登录的时间窗口
+                            else:
+                                logger.warning(f"登录失败: {msg}")
+                                time.sleep(60)
                             continue
 
                     # 心跳
                     if not client.heartbeat():
-                        logger.warning("心跳失败")
-                        time.sleep(10)
+                        logger.warning("心跳失败，可能被其他用户登出，等待 10 分钟后再尝试")
+                        time.sleep(600)  # 等待10分钟
                         continue
 
                     # 检查新短信
