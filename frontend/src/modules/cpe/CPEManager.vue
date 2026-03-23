@@ -323,7 +323,7 @@ const handleViewSMS = async (row) => {
   smsData.value = []
 
   try {
-    const result = await window.$request.get(`/cpe/configs/${row.id}/sms?limit=50`)
+    const result = await window.$request.get(`/cpe/configs/${row.id}/sms?limit=10`)
     smsData.value = result?.items || []
   } catch (e) {
     window.$message.error('获取短信列表失败')

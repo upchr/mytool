@@ -29,6 +29,11 @@ async def create_config(data: schemas.CPEConfigCreate, engine=Depends(get_engine
     """
     service = services.CPEConfigService(engine)
     result = service.create(data.model_dump())
+    
+    # 如果启用了自动监控，自动启动监控
+    if result.get("auto_monitor") and result.get("is_active"):
+        services.CPEMonitorService.start_monitor(result)
+    
     return BaseResponse.success(result)
 
 
@@ -76,6 +81,18 @@ async def update_config(config_id: int, data: schemas.CPEConfigUpdate, engine=De
     result = service.update(config_id, data.model_dump(exclude_unset=True))
     if not result:
         raise NotFoundException(detail="配置不存在")
+    
+    # 检查是否需要启动/停止监控
+    if data.auto_monitor is not None:
+        if data.auto_monitor and result.get("is_active"):
+            # 启用自动监控，启动监控
+            services.CPEMonitorService.start_monitor(result)
+        elif not data.auto_monitor:
+            # 禁用自动监控，如果当前正在监控这个配置，则停止
+            status = services.CPEMonitorService.get_status()
+            if status.get("config_id") == config_id:
+                services.CPEMonitorService.stop_monitor()
+    
     return BaseResponse.success(result)
 
 

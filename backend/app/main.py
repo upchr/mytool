@@ -53,7 +53,15 @@ async def lifespan(app: FastAPI):
     from app.core.scheduler.config import init_schedule,destroy_schedule
     init_schedule()
 
-    # 5路由配置
+    # 5. CPE 自动监控启动
+    try:
+        from app.core.db.database import get_engine
+        from app.modules.cpe.services import CPEMonitorService
+        CPEMonitorService.auto_start_monitor(get_engine())
+    except Exception as e:
+        logger.warning(f"CPE 自动监控启动失败: {e}")
+
+    # 6. 路由配置
     from app.core.routers import router_manager
     router_manager.register_routers(app)
     # 运行应用

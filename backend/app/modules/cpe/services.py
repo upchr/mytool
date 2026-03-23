@@ -135,6 +135,29 @@ class CPEMonitorService:
         }
 
     @staticmethod
+    def auto_start_monitor(engine) -> bool:
+        """
+        系统启动时自动启动监控
+        
+        检查所有 auto_monitor=True 且 is_active=True 的配置，启动第一个
+        """
+        global _monitor_running, _current_config
+        
+        if _monitor_running:
+            return False
+        
+        config_service = CPEConfigService(engine)
+        configs = config_service.get_all(active_only=True)
+        
+        # 找到第一个启用自动监控的配置
+        for config in configs:
+            if config.get("auto_monitor"):
+                logger.info(f"自动启动 CPE 监控: {config['name']}")
+                return CPEMonitorService.start_monitor(config)
+        
+        return False
+
+    @staticmethod
     def start_monitor(config: Dict[str, Any]) -> bool:
         """启动监控"""
         global _monitor_thread, _monitor_running, _current_config
