@@ -1,59 +1,69 @@
 """
 CPE AES 加密模块
+
+烽火 CPE 使用 AES-128-CBC 加密 API 通信：
+- 密钥：sessionid 的前 16 个字符
+- IV：固定值 'pqrstuvwxyz{|}~\x7f'
+- 填充：PKCS7
 """
 
-import hashlib
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-
-
-def intAesIV() -> bytes:
-    """生成固定的 IV"""
-    return b'0000000000000000'
+import binascii
 
 
 class AESEncryptor:
     """AES 加密器"""
     
+    # 初始化向量：chr(112) 到 chr(127)
+    IV = bytes(range(112, 128))  # b'pqrstuvwxyz{|}~\x7f'
+    
     @staticmethod
     def encrypt(data: str, key: str) -> str:
         """
-        AES CBC 加密
+        加密数据
         
         Args:
-            data: 要加密的数据
-            key: 加密密钥(前16位)
+            data: 要加密的字符串
+            key: 密钥（sessionid 的前 16 个字符）
         
         Returns:
-            加密后的十六进制字符串
+            十六进制编码的加密数据
         """
-        key_bytes = key[:16].encode('utf-8')
-        iv = intAesIV()
+        if len(key) < 16:
+            raise ValueError("密钥长度必须至少 16 个字符")
         
-        cipher = AES.new(key_bytes, AES.MODE_CBC, iv)
+        cipher_key = key[:16].encode('utf-8')
+        cipher = AES.new(cipher_key, AES.MODE_CBC, AESEncryptor.IV)
+        
+        # PKCS7 填充并加密
         padded_data = pad(data.encode('utf-8'), AES.block_size)
         encrypted = cipher.encrypt(padded_data)
         
-        return encrypted.hex()
+        # 返回十六进制字符串
+        return binascii.hexlify(encrypted).decode('utf-8')
     
     @staticmethod
-    def decrypt(data: str, key: str) -> str:
+    def decrypt(hex_data: str, key: str) -> str:
         """
-        AES CBC 解密
+        解密数据
         
         Args:
-            data: 加密后的十六进制字符串
-            key: 解密密钥(前16位)
+            hex_data: 十六进制编码的加密数据
+            key: 密钥（sessionid 的前 16 个字符）
         
         Returns:
             解密后的字符串
         """
-        key_bytes = key[:16].encode('utf-8')
-        iv = intAesIV()
+        if len(key) < 16:
+            raise ValueError("密钥长度必须至少 16 个字符")
         
-        cipher = AES.new(key_bytes, AES.MODE_CBC, iv)
-        encrypted_bytes = bytes.fromhex(data)
-        decrypted = cipher.decrypt(encrypted_bytes)
+        cipher_key = key[:16].encode('utf-8')
+        cipher = AES.new(cipher_key, AES.MODE_CBC, AESEncryptor.IV)
+        
+        # 解密并去除填充
+        encrypted = binascii.unhexlify(hex_data)
+        decrypted = cipher.decrypt(encrypted)
         unpadded = unpad(decrypted, AES.block_size)
         
         return unpadded.decode('utf-8')
