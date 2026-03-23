@@ -57,6 +57,7 @@
       v-model:visible="showDialog"
       v-model:formData="formData"
       :field-groups="fieldGroups"
+      :use-field-groups="true"
       :rules="formRules"
       :title="dialogTitle"
       @submit="handleSubmit"
@@ -150,7 +151,7 @@ const columns = [
     width: 280,
     render(row) {
       const isMonitoring = monitorStatus.value.running && monitorStatus.value.config_id === row.id
-      
+
       return h(NSpace, {}, {
         default: () => [
           h(NButton, { size: 'small', onClick: () => handleViewDevice(row) }, {
@@ -161,7 +162,7 @@ const columns = [
             default: () => '短信',
             icon: () => h(NIcon, null, { default: () => h(MailOutline) })
           }),
-          isMonitoring 
+          isMonitoring
             ? h(NButton, { size: 'small', type: 'warning', onClick: handleStopMonitor }, {
                 default: () => '停止',
                 icon: () => h(NIcon, null, { default: () => h(StopOutline) })
@@ -183,9 +184,9 @@ const smsColumns = [
   { title: '时间', key: 'time', width: 160 },
   { title: '号码', key: 'phone', width: 130 },
   { title: '内容', key: 'content', ellipsis: { tooltip: true } },
-  { 
-    title: '状态', 
-    key: 'is_read', 
+  {
+    title: '状态',
+    key: 'is_read',
     width: 80,
     render(row) {
       return h(NTag, { type: row.is_read ? 'default' : 'warning', size: 'small' }, {
@@ -304,7 +305,7 @@ const handleViewDevice = async (row) => {
   showDeviceInfo.value = true
   deviceLoading.value = true
   deviceInfo.value = null
-  
+
   try {
     const result = await window.$request.get(`/cpe/configs/${row.id}/device`)
     deviceInfo.value = result
@@ -320,7 +321,7 @@ const handleViewSMS = async (row) => {
   showSMSList.value = true
   smsLoading.value = true
   smsData.value = []
-  
+
   try {
     const result = await window.$request.get(`/cpe/configs/${row.id}/sms?limit=50`)
     smsData.value = result?.items || []
