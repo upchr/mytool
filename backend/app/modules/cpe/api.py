@@ -3,7 +3,7 @@ CPE 模块 - API 路由
 
 烽火 5G CPE 路由器管理接口
 """
-
+import logging
 from fastapi import APIRouter, Depends, Query
 from app.core.db.database import get_engine
 from app.core.pojo.response import BaseResponse
@@ -12,6 +12,7 @@ from app.core.exception.exceptions import NotFoundException, ServerException
 from . import schemas, services
 
 router = APIRouter(prefix="/cpe", tags=["CPE 设备管理"])
+logger = logging.getLogger(__name__)
 
 
 # ==================== 配置管理 ====================
@@ -20,20 +21,20 @@ router = APIRouter(prefix="/cpe", tags=["CPE 设备管理"])
 async def create_config(data: schemas.CPEConfigCreate, engine=Depends(get_engine)):
     """
     创建 CPE 配置
-    
+
     Args:
         data: 配置数据
-    
+
     Returns:
         创建的配置
     """
     service = services.CPEConfigService(engine)
     result = service.create(data.model_dump())
-    
+
     # 如果启用了自动监控，自动启动监控
     if result.get("auto_monitor") and result.get("is_active"):
         services.CPEMonitorService.start_monitor(result)
-    
+
     return BaseResponse.success(result)
 
 
@@ -41,10 +42,10 @@ async def create_config(data: schemas.CPEConfigCreate, engine=Depends(get_engine
 async def get_configs(active_only: bool = False, engine=Depends(get_engine)):
     """
     获取配置列表
-    
+
     Args:
         active_only: 仅返回启用的配置
-    
+
     Returns:
         配置列表
     """
@@ -57,7 +58,7 @@ async def get_configs(active_only: bool = False, engine=Depends(get_engine)):
 async def get_config(config_id: int, engine=Depends(get_engine)):
     """
     获取单个配置
-    
+
     Args:
         config_id: 配置 ID
     """
@@ -72,7 +73,7 @@ async def get_config(config_id: int, engine=Depends(get_engine)):
 async def update_config(config_id: int, data: schemas.CPEConfigUpdate, engine=Depends(get_engine)):
     """
     更新配置
-    
+
     Args:
         config_id: 配置 ID
         data: 更新数据
@@ -81,7 +82,7 @@ async def update_config(config_id: int, data: schemas.CPEConfigUpdate, engine=De
     result = service.update(config_id, data.model_dump(exclude_unset=True))
     if not result:
         raise NotFoundException(detail="配置不存在")
-    
+
     # 检查是否需要启动/停止监控
     if data.auto_monitor is not None:
         if data.auto_monitor and result.get("is_active"):
@@ -92,7 +93,7 @@ async def update_config(config_id: int, data: schemas.CPEConfigUpdate, engine=De
             status = services.CPEMonitorService.get_status()
             if status.get("config_id") == config_id:
                 services.CPEMonitorService.stop_monitor()
-    
+
     return BaseResponse.success(result)
 
 
@@ -100,7 +101,7 @@ async def update_config(config_id: int, data: schemas.CPEConfigUpdate, engine=De
 async def delete_config(config_id: int, engine=Depends(get_engine)):
     """
     删除配置
-    
+
     Args:
         config_id: 配置 ID
     """
@@ -115,7 +116,7 @@ async def delete_config(config_id: int, engine=Depends(get_engine)):
 async def toggle_config(config_id: int, is_active: bool = True, engine=Depends(get_engine)):
     """
     切换配置启用状态
-    
+
     Args:
         config_id: 配置 ID
         is_active: 是否启用
@@ -133,7 +134,7 @@ async def toggle_config(config_id: int, is_active: bool = True, engine=Depends(g
 async def test_connection(data: schemas.CPEConfigCreate, engine=Depends(get_engine)):
     """
     测试连接
-    
+
     测试 CPE 设备连接是否正常
     """
     result = services.CPEClientService.test_connection(
@@ -141,7 +142,7 @@ async def test_connection(data: schemas.CPEConfigCreate, engine=Depends(get_engi
         data.username,
         data.password
     )
-    
+
     if result["success"]:
         return BaseResponse.success(result)
     else:
@@ -152,21 +153,21 @@ async def test_connection(data: schemas.CPEConfigCreate, engine=Depends(get_engi
 async def get_device_info(config_id: int, engine=Depends(get_engine)):
     """
     获取设备信息
-    
+
     获取 CPE 设备的详细信息（型号、序列号、温度、运行时间等）
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     result = services.CPEClientService.get_device_info(
         config["host"],
         config["username"],
         config["password"]
     )
-    
+
     if result["success"]:
         return BaseResponse.success(result["data"])
     else:
@@ -177,21 +178,21 @@ async def get_device_info(config_id: int, engine=Depends(get_engine)):
 async def get_temperature(config_id: int, engine=Depends(get_engine)):
     """
     获取温度
-    
+
     获取 CPE 设备的 5G/4G 模块温度
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     result = services.CPEClientService.get_device_info(
         config["host"],
         config["username"],
         config["password"]
     )
-    
+
     if result["success"]:
         return BaseResponse.success(result["data"].get("temperature", {}))
     else:
@@ -202,23 +203,23 @@ async def get_temperature(config_id: int, engine=Depends(get_engine)):
 async def get_signal_info(config_id: int, engine=Depends(get_engine)):
     """
     获取信号信息
-    
+
     获取 CPE 设备的信号强度信息（RSRP、RSSI、SINR等）
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     from .lib.client import CPEClient
-    
+
     client = CPEClient(config["host"], config["username"], config["password"])
     success, msg = client.login()
-    
+
     if not success:
         return BaseResponse.error(400, msg)
-    
+
     try:
         signal = client.get_signal_info()
         return BaseResponse.success(signal)
@@ -230,23 +231,23 @@ async def get_signal_info(config_id: int, engine=Depends(get_engine)):
 async def get_traffic_stats(config_id: int, engine=Depends(get_engine)):
     """
     获取流量统计
-    
+
     获取 CPE 设备的流量使用情况
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     from .lib.client import CPEClient
-    
+
     client = CPEClient(config["host"], config["username"], config["password"])
     success, msg = client.login()
-    
+
     if not success:
         return BaseResponse.error(400, msg)
-    
+
     try:
         traffic = client.get_traffic_stats()
         return BaseResponse.success(traffic)
@@ -260,22 +261,22 @@ async def get_traffic_stats(config_id: int, engine=Depends(get_engine)):
 async def get_sms_list(config_id: int, limit: int = 20, engine=Depends(get_engine)):
     """
     获取短信列表
-    
+
     获取 CPE 设备上的短信列表
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     result = services.CPEClientService.get_sms_list(
         config["host"],
         config["username"],
         config["password"],
         limit
     )
-    
+
     if result["success"]:
         return BaseResponse.success(result)
     else:
@@ -286,23 +287,23 @@ async def get_sms_list(config_id: int, limit: int = 20, engine=Depends(get_engin
 async def get_unread_sms(config_id: int, engine=Depends(get_engine)):
     """
     获取未读短信
-    
+
     获取 CPE 设备上的未读短信
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     from .lib.client import CPEClient
-    
+
     client = CPEClient(config["host"], config["username"], config["password"])
     success, msg = client.login()
-    
+
     if not success:
         return BaseResponse.error(400, msg)
-    
+
     try:
         sms_list = client.get_unread_sms()
         return BaseResponse.success({"total": len(sms_list), "items": sms_list})
@@ -316,7 +317,7 @@ async def get_unread_sms(config_id: int, engine=Depends(get_engine)):
 async def get_monitor_status():
     """
     获取监控状态
-    
+
     获取短信监控的运行状态
     """
     status = services.CPEMonitorService.get_status()
@@ -327,17 +328,17 @@ async def get_monitor_status():
 async def start_monitor(config_id: int, engine=Depends(get_engine)):
     """
     启动监控
-    
+
     启动短信监控，自动转发新短信
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     success = services.CPEMonitorService.start_monitor(config)
-    
+
     if success:
         return BaseResponse.success(message=f"监控已启动: {config['name']}")
     else:
@@ -348,7 +349,7 @@ async def start_monitor(config_id: int, engine=Depends(get_engine)):
 async def stop_monitor():
     """
     停止监控
-    
+
     停止短信监控
     """
     services.CPEMonitorService.stop_monitor()
@@ -361,23 +362,23 @@ async def stop_monitor():
 async def get_airplane_mode(config_id: int, engine=Depends(get_engine)):
     """
     获取飞行模式状态
-    
+
     获取 CPE 设备的飞行模式开关状态
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     from .lib.client import CPEClient
-    
+
     client = CPEClient(config["host"], config["username"], config["password"])
     success, msg = client.login()
-    
+
     if not success:
         return BaseResponse.error(400, msg)
-    
+
     try:
         enabled = client.get_airplane_mode()
         return BaseResponse.success({"enabled": enabled})
@@ -387,42 +388,42 @@ async def get_airplane_mode(config_id: int, engine=Depends(get_engine)):
 
 @router.post("/configs/{config_id}/airplane-mode")
 async def set_airplane_mode(
-    config_id: int, 
-    enable: bool = True, 
+    config_id: int,
+    enable: bool = True,
     auto_disable: bool = False,
     auto_disable_delay: int = 10,
     engine=Depends(get_engine)
 ):
     """
     设置飞行模式
-    
+
     Args:
         config_id: 配置 ID
         enable: True = 开启，False = 关闭
         auto_disable: 开启后是否自动关闭（防止断网）
         auto_disable_delay: 自动关闭延迟时间（秒），默认 10 秒
-    
+
     注意：开启飞行模式会导致设备断网！
     """
     config_service = services.CPEConfigService(engine)
     config = config_service.get_by_id(config_id)
-    
+
     if not config:
         raise NotFoundException(detail="配置不存在")
-    
+
     from .lib.client import CPEClient
     import threading
     import time
-    
+
     client = CPEClient(config["host"], config["username"], config["password"])
     success, msg = client.login()
-    
+
     if not success:
         return BaseResponse.error(400, msg)
-    
+
     try:
         result = client.set_airplane_mode(enable)
-        
+
         if result and enable and auto_disable:
             # 开启飞行模式后，延迟自动关闭
             def auto_disable_task():
@@ -435,21 +436,21 @@ async def set_airplane_mode(
                     logger.info(f"飞行模式已自动关闭（延迟 {auto_disable_delay} 秒）")
                 except Exception as e:
                     logger.error(f"自动关闭飞行模式失败: {e}")
-            
+
             thread = threading.Thread(target=auto_disable_task, daemon=True)
             thread.start()
-            
+
             return BaseResponse.success({
                 "enabled": enable,
                 "auto_disable": True,
                 "auto_disable_delay": auto_disable_delay,
                 "message": f"飞行模式已开启，将在 {auto_disable_delay} 秒后自动关闭"
             })
-        
+
         return BaseResponse.success({"enabled": enable})
-    
+
     except Exception as e:
         return BaseResponse.error(500, str(e))
-    
+
     finally:
         client.logout()
