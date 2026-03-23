@@ -1,7 +1,7 @@
 <template>
   <n-card title="固定资产管理" class="asset-page">
     <template #header-extra>
-      <n-space :align="'center'" :size="isMobile ? 'small' : 'medium'">
+      <n-space :align="isMobile ? 'center' : 'center'" :size="isMobile ? 4 : 8">
         <n-tag type="info" :size="isMobile ? 'tiny' : 'small'">{{ stats.total || 0 }} 个资产</n-tag>
         <n-tag type="success" :size="isMobile ? 'tiny' : 'small'">¥{{ (stats.total_value || 0).toLocaleString() }}</n-tag>
       </n-space>
@@ -9,11 +9,11 @@
 
     <!-- 顶部统计卡片 -->
     <n-grid
-      :x-gap="isMobile ? 8 : 16"
-      :y-gap="isMobile ? 8 : 16"
-      :cols="isMobile ? 2 : (isTablet ? 2 : 4)"
-      style="margin-bottom: 16px"
-      responsive="screen"
+        :x-gap="isMobile ? 8 : 16"
+        :y-gap="isMobile ? 8 : 16"
+        :cols="isMobile ? 2 : (isTablet ? 2 : 4)"
+        style="margin-bottom: 16px"
+        responsive="screen"
     >
       <n-gi>
         <n-statistic label="总资产数量" :value="stats.total || 0">
@@ -38,7 +38,7 @@
       <n-gi>
         <n-statistic label="日均成本总和" :value="stats.daily_cost_sum || 0">
           <template #prefix>
-              <n-icon :size="isMobile ? 16 : 18" color="#f0a020"><TrendingUpOutline /></n-icon>
+            <n-icon :size="isMobile ? 16 : 18" color="#f0a020"><TrendingUpOutline /></n-icon>
           </template>
           <template #suffix>
             <span :style="{fontSize: isMobile ? '12px' : '14px', color: '#909399'}">元/天</span>
@@ -58,7 +58,7 @@
     </n-grid>
 
     <!-- 图表展示 -->
-    <n-space vertical :size="isMobile ? 'small' : 'medium'" style="margin-bottom: 16px">
+    <n-space vertical :size="isMobile ? 12 : 16" style="margin-bottom: 16px">
       <n-card size="small" title="资产类别分布">
         <template #header-extra>
           <n-tag type="info" :size="isMobile ? 'tiny' : 'small'">饼图</n-tag>
@@ -109,328 +109,91 @@
     </n-space>
 
     <!-- 顶部工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-filters">
+        <n-space :vertical="isMobile" :size="isMobile ? 8 : 0" :wrap="true" style="width: 100%">
+          <n-input
+              v-model:value="searchKeyword"
+              placeholder="搜索名称、备注"
+              clearable
+              :style="{width: isMobile ? '100%' : '200px'}"
+              :size="isMobile ? 'medium' : 'small'"
+              @keyup.enter="handleSearch"
+          >
+            <template #prefix>
+              <n-icon><SearchOutline /></n-icon>
+            </template>
+          </n-input>
+          <n-select
+              v-model:value="filterCategory"
+              placeholder="类别筛选"
+              clearable
+              :style="{width: isMobile ? '100%' : '120px'}"
+              :size="isMobile ? 'medium' : 'small'"
+              :options="categoryOptions"
+              @update:value="loadAssets"
+          />
+          <n-select
+              v-model:value="filterStatus"
+              placeholder="状态筛选"
+              clearable
+              :style="{width: isMobile ? '100%' : '100px'}"
+              :size="isMobile ? 'medium' : 'small'"
+              :options="statusOptions"
+              @update:value="loadAssets"
+          />
+          <n-button
+              quaternary
+              :size="isMobile ? 'medium' : 'small'"
+              @click="resetFilters"
+          >
+            <template #icon>
+              <n-icon><RefreshOutline /></n-icon>
+            </template>
+            <span v-if="!isMobile">重置</span>
+          </n-button>
+        </n-space>
+      </div>
+      <div class="toolbar-actions">
+        <n-space :wrap="true" :size="isMobile ? 4 : 0">
+          <n-button
+              type="primary"
+              :size="isMobile ? 'medium' : 'small'"
+              @click="handleAdd"
+          >
+            <template #icon>
+              <n-icon><AddOutline /></n-icon>
+            </template>
+            添加
+          </n-button>
+          <n-button
+              type="error"
+              :size="isMobile ? 'medium' : 'small'"
+              @click="deleteAll"
+              :disabled="checkedRowKeys.length === 0"
+          >
+            <template #icon>
+              <n-icon><TrashOutline /></n-icon>
+            </template>
+            <span v-if="!isMobile">批量删除</span>
+            <span v-else>({{ checkedRowKeys.length }})</span>
+          </n-button>
+          <n-button
+              type="warning"
+              :size="isMobile ? 'medium' : 'small'"
+              @click="batchScrap"
+              :disabled="checkedRowKeys.length === 0"
+          >
+            <template #icon>
+              <n-icon><StopCircleOutline /></n-icon>
+            </template>
+            <span v-if="!isMobile">批量报废</span>
+            <span v-else>({{ checkedRowKeys.length }})</span>
+          </n-button>
+        </n-space>
+      </div>
+    </div>
 
-        <div class="toolbar">
-
-          <div class="toolbar-filters">
-
-            <n-space v-if="isMobile" vertical :size="'small'" :wrap="true" style="width: 100%">
-
-              <n-input
-
-                  v-model:value="searchKeyword"
-
-                  placeholder="搜索名称、备注"
-
-                  clearable
-
-                  style="width: 100%"
-
-                  size="medium"
-
-                  @keyup.enter="handleSearch"
-
-              >
-
-                <template #prefix>
-
-                  <n-icon><SearchOutline /></n-icon>
-
-                </template>
-
-              </n-input>
-
-              <n-select
-
-                  v-model:value="filterCategory"
-
-                  placeholder="类别筛选"
-
-                  clearable
-
-                  style="width: 100%"
-
-                  size="medium"
-
-                  :options="categoryOptions"
-
-                  @update:value="loadAssets"
-
-              />
-
-              <n-select
-
-                  v-model:value="filterStatus"
-
-                  placeholder="状态筛选"
-
-                  clearable
-
-                  style="width: 100%"
-
-                  size="medium"
-
-                  :options="statusOptions"
-
-                  @update:value="loadAssets"
-
-              />
-
-              <n-button
-
-                quaternary
-
-                size="medium"
-
-                @click="resetFilters"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><RefreshOutline /></n-icon>
-
-                </template>
-
-                重置
-
-              </n-button>
-
-            </n-space>
-
-            <n-space v-else :size="'medium'">
-
-              <n-input
-
-                  v-model:value="searchKeyword"
-
-                  placeholder="搜索名称、备注"
-
-                  clearable
-
-                  style="width: 200px"
-
-                  size="small"
-
-                  @keyup.enter="handleSearch"
-
-              >
-
-                <template #prefix>
-
-                  <n-icon><SearchOutline /></n-icon>
-
-                </template>
-
-              </n-input>
-
-              <n-select
-
-                  v-model:value="filterCategory"
-
-                  placeholder="类别筛选"
-
-                  clearable
-
-                  style="width: 120px"
-
-                  size="small"
-
-                  :options="categoryOptions"
-
-                  @update:value="loadAssets"
-
-              />
-
-              <n-select
-
-                  v-model:value="filterStatus"
-
-                  placeholder="状态筛选"
-
-                  clearable
-
-                  style="width: 100px"
-
-                  size="small"
-
-                  :options="statusOptions"
-
-                  @update:value="loadAssets"
-
-              />
-
-              <n-button
-
-                quaternary
-
-                size="small"
-
-                @click="resetFilters"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><RefreshOutline /></n-icon>
-
-                </template>
-
-                重置
-
-              </n-button>
-
-            </n-space>
-
-          </div>
-
-          <div class="toolbar-actions">
-
-            <n-space v-if="isMobile" :size="'small'" :wrap="true" style="width: 100%">
-
-              <n-button 
-
-                type="primary" 
-
-                size="medium"
-
-                @click="handleAdd"
-
-                style="flex: 1"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><AddOutline /></n-icon>
-
-                </template>
-
-                添加
-
-              </n-button>
-
-              <n-button
-
-                  type="error"
-
-                  size="medium"
-
-                  @click="deleteAll"
-
-                  :disabled="checkedRowKeys.length === 0"
-
-                  style="flex: 1"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><TrashOutline /></n-icon>
-
-                </template>
-
-                ({{ checkedRowKeys.length }})
-
-              </n-button>
-
-              <n-button
-
-                  type="warning"
-
-                  size="medium"
-
-                  @click="batchScrap"
-
-                  :disabled="checkedRowKeys.length === 0"
-
-                  style="flex: 1"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><StopCircleOutline /></n-icon>
-
-                </template>
-
-                ({{ checkedRowKeys.length }})
-
-              </n-button>
-
-            </n-space>
-
-            <n-space v-else :size="'medium'">
-
-              <n-button 
-
-                type="primary" 
-
-                size="small"
-
-                @click="handleAdd"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><AddOutline /></n-icon>
-
-                </template>
-
-                添加资产
-
-              </n-button>
-
-              <n-button
-
-                  type="error"
-
-                  size="small"
-
-                  @click="deleteAll"
-
-                  :disabled="checkedRowKeys.length === 0"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><TrashOutline /></n-icon>
-
-                </template>
-
-                批量删除 ({{ checkedRowKeys.length }})
-
-              </n-button>
-
-              <n-button
-
-                  type="warning"
-
-                  size="small"
-
-                  @click="batchScrap"
-
-                  :disabled="checkedRowKeys.length === 0"
-
-              >
-
-                <template #icon>
-
-                  <n-icon><StopCircleOutline /></n-icon>
-
-                </template>
-
-                批量报废 ({{ checkedRowKeys.length }})
-
-              </n-button>
-
-            </n-space>
-
-          </div>
-
-        </div>
     <!-- 数据表格 -->
     <n-data-table
         v-model:checked-row-keys="checkedRowKeys"
@@ -440,10 +203,8 @@
         :pagination="pagination"
         :bordered="false"
         :row-key="row => row.id"
-        :scroll-x="isMobile ? 500 : 1400"
+        :scroll-x="isMobile ? 800 : 1400"
         :size="isMobile ? 'small' : 'medium'"
-        :max-height="isMobile ? 500 : undefined"
-        :virtual-scroll="isMobile"
         remote
     />
 
@@ -563,243 +324,315 @@ const statusOptions = [
 ]
 
 // ========== 表格列定义 ==========
-const columns = computed(() => {
-  const allColumns = [
-    {
-      type: "selection",
-      width: isMobile.value ? 35 : 40
-    },
-    {
-      title: "ID",
-      key: "id",
-      width: 60,
-      sorter: (a, b) => a.id - b.id,
-      hidden: true // 移动端和桌面端都隐藏ID
-    },
-    {
-      title: "资产信息",
-      key: "asset_info",
-      width: isMobile.value ? 200 : 150,
-      ellipsis: {tooltip: true},
-      render(row) {
-        const categoryMap = {
-          electronics: {label: '电子产品', color: '#18a058', icon: '📱'},
-          home: {label: '家居用品', color: '#2080f0', icon: '🏠'},
-          office: {label: '办公设备', color: '#f0a020', icon: '💼'},
-          vehicle: {label: '交通工具', color: '#d03050', icon: '🚗'},
-          other: {label: '其他', color: '#909399', icon: '📦'}
-        }
-        const info = categoryMap[row.category] || {label: row.category || '未分类', color: 'default', icon: '📦'}
-        
-        if (isMobile.value) {
-          // 移动端：紧凑的资产信息展示
-          return h('div', {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }
-          }, [
-            h('div', {
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontWeight: 'bold',
-                fontSize: '13px'
-              }
-            }, [
-              h('span', info.icon),
-              h('span', { 
-                style: { 
-                  flex: 1, 
-                  overflow: 'hidden', 
-                  textOverflow: 'ellipsis', 
-                  whiteSpace: 'nowrap' 
-                } 
-              }, row.name || '未命名')
-            ]),
-            h('div', {
-              style: {
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                color: '#909399'
-              }
-            }, [
-              h(NTag, {
-                type: 'info',
-                bordered: false,
-                size: 'tiny',
-                style: { backgroundColor: info.color + '20', color: info.color }
-              }, { default: () => info.label }),
-              h('span', `¥${(row.price || 0).toLocaleString()}`)
-            ])
-          ])
-        } else {
-          // 桌面端：名称和类别分开显示
-          return h('div', {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px'
-            }
-          }, [
-            h('span', { style: { fontWeight: 'bold' } }, row.name || '未命名'),
-            h(NTag, {
-              type: 'info',
-              bordered: false,
-              size: 'small',
-              style: { backgroundColor: info.color + '20', color: info.color }
-            }, { default: () => info.label })
-          ])
-        }
+const columns = [
+  {
+    type: "selection",
+    width: 40
+  },
+  {
+    title: "ID",
+    key: "id",
+    width: 80,
+    sorter: (a, b) => a.id - b.id
+  },
+  {
+    title: "资产名称",
+    key: "name",
+    width: 150,
+    ellipsis: {tooltip: true}
+  },
+  {
+    title: "类别",
+    key: "category",
+    width: 100,
+    render(row) {
+      const categoryMap = {
+        electronics: {label: '电子产品', color: '#18a058'},
+        home: {label: '家居用品', color: '#2080f0'},
+        office: {label: '办公设备', color: '#f0a020'},
+        vehicle: {label: '交通工具', color: '#d03050'},
+        other: {label: '其他', color: '#909399'}
       }
-    },
-    {
-      title: "购买信息",
-      key: "purchase_info",
-      width: isMobile.value ? 130 : 120,
-      hidden: isMobile.value,
-      render(row) {
-        const purchaseDate = row.purchase_date ? new Date(row.purchase_date).toLocaleDateString() : '-'
-        const usageDays = row.usage_days || 0
-        return h('div', {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-            fontSize: '12px'
-          }
-        }, [
-          h('span', { style: { color: '#666' } }, purchaseDate),
-          h('span', { style: { color: '#909399' } }, `${usageDays} 天`)
-        ])
-      }
-    },
-    {
-      title: "日均成本",
-      key: "daily_cost",
-      width: isMobile.value ? 100 : 100,
-      render(row) {
-        const cost = row.daily_cost || 0
-        return h('span', {
-          style: {
-            color: '#f0a020', 
-            fontWeight: 'bold', 
-            fontSize: isMobile.value ? '12px' : '14px'
-          }
-        }, `¥${cost.toFixed(2)}`)
-      }
-    },
-    {
-      title: "状态",
-      key: "status",
-      width: isMobile.value ? 70 : 80,
-      render(row) {
-        const statusConfig = {
-          active: { type: 'success', label: '使用中', icon: '✅' },
-          scrapped: { type: 'default', label: '已报废', icon: '❌' }
-        }
-        const config = statusConfig[row.status] || statusConfig.active
-        
-        if (isMobile.value) {
-          return h(NTag, {
-            type: config.type,
-            bordered: false,
-            size: 'tiny'
-          }, { default: () => config.icon })
-        } else {
-          return h(NTag, {
-            type: config.type,
-            bordered: false,
-            size: 'medium'
-          }, { default: () => config.label })
-        }
-      }
-    },
-    {
-      title: "质保",
-      key: "warranty",
-      width: isMobile.value ? 60 : 100,
-      render(row) {
-        const warrantyMonths = row.warranty_months || 0
-        if (!warrantyMonths) return '-'
-        
-        const isExpired = row.is_warranty_expired || false
-        const remainingDays = row.remaining_warranty_days || 0
-        
-        if (isExpired) {
-          return h(NTag, { 
-            type: 'error', 
-            bordered: false, 
-            size: isMobile.value ? 'tiny' : 'small'
-          }, { default: () => isMobile.value ? '❌' : '已过期' })
-        }
-        if (remainingDays && remainingDays <= 30) {
-          return h(NTag, { 
-            type: 'warning', 
-            bordered: false, 
-            size: isMobile.value ? 'tiny' : 'small'
-          }, { default: () => isMobile.value ? `⚠️${remainingDays}` : `${remainingDays}天` })
-        }
-        return h(NTag, { 
-          type: 'success', 
-          bordered: false, 
-          size: isMobile.value ? 'tiny' : 'small'
-        }, { default: () => isMobile.value ? `✓${remainingDays}` : `${remainingDays}天` })
-      }
-    },
-    {
-      title: "操作",
-      key: "actions",
-      width: isMobile.value ? 150 : 200,
-      fixed: "right",
-      render(row) {
-        return h(NSpace, { 
-          size: isMobile.value ? 'tiny' : 'small',
-          style: { display: 'flex', flexWrap: 'nowrap' }
-        }, {
-          default: () => [
-            h(NButton, {
-              strong: true,
-              tertiary: true,
-              size: isMobile.value ? 'tiny' : 'small',
-              type: 'primary',
-              onClick: () => handleEdit(row)
-            }, {
-              icon: () => h(CreateOutline),
-              default: () => isMobile.value ? '' : '编辑'
-            }),
-            row.status === 'active' ? h(NButton, {
-              strong: true,
-              tertiary: true,
-              size: isMobile.value ? 'tiny' : 'small',
-              type: "warning",
-              onClick: () => handleScrap(row)
-            }, {
-              icon: () => h(StopCircleOutline),
-              default: () => isMobile.value ? '' : '报废'
-            }) : null,
-            h(NButton, {
-              strong: true,
-              tertiary: true,
-              size: isMobile.value ? 'tiny' : 'small',
-              type: "error",
-              onClick: () => handleDelete(row)
-            }, {
-              icon: () => h(TrashOutline),
-              default: () => isMobile.value ? '' : '删除'
-            })
-          ]
-        })
-      }
+      const info = categoryMap[row.category] || {label: row.category, color: 'default'}
+      return h(NTag, {
+        type: 'info',
+        bordered: false,
+        style: {backgroundColor: info.color + '20', color: info.color}
+      }, {default: () => info.label})
     }
-  ]
+  },
+  {
+    title: "购买价格",
+    key: "price",
+    width: 100,
+    render(row) {
+      return `¥${row.price.toLocaleString()}`
+    }
+  },
+  {
+    title: "购买日期",
+    key: "purchase_date",
+    width: 120,
+    render(row) {
+      return new Date(row.purchase_date).toLocaleDateString()
+    }
+  },
+  {
+    title: "使用天数",
+    key: "usage_days",
+    width: 90,
+    render(row) {
+      return h('span', {
+        style: {color: row.usage_days > 365 ? '#18a058' : '#909399'}
+      }, `${row.usage_days} 天`)
+    }
+  },
+  {
+    title: "日均成本",
+    key: "daily_cost",
+    width: 100,
+    render(row) {
+      return h('span', {
+        style: {color: '#f0a020', fontWeight: 'bold'}
+      }, `¥${row.daily_cost.toFixed(2)}`)
+    }
+  },
+  {
+    title: "状态",
+    key: "status",
+    width: 80,
+    render(row) {
+      return h(NTag, {
+        type: row.status === 'active' ? 'success' : 'default',
+        bordered: false
+      }, {default: () => row.status === 'active' ? '使用中' : '已报废'})
+    }
+  },
+  {
+    title: "质保",
+    key: "warranty",
+    width: 100,
+    render(row) {
+      if (!row.warranty_months) return '-'
+      if (row.is_warranty_expired) {
+        return h(NTag, {type: 'error', bordered: false}, {default: () => '已过期'})
+      }
+      if (row.remaining_warranty_days && row.remaining_warranty_days <= 30) {
+        return h(NTag, {type: 'warning', bordered: false}, {default: () => `${row.remaining_warranty_days}天`})
+      }
+      return h(NTag, {type: 'success', bordered: false}, {default: () => `${row.remaining_warranty_days}天`})
+    }
+  },
+  {
+    title: "备注",
+    key: "description",
+    width: 150,
+    ellipsis: {tooltip: true},
+    render(row) {
+      return row.description || '-'
+    }
+  },
+  {
+    title: "操作",
+    key: "actions",
+    width: 200,
+    render(row) {
+      return h(NSpace, {size: 'small'}, {
+        default: () => [
+          h(NButton, {
+            strong: true,
+            tertiary: true,
+            size: "small",
+            onClick: () => handleEdit(row)
+          }, {
+            icon: () => h(CreateOutline),
+            default: () => "编辑"
+          }),
+          row.status === 'active' ? h(NButton, {
+            strong: true,
+            tertiary: true,
+            size: "small",
+            type: "warning",
+            onClick: () => handleScrap(row)
+          }, {
+            icon: () => h(StopCircleOutline),
+            default: () => "报废"
+          }) : null,
+          h(NButton, {
+            strong: true,
+            tertiary: true,
+            size: "small",
+            type: "error",
+            onClick: () => handleDelete(row)
+          }, {
+            icon: () => h(TrashOutline),
+            default: () => "删除"
+          })
+        ]
+      })
+    }
+  }
+]
+// const columns = computed(() => {
+//   const allColumns = [
+//     {
+//       type: "selection",
+//       width: 40
+//     },
+//     {
+//       title: "ID",
+//       key: "id",
+//       width: 80,
+//       sorter: (a, b) => a.id - b.id,
+//       hidden: isMobile.value
+//     },
+//     {
+//       title: "资产名称",
+//       key: "name",
+//       width: isMobile.value ? 120 : 150,
+//       ellipsis: {tooltip: true}
+//     },
+//     {
+//       title: "类别",
+//       key: "category",
+//       width: isMobile.value ? 80 : 100,
+//       render(row) {
+//         const categoryMap = {
+//           electronics: {label: '电子产品', color: '#18a058'},
+//           home: {label: '家居用品', color: '#2080f0'},
+//           office: {label: '办公设备', color: '#f0a020'},
+//           vehicle: {label: '交通工具', color: '#d03050'},
+//           other: {label: '其他', color: '#909399'}
+//         }
+//         const info = categoryMap[row.category] || {label: row.category, color: 'default'}
+//         return h(NTag, {
+//           type: 'info',
+//           bordered: false,
+//           size: isMobile.value ? 'small' : 'medium',
+//           style: {backgroundColor: info.color + '20', color: info.color}
+//         }, {default: () => info.label})
+//       }
+//     },
+//     {
+//       title: "购买价格",
+//       key: "price",
+//       width: isMobile.value ? 90 : 100,
+//       render(row) {
+//         return `¥${row.price.toLocaleString()}`
+//       }
+//     },
+//     {
+//       title: "购买日期",
+//       key: "purchase_date",
+//       width: isMobile.value ? 100 : 120,
+//       render(row) {
+//         return new Date(row.purchase_date).toLocaleDateString()
+//       }
+//     },
+//     {
+//       title: "使用天数",
+//       key: "usage_days",
+//       width: isMobile.value ? 80 : 90,
+//       hidden: isMobile.value,
+//       render(row) {
+//         return h('span', {
+//           style: {color: row.usage_days > 365 ? '#18a058' : '#909399'}
+//         }, `${row.usage_days} 天`)
+//       }
+//     },
+//     {
+//       title: "日均成本",
+//       key: "daily_cost",
+//       width: isMobile.value ? 90 : 100,
+//       render(row) {
+//         return h('span', {
+//           style: {color: '#f0a020', fontWeight: 'bold', fontSize: isMobile.value ? '12px' : '14px'}
+//         }, `¥${row.daily_cost.toFixed(2)}`)
+//       }
+//     },
+//     {
+//       title: "状态",
+//       key: "status",
+//       width: isMobile.value ? 70 : 80,
+//       render(row) {
+//         return h(NTag, {
+//           type: row.status === 'active' ? 'success' : 'default',
+//           bordered: false,
+//           size: isMobile.value ? 'small' : 'medium'
+//         }, {default: () => row.status === 'active' ? '使用中' : '已报废'})
+//       }
+//     },
+//     {
+//       title: "质保",
+//       key: "warranty",
+//       width: isMobile.value ? 80 : 100,
+//       render(row) {
+//         if (!row.warranty_months) return '-'
+//         if (row.is_warranty_expired) {
+//           return h(NTag, {type: 'error', bordered: false, size: isMobile.value ? 'tiny' : 'small'}, {default: () => '已过期'})
+//         }
+//         if (row.remaining_warranty_days && row.remaining_warranty_days <= 30) {
+//           return h(NTag, {type: 'warning', bordered: false, size: isMobile.value ? 'tiny' : 'small'}, {default: () => `${row.remaining_warranty_days}天`})
+//         }
+//         return h(NTag, {type: 'success', bordered: false, size: isMobile.value ? 'tiny' : 'small'}, {default: () => `${row.remaining_warranty_days}天`})
+//       }
+//     },
+//     {
+//       title: "备注",
+//       key: "description",
+//       width: isMobile.value ? 100 : 150,
+//       ellipsis: {tooltip: true},
+//       render(row) {
+//         return row.description || '-'
+//       }
+//     },
+//     {
+//       title: "操作",
+//       key: "actions",
+//       width: isMobile.value ? 180 : 200,
+//       fixed: "right",
+//       render(row) {
+//         return h(NSpace, {size: isMobile.value ? 'tiny' : 'small'}, {
+//           default: () => [
+//             h(NButton, {
+//               strong: true,
+//               tertiary: true,
+//               size: isMobile.value ? 'tiny' : 'small',
+//               onClick: () => handleEdit(row)
+//             }, {
+//               icon: () => h(CreateOutline),
+//               default: () => isMobile.value ? '' : '编辑'
+//             }),
+//             row.status === 'active' ? h(NButton, {
+//               strong: true,
+//               tertiary: true,
+//               size: isMobile.value ? 'tiny' : 'small',
+//               type: "warning",
+//               onClick: () => handleScrap(row)
+//             }, {
+//               icon: () => h(StopCircleOutline),
+//               default: () => isMobile.value ? '' : '报废'
+//             }) : null,
+//             h(NButton, {
+//               strong: true,
+//               tertiary: true,
+//               size: isMobile.value ? 'tiny' : 'small',
+//               type: "error",
+//               onClick: () => handleDelete(row)
+//             }, {
+//               icon: () => h(TrashOutline),
+//               default: () => isMobile.value ? '' : '删除'
+//             })
+//           ]
+//         })
+//       }
+//     }
+//   ]
+//
+//   return allColumns.filter(col => !col.hidden)
+// })
 
-  return allColumns.filter(col => !col.hidden)
-})
+
 
 // ========== 表单配置 ==========
 const dialogRef = ref(null)
@@ -820,7 +653,7 @@ const defaultFormData = {
   name: '',
   category: 'electronics',
   price: 0,
-  purchase_date: new Date().toISOString().split('T')[0],
+  purchase_date: new Date().getTime(),
   description: '',
   image_url: '',
   warranty_months: 0
@@ -915,7 +748,7 @@ const formRules = {
     {type: 'number', min: 0.01, message: '价格必须大于0', trigger: ['blur', 'change']}
   ],
   purchase_date: [
-    {required: true, message: '请选择购买日期', trigger: ['blur', 'change']}
+    {required: true, type: 'date', message: '请选择购买日期', trigger: ['blur', 'change']}
   ]
 }
 
@@ -1235,19 +1068,15 @@ const batchScrapAssets = async (ids) => {
 // ========== 事件处理 ==========
 const handleAdd = () => {
   dialogType.value = 'add'
-  formData.value = {
-    ...defaultFormData,
-    purchase_date: new Date().toISOString().split('T')[0]
-  }
+  formData.value = {...defaultFormData}
   showDialog.value = true
 }
 
 const handleEdit = (row) => {
   dialogType.value = 'edit'
-  const purchaseDate = row.purchase_date ? new Date(row.purchase_date) : new Date()
   formData.value = {
     ...row,
-    purchase_date: purchaseDate.toISOString().split('T')[0]
+    purchase_date: row.purchase_date ? new Date(row.purchase_date).toISOString().split('T')[0] : ''
   }
   showDialog.value = true
 }
@@ -1336,10 +1165,7 @@ const handlePageSizeChange = (pageSize) => {
 
 const handleCancel = () => {
   showDialog.value = false
-  formData.value = {
-    ...defaultFormData,
-    purchase_date: new Date().toISOString().split('T')[0]
-  }
+  formData.value = {...defaultFormData}
 }
 
 const handleSubmit = async (data, validate = false) => {
@@ -1444,13 +1270,15 @@ const handleResize = () => {
   }
 
   .toolbar-actions :deep(.n-space) {
-    display: flex;
     width: 100%;
   }
 
   .toolbar-actions :deep(.n-space-item) {
-    display: flex;
     flex: 1;
+  }
+
+  .toolbar-actions :deep(.n-button) {
+    width: 100%;
   }
 
   :deep(.n-statistic .n-statistic-value) {
@@ -1476,23 +1304,10 @@ const handleResize = () => {
   :deep(.n-data-table th) {
     font-size: 12px;
     padding: 8px 6px;
-    white-space: nowrap;
   }
 
   :deep(.n-data-table td) {
     padding: 8px 6px;
-  }
-
-  :deep(.n-data-table .n-data-table-td) {
-    vertical-align: top;
-  }
-
-  :deep(.n-data-table .n-checkbox) {
-    padding: 0;
-  }
-
-  :deep(.n-data-table .n-checkbox-box) {
-    border-radius: 3px;
   }
 
   :deep(.n-card) {
@@ -1530,15 +1345,10 @@ const handleResize = () => {
   :deep(.n-data-table th) {
     font-size: 11px;
     padding: 6px 4px;
-    white-space: nowrap;
   }
 
   :deep(.n-data-table td) {
     padding: 6px 4px;
-  }
-
-  :deep(.n-data-table .n-data-table-td) {
-    vertical-align: top;
   }
 }
 
