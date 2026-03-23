@@ -203,7 +203,7 @@ const fieldGroups = computed(() => [
       { name: 'name', label: '配置名称', type: 'input', required: true, maxlength: 100, placeholder: '如：办公室 CPE' },
       { name: 'host', label: '设备地址', type: 'input', required: true, maxlength: 255, placeholder: 'http://192.168.1.1' },
       { name: 'username', label: '用户名', type: 'input', required: true, maxlength: 100 },
-      { name: 'password', label: '密码', type: 'password', required: true, maxlength: 255 }
+      { name: 'password', label: '密码', type: 'input', inputType: 'password', showPasswordOn: 'click', required: true, maxlength: 255 }
     ]
   },
   {
@@ -267,7 +267,12 @@ const handleAdd = () => {
 // 编辑配置
 const handleEdit = (row) => {
   dialogType.value = 'edit'
+  // 复制数据，但保留密码（编辑时不强制要求输入密码）
   formData.value = { ...row }
+  // 如果密码为空，设置一个占位符让用户知道需要输入
+  if (!formData.value.password) {
+    formData.value.password = ''
+  }
   showDialog.value = true
 }
 
