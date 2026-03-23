@@ -353,3 +353,103 @@ async def stop_monitor():
     """
     services.CPEMonitorService.stop_monitor()
     return BaseResponse.success(message="监控已停止")
+
+
+# ==================== 飞行模式 ====================
+
+@router.get("/configs/{config_id}/airplane-mode")
+async def get_airplane_mode(config_id: int, engine=Depends(get_engine)):
+    """
+    获取飞行模式状态
+    
+    获取 CPE 设备的飞行模式开关状态
+    """
+    config_service = services.CPEConfigService(engine)
+    config = config_service.get_by_id(config_id)
+    
+    if not config:
+        raise NotFoundException(detail="配置不存在")
+    
+    from .lib.client import CPEClient
+    
+    client = CPEClient(config["host"], config["username"], config["password"])
+    success, msg = client.login()
+    
+    if not success:
+        return BaseResponse.error(400, msg)
+    
+    try:
+        enabled = client.get_airplane_mode()
+        return BaseResponse.success({"enabled": enabled})
+    finally:
+        client.logout()
+
+
+@router.post("/configs/{config_id}/airplane-mode")
+async def set_airplane_mode(
+    config_id: int, 
+    enable: bool = True, 
+    auto_disable: bool = False,
+    auto_disable_delay: int = 10,
+    engine=Depends(get_engine)
+):
+    """
+    设置飞行模式
+    
+    Args:
+        config_id: 配置 ID
+        enable: True = 开启，False = 关闭
+        auto_disable: 开启后是否自动关闭（防止断网）
+        auto_disable_delay: 自动关闭延迟时间（秒），默认 10 秒
+    
+    注意：开启飞行模式会导致设备断网！
+    """
+    config_service = services.CPEConfigService(engine)
+    config = config_service.get_by_id(config_id)
+    
+    if not config:
+        raise NotFoundException(detail="配置不存在")
+    
+    from .lib.client import CPEClient
+    import threading
+    import time
+    
+    client = CPEClient(config["host"], config["username"], config["password"])
+    success, msg = client.login()
+    
+    if not success:
+        return BaseResponse.error(400, msg)
+    
+    try:
+        result = client.set_airplane_mode(enable)
+        
+        if result and enable and auto_disable:
+            # 开启飞行模式后，延迟自动关闭
+            def auto_disable_task():
+                time.sleep(auto_disable_delay)
+                try:
+                    client2 = CPEClient(config["host"], config["username"], config["password"])
+                    client2.login()
+                    client2.set_airplane_mode(False)
+                    client2.logout()
+                    logger.info(f"飞行模式已自动关闭（延迟 {auto_disable_delay} 秒）")
+                except Exception as e:
+                    logger.error(f"自动关闭飞行模式失败: {e}")
+            
+            thread = threading.Thread(target=auto_disable_task, daemon=True)
+            thread.start()
+            
+            return BaseResponse.success({
+                "enabled": enable,
+                "auto_disable": True,
+                "auto_disable_delay": auto_disable_delay,
+                "message": f"飞行模式已开启，将在 {auto_disable_delay} 秒后自动关闭"
+            })
+        
+        return BaseResponse.success({"enabled": enable})
+    
+    except Exception as e:
+        return BaseResponse.error(500, str(e))
+    
+    finally:
+        client.logout()

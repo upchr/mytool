@@ -273,3 +273,40 @@ class CPEClient:
         except Exception as e:
             logger.error(f"标记短信已读失败: {e}")
             return False
+    
+    # ==================== 飞行模式 ====================
+    
+    def get_airplane_mode(self) -> bool:
+        """
+        获取飞行模式状态
+        
+        Returns:
+            True = 开启，False = 关闭
+        """
+        result = self._request_post({
+            "AirplaneEnable": "X_FH_MobileNetwork.NetworkSettings.airplan_on"
+        }, "/api/tmp/FHAPIS", "get_value_by_xmlnode")
+        
+        data = json.loads(result) if result else {}
+        return data.get("AirplaneEnable") == "1"
+    
+    def set_airplane_mode(self, enable: bool) -> bool:
+        """
+        设置飞行模式
+        
+        Args:
+            enable: True = 开启，False = 关闭
+        
+        Returns:
+            是否成功
+        """
+        try:
+            data = {
+                "url": "X_FH_MobileNetwork.NetworkSettings.airplan_on",
+                "value": "1" if enable else "0"
+            }
+            self._request_post(data, "/api/tmp/FHAPIS", "set_single_by_xmlnode")
+            return True
+        except Exception as e:
+            logger.error(f"设置飞行模式失败: {e}")
+            return False

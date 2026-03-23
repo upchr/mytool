@@ -51,6 +51,31 @@
       <n-data-table :columns="smsColumns" :data="smsData" :loading="smsLoading" max-height="400" />
     </n-modal>
 
+    <!-- 飞行模式对话框 -->
+    <n-modal v-model:show="showAirplaneMode" preset="card" title="飞行模式" style="width: 500px">
+      <n-spin :show="airplaneLoading">
+        <n-space vertical>
+          <n-alert type="warning" title="警告">
+            开启飞行模式会导致设备断网！建议开启后自动关闭。
+          </n-alert>
+          
+          <n-form-item label="飞行模式">
+            <n-switch v-model:value="airplaneEnabled" :loading="airplaneSwitching" @update:value="handleAirplaneModeChange" />
+            <n-text style="margin-left: 10px">{{ airplaneEnabled ? '已开启' : '已关闭' }}</n-text>
+          </n-form-item>
+          
+          <n-form-item label="自动关闭">
+            <n-switch v-model:value="airplaneAutoDisable" :disabled="!airplaneEnabled" />
+            <n-text style="margin-left: 10px">开启后 {{ airplaneAutoDisableDelay }} 秒自动关闭</n-text>
+          </n-form-item>
+          
+          <n-form-item label="延迟时间(秒)" v-if="airplaneAutoDisable">
+            <n-input-number v-model:value="airplaneAutoDisableDelay" :min="5" :max="60" />
+          </n-form-item>
+        </n-space>
+      </n-spin>
+    </n-modal>
+
     <!-- 配置表单对话框 -->
     <DialogForm
       ref="dialogRef"
@@ -68,7 +93,7 @@
 <script setup>
 import { h, ref, reactive, computed, onMounted } from 'vue'
 import { NButton, NSpace, NTag, NSwitch, NIcon } from 'naive-ui'
-import { AddOutline, SearchOutline, InformationCircleOutline, MailOutline, PlayOutline, StopOutline } from '@vicons/ionicons5'
+import { AddOutline, SearchOutline, InformationCircleOutline, MailOutline, PlayOutline, StopOutline, AirplaneOutline } from '@vicons/ionicons5'
 import DialogForm from '@/components/DialogForm.vue'
 
 // 状态
@@ -89,6 +114,15 @@ const currentConfigId = ref(null)
 const showSMSList = ref(false)
 const smsLoading = ref(false)
 const smsData = ref([])
+
+// 飞行模式
+const showAirplaneMode = ref(false)
+const airplaneLoading = ref(false)
+const airplaneSwitching = ref(false)
+const airplaneEnabled = ref(false)
+const airplaneAutoDisable = ref(true)
+const airplaneAutoDisableDelay = ref(10)
+const currentAirplaneConfigId = ref(null)
 
 // 监控状态
 const monitorStatus = ref({ running: false, config_id: null })
@@ -161,6 +195,10 @@ const columns = [
           h(NButton, { size: 'small', onClick: () => handleViewSMS(row) }, {
             default: () => '短信',
             icon: () => h(NIcon, null, { default: () => h(MailOutline) })
+          }),
+          h(NButton, { size: 'small', onClick: () => handleAirplaneMode(row) }, {
+            default: () => '飞行',
+            icon: () => h(NIcon, null, { default: () => h(AirplaneOutline) })
           }),
           isMonitoring
             ? h(NButton, { size: 'small', type: 'warning', onClick: handleStopMonitor }, {
@@ -329,6 +367,39 @@ const handleViewSMS = async (row) => {
     window.$message.error('获取短信列表失败')
   } finally {
     smsLoading.value = false
+  }
+}
+
+// 飞行模式
+const handleAirplaneMode = async (row) => {
+  currentAirplaneConfigId.value = row.id
+  showAirplaneMode.value = true
+  airplaneLoading.value = true
+
+  try {
+    const result = await window.$request.get(`/cpe/configs/${row.id}/airplane-mode`)
+    airplaneEnabled.value = result?.enabled || false
+  } catch (e) {
+    window.$message.error('获取飞行模式状态失败')
+  } finally {
+    airplaneLoading.value = false
+  }
+}
+
+// 切换飞行模式
+const handleAirplaneModeChange = async (enabled) => {
+  airplaneSwitching.value = true
+
+  try {
+    await window.$request.post(
+      `/cpe/configs/${currentAirplaneConfigId.value}/airplane-mode?enable=${enabled}&auto_disable=${airplaneAutoDisable.value}&auto_disable_delay=${airplaneAutoDisableDelay.value}`
+    )
+    window.$message.success(enabled ? '飞行模式已开启' : '飞行模式已关闭')
+  } catch (e) {
+    window.$message.error('设置飞行模式失败')
+    airplaneEnabled.value = !enabled // 恢复原状态
+  } finally {
+    airplaneSwitching.value = false
   }
 }
 
