@@ -17,6 +17,7 @@ import KnowledgeBase from '../modules/ai-chat/KnowledgeBase.vue'
 import WorkflowManager from '../modules/workflow/WorkflowManager.vue'
 import WorkflowExecutionLog from '../modules/workflow/WorkflowExecutionLog.vue'
 import AssetList from '../modules/asset/AssetList.vue'
+import CPEManager from '../modules/cpe/CPEManager.vue'
 
 import {
     AccessibilityOutline as AboutIcon,
@@ -37,6 +38,7 @@ import {
     GitBranchOutline as WorkflowIcon,
     BookOutline as KnowledgeIcon,
     BookOutline as AssetIcon,
+    WifiOutline as CPEIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -54,6 +56,7 @@ const routes = [
     { path: '/ai-config', component: AIConfig },
     { path: '/ai-knowledge', component: KnowledgeBase },
     { path: '/asset', component: AssetList },
+    { path: '/cpe', component: CPEManager },
     { path: '/ssl-dns', component: SSLDns },
     {
         path: '/ssl-apply',
@@ -138,6 +141,12 @@ const routeLabels = [
         label: '固定资产',
         icon: AssetIcon,
         key: 'asset'
+    },
+    {
+        path: '/cpe',
+        label: 'CPE 设备',
+        icon: CPEIcon,
+        key: 'cpe'
     },
     {
         label: 'AI 助手',
