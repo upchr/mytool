@@ -32,7 +32,17 @@ const initEditor = async () => {
           'ls', 'cd', 'pwd', 'mkdir', 'rm', 'cp', 'mv', 'echo', 'cat', 'grep',
           'find', 'ps', 'kill', 'top', 'df', 'du', 'chmod', 'chown', 'tar',
           'wget', 'curl', 'ssh', 'scp', 'rsync', 'systemctl', 'journalctl',
-          'docker', 'docker ps', 'docker-compose', 'git', 'python3', 'bash', 'sh'
+          'docker', 'docker ps', 'docker-compose', 'git', 'python3', 'bash', 'sh',
+          '# error_exit \'自定义错误内容\' [错误码|1]\n' +
+          'error_exit() {\n' +
+          '    echo "错误退出: $1" >&2\n' +
+          '    exit "${2:-1}"\n' +
+          '}',
+          '# success_exit \'自定义成功内容\'\n' +
+          'success_exit() {\n' +
+          '    echo "成功退出: $1"\n' +
+          '    exit 0\n' +
+          '}'
         ]
 
         const suggestions = commands.map(cmd => ({

@@ -714,7 +714,7 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'trigger', 'back', 'update:workflowName', 'update:schedule'])
 
-const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes } = useVueFlow()
+const { zoomIn, zoomOut, fitView, addNodes, addEdges, removeNodes, getViewport } = useVueFlow()
 
 const canvasRef = ref(null)
 const saving = ref(false)
@@ -1235,15 +1235,34 @@ const onDragStart = (e, item) => {
 
 const onDrop = (e) => {
   if (!dragType) return
+  
   const rect = canvasRef.value.getBoundingClientRect()
-  const pos = { x: e.clientX - rect.left - 60, y: e.clientY - rect.top - 20 }
+  const viewport = getViewport()
+  
+  // 计算鼠标相对于画布的位置
+  const mouseX = e.clientX - rect.left
+  const mouseY = e.clientY - rect.top
+  
+  // 考虑画布的缩放和平移
+  // 坐标转换公式：worldPosition = (screenPosition - translate) / zoom
+  const x = (mouseX - viewport.x) / viewport.zoom
+  const y = (mouseY - viewport.y) / viewport.zoom
+  
+  // 节点中心点偏移（假设节点宽度约 100px，高度约 40px）
+  const nodeWidth = 100
+  const nodeHeight = 40
+  
   const id = `n${nodeCounter.value++}`
   nodes.value.push({
     id,
     type: dragType.type,
-    position: pos,
+    position: { 
+      x: x - nodeWidth / 2,  // 居中对齐
+      y: y - nodeHeight / 2
+    },
     data: { label: `${dragType.label}节点`, config: {} }
   })
+  
   dragType = null
   editConfig.value = {}
   saveToHistory()

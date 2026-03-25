@@ -37,7 +37,7 @@ import {
     SparklesOutline as AiIcon,
     GitBranchOutline as WorkflowIcon,
     BookOutline as KnowledgeIcon,
-    BookOutline as AssetIcon,
+    DiamondOutline as AssetIcon,
     WifiOutline as CPEIcon,
 } from "@vicons/ionicons5";
 
