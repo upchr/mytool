@@ -1,8 +1,23 @@
 <template>
   <div class="ai-chat-container">
+    <!-- 移动端顶部栏 -->
+    <div class="mobile-header" v-if="isMobile">
+      <n-button text @click="showHistoryDrawer = true">
+        <template #icon>
+          <n-icon :component="MenuIcon" :size="24" />
+        </template>
+      </n-button>
+      <span class="mobile-title">{{ currentConversationTitle }}</span>
+      <n-button text @click="showSettingsDrawer = true">
+        <template #icon>
+          <n-icon :component="SettingsIcon" :size="24" />
+        </template>
+      </n-button>
+    </div>
+
     <div class="chat-layout">
       <!-- 左侧历史对话列表 -->
-      <div class="history-sidebar" v-if="showHistory">
+      <div class="history-sidebar" v-if="showHistory && !isMobile">
         <n-card title="💬 历史对话" class="history-card" size="small">
           <template #header-extra>
             <n-button text type="primary" @click="createNewConversation" title="新建对话">
@@ -42,8 +57,8 @@
 
       <!-- 右侧聊天区域 -->
       <div class="chat-main">
-        <n-card :title="currentConversationTitle" class="chat-card">
-          <template #header-extra>
+        <n-card :title="currentConversationTitle" class="chat-card" :class="{ 'no-header': isMobile }">
+          <template #header-extra v-if="!isMobile">
             <n-space>
               <n-select
                   v-model:value="currentConfigId"
@@ -89,7 +104,7 @@
                 :class="['message', message.role]"
             >
               <div class="message-avatar">
-                <n-icon :size="24" :component="message.role === 'user' ? PersonIcon : RobotIcon" />
+                <n-icon :size="isMobile ? 20 : 24" :component="message.role === 'user' ? PersonIcon : RobotIcon" />
               </div>
               <div class="message-content">
                 <div class="message-text markdown-body" v-html="renderMarkdown(message.content)"></div>
@@ -116,7 +131,7 @@
                 v-model:value="inputMessage"
                 type="textarea"
                 placeholder="输入消息..."
-                :autosize="{ minRows: 2, maxRows: 6 }"
+                :autosize="{ minRows: isMobile ? 2 : 2, maxRows: isMobile ? 4 : 6 }"
                 @keydown.enter.exact="sendMessage"
                 :disabled="isLoading"
             />
@@ -126,6 +141,7 @@
                   :loading="isLoading"
                   @click="sendMessage"
                   :disabled="!inputMessage.trim() || isLoading"
+                  :size="isMobile ? 'medium' : 'default'"
               >
                 发送
               </n-button>
@@ -133,13 +149,18 @@
                   v-if="isLoading"
                   type="warning"
                   @click="cancelMessage"
+                  :size="isMobile ? 'medium' : 'default'"
               >
                 <template #icon>
                   <n-icon :component="StopIcon" />
                 </template>
                 中断
               </n-button>
-              <n-button @click="clearMessages" :disabled="messages.length === 0 || isLoading">
+              <n-button 
+                @click="clearMessages" 
+                :disabled="messages.length === 0 || isLoading"
+                :size="isMobile ? 'medium' : 'default'"
+              >
                 清空
               </n-button>
             </div>
@@ -149,7 +170,7 @@
     </div>
 
     <!-- 编辑标题对话框 -->
-    <n-modal v-model:show="showEditDialog" preset="card" title="编辑对话标题" style="width: 400px">
+    <n-modal v-model:show="showEditDialog" preset="card" title="编辑对话标题" :style="{ width: isMobile ? '90%' : '400px' }">
       <n-form :model="{ title: editingTitle }" label-placement="left" label-width="80px">
         <n-form-item label="对话标题" path="title">
           <n-input
@@ -168,13 +189,97 @@
         </div>
       </template>
     </n-modal>
+
+    <!-- 移动端历史记录抽屉 -->
+    <n-drawer v-model:show="showHistoryDrawer" :width="isMobile ? '80%' : '300px'" placement="left">
+      <n-drawer-content title="💬 历史对话">
+        <template #header-extra>
+          <n-button text type="primary" @click="createNewConversation" title="新建对话">
+            <template #icon>
+              <n-icon :component="AddIcon" />
+            </template>
+          </n-button>
+        </template>
+
+        <div class="history-list mobile-history-list">
+          <div
+            v-for="conv in conversations"
+            :key="conv.id"
+            :class="['history-item', { active: currentConversationId === conv.id }]"
+            @click="loadConversation(conv.id); showHistoryDrawer = false"
+          >
+            <div class="history-title">{{ conv.title }}</div>
+            <div class="history-time">{{ formatDateTime(conv.updated_at) }}</div>
+            <div class="history-actions">
+              <n-button text size="tiny" @click.stop="editConversationTitle(conv)">
+                <template #icon>
+                  <n-icon :component="EditIcon" />
+                </template>
+              </n-button>
+              <n-button text size="tiny" type="error" @click.stop="deleteConversation(conv.id)">
+                <template #icon>
+                  <n-icon :component="DeleteIcon" />
+                </template>
+              </n-button>
+            </div>
+          </div>
+
+          <n-empty v-if="conversations.length === 0" description="暂无历史对话" size="small" />
+        </div>
+      </n-drawer-content>
+    </n-drawer>
+
+    <!-- 移动端设置抽屉 -->
+    <n-drawer v-model:show="showSettingsDrawer" :width="isMobile ? '80%' : '300px'" placement="right">
+      <n-drawer-content title="⚙️ 设置">
+        <n-form label-placement="left" label-width="auto">
+          <n-form-item label="AI 配置">
+            <n-select
+                v-model:value="currentConfigId"
+                :options="configOptions"
+                placeholder="选择配置"
+                @update:value="handleConfigChange"
+                :loading="loadingConfigs"
+            >
+              <template #render-label="{ option }">
+                <div class="config-option">
+                  <n-icon :component="option.is_enabled ? CheckmarkCircleIcon : RadioIcon" :size="14" />
+                  <span>{{ option.label }}</span>
+                  <n-tag v-if="option.is_enabled" type="success" size="tiny" style="margin-left: 4px">当前</n-tag>
+                </div>
+              </template>
+            </n-select>
+          </n-form-item>
+
+          <n-form-item label="知识库">
+            <n-switch
+                v-model:value="useKnowledgeBase"
+                @update:value="handleKnowledgeBaseChange"
+            >
+              <template #checked>开启</template>
+              <template #unchecked>关闭</template>
+            </n-switch>
+          </n-form-item>
+
+          <n-form-item v-if="useKnowledgeBase" label="选择知识库">
+            <n-select
+                v-model:value="selectedKnowledgeBaseId"
+                :options="knowledgeBaseOptions"
+                placeholder="选择知识库"
+                @update:value="handleKnowledgeBaseSelect"
+                :loading="loadingKnowledgeBases"
+            />
+          </n-form-item>
+        </n-form>
+      </n-drawer-content>
+    </n-drawer>
   </div>
 </template>
 
 <script setup>
-import {ref, nextTick, onMounted, computed} from 'vue'
-import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag, NModal, NForm, NFormItem} from 'naive-ui'
-import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon, StopCircleOutline as StopIcon} from '@vicons/ionicons5'
+import {ref, nextTick, onMounted, computed, onUnmounted} from 'vue'
+import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag, NModal, NForm, NFormItem, NDrawer, NDrawerContent, NSpace, NSwitch} from 'naive-ui'
+import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon, StopCircleOutline as StopIcon, MenuOutline as MenuIcon, SettingsOutline as SettingsIcon} from '@vicons/ionicons5'
 import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -186,6 +291,16 @@ const isLoading = ref(false)
 const messagesContainer = ref(null)
 const message = useMessage()
 const isConfigured = ref(true) // API Key 配置状态
+
+// 移动端检测
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// 移动端抽屉状态
+const showHistoryDrawer = ref(false)
+const showSettingsDrawer = ref(false)
 
 // 中断相关
 const abortController = ref(null)
@@ -708,6 +823,10 @@ const handleKnowledgeBaseSelect = (baseId) => {
 
 // 初始化欢迎消息和检查配置
 onMounted(async () => {
+  // 检测移动端
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+
   messages.value.push({
     role: 'assistant',
     content: '您好！我是 AI 助手，有什么可以帮助您的吗？',
@@ -723,6 +842,11 @@ onMounted(async () => {
   // 加载知识库列表
   await loadKnowledgeBases()
 })
+
+// 清理事件监听器
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
 </script>
 
 <style scoped>
@@ -730,6 +854,28 @@ onMounted(async () => {
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* 移动端顶部栏 */
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.mobile-title {
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
 }
 
 .chat-layout {
@@ -808,6 +954,10 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.chat-card.no-header :deep(.n-card__header) {
+  display: none;
 }
 
 .chat-messages {
@@ -932,6 +1082,17 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 移动端历史记录列表 */
+.mobile-history-list {
+  padding: 8px 0;
+}
+
 /* 深色模式适配 */
 .dark .chat-messages {
   background: #1e1e1e;
@@ -964,6 +1125,15 @@ onMounted(async () => {
   border-color: #1890ff;
 }
 
+.dark .mobile-header {
+  background: #2d2d2d;
+  border-bottom-color: #444;
+}
+
+.dark .mobile-title {
+  color: #e0e0e0;
+}
+
 .config-option {
   display: flex;
   align-items: center;
@@ -976,5 +1146,163 @@ onMounted(async () => {
 
 .dark .config-option :deep(.n-icon) {
   color: #4dabf7;
+}
+
+/* ==================== 移动端响应式样式 ==================== */
+@media (max-width: 768px) {
+  .ai-chat-container {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  /* 显示移动端顶部栏 */
+  .mobile-header {
+    display: flex;
+  }
+
+  /* 隐藏桌面端侧边栏 */
+  .history-sidebar {
+    display: none;
+  }
+
+  /* 调整聊天布局 */
+  .chat-layout {
+    gap: 0;
+    height: calc(100vh - 60px);
+  }
+
+  /* 调整聊天卡片 */
+  .chat-card {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* 调整消息区域 */
+  .chat-messages {
+    padding: 12px;
+    border-radius: 0;
+    margin-bottom: 12px;
+    max-height: calc(100vh - 200px);
+  }
+
+  /* 调整消息样式 */
+  .message {
+    margin-bottom: 12px;
+  }
+
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    margin: 0 8px;
+  }
+
+  .message-content {
+    max-width: 85%;
+  }
+
+  .message-text {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .message-time {
+    font-size: 11px;
+  }
+
+  /* 调整输入框 */
+  .chat-input {
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+
+  .chat-actions {
+    gap: 6px;
+  }
+
+  .chat-actions button {
+    flex: 1;
+    font-size: 14px;
+  }
+
+  /* 调整配置提示 */
+  .config-notice {
+    margin-top: 12px;
+  }
+
+  .config-notice :deep(.n-alert) {
+    font-size: 13px;
+  }
+
+  /* 调整历史记录项 */
+  .history-item {
+    padding: 10px;
+  }
+
+  .history-title {
+    font-size: 13px;
+  }
+
+  .history-time {
+    font-size: 11px;
+  }
+
+  /* 移动端历史记录操作按钮始终显示 */
+  .history-item .history-actions {
+    opacity: 1;
+    position: static;
+    transform: none;
+    margin-top: 4px;
+    justify-content: flex-end;
+  }
+
+  /* 调整代码块样式 */
+  .markdown-body :deep(pre) {
+    padding: 8px;
+  }
+
+  .markdown-body :deep(code) {
+    font-size: 12px;
+  }
+}
+
+/* 小屏幕手机适配 */
+@media (max-width: 480px) {
+  .message-content {
+    max-width: 90%;
+  }
+
+  .message-text {
+    font-size: 13px;
+  }
+
+  .mobile-title {
+    font-size: 14px;
+  }
+
+  .chat-actions button {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+}
+
+/* 横屏模式适配 */
+@media (max-height: 600px) and (orientation: landscape) {
+  .chat-messages {
+    max-height: calc(100vh - 180px);
+  }
+
+  .message {
+    margin-bottom: 8px;
+  }
+
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message-text {
+    padding: 8px 10px;
+  }
 }
 </style>
