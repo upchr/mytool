@@ -18,6 +18,8 @@
         :collapsed="collapsed"
         :collapsed-width="60"
         :collapsed-icon-size="22"
+        :root-indent="36"
+        :indent="12"
         :options="menuOptions"
     />
   </n-layout-sider>
@@ -56,7 +58,7 @@
 <script setup>
 import { ref, computed , h,} from 'vue'
 import { useWindowSize } from '@vueuse/core'
-import {NIcon, NLayoutSider, NMenu} from 'naive-ui'
+import {NEllipsis, NIcon, NLayoutSider, NMenu} from 'naive-ui'
 import { RouterLink } from 'vue-router'
 import { routeLabels } from '@/router/index.js'
 

@@ -86,55 +86,63 @@ const routeLabels = [
         key: 'notify'
     },
     {
-        path: '/workflows',
-        label: '工作流',
+        label: '全流程',
         icon: WorkflowIcon,
-        key: 'workflows'
-    },
-    {
-        path: '/nodes',
-        label: '节点管理',
-        icon: PCIcon,
-        key: 'nodes'
-    },
-    {
-        path: '/jobs',
-        label: '任务管理',
-        icon: ClockIcon,
-        key: 'jobs'
-    },
-    {
-        label: '证书管理',
-        icon: SSLIcon,
-        key: 'ssl',
+        key: 'workflows',
         children: [
             {
-                path: '/ssl-apply',
-                label: '证书申请',
-                icon: SSLApplyIcon,
-                key: 'ssl-apply'
+                path: '/workflows',
+                label: '工作流',
+                icon: WorkflowIcon,
+                key: 'workflows',
             },
             {
-                path: '/ssl-dns',
-                label: 'DNS授权',
-                icon: SSLDNSIcon,
-                key: 'ssl-dns'
+                path: '/nodes',
+                label: '节点管理',
+                icon: PCIcon,
+                key: 'nodes'
             },
             {
-                path: '/ssl-store',
-                label: '证书仓库',
-                icon: SSLListIcon,
-                key: 'ssl-store'
+                path: '/jobs',
+                label: '任务管理',
+                icon: ClockIcon,
+                key: 'jobs'
             },
             {
-                path: '/ssl-min',
-                label: '站点监控',
-                icon: SSLMiIcon,
-                key: 'ssl-min'
-            },
+                label: '证书管理',
+                icon: SSLIcon,
+                key: 'ssl',
+                children: [
+                    {
+                        path: '/ssl-apply',
+                        label: '证书申请',
+                        icon: SSLApplyIcon,
+                        key: 'ssl-apply'
+                    },
+                    {
+                        path: '/ssl-dns',
+                        label: 'DNS授权',
+                        icon: SSLDNSIcon,
+                        key: 'ssl-dns'
+                    },
+                    {
+                        path: '/ssl-store',
+                        label: '证书仓库',
+                        icon: SSLListIcon,
+                        key: 'ssl-store'
+                    },
+                    {
+                        path: '/ssl-min',
+                        label: '站点监控',
+                        icon: SSLMiIcon,
+                        key: 'ssl-min'
+                    },
 
+                ]
+            },
         ]
     },
+
 
     {
         path: '/asset',

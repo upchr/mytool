@@ -36,10 +36,10 @@
           />
           <n-divider v-if="!isMobile" vertical />
           <n-space :size="isMobile ? 4 : 0">
-            <n-button 
-              quaternary 
-              :size="isMobile ? 'medium' : 'small'" 
-              @click="handleUndo" 
+            <n-button
+              quaternary
+              :size="isMobile ? 'medium' : 'small'"
+              @click="handleUndo"
               :disabled="!canUndo"
             >
               <template #icon>
@@ -47,10 +47,10 @@
               </template>
               <span v-if="!isMobile">撤销</span>
             </n-button>
-            <n-button 
-              quaternary 
-              :size="isMobile ? 'medium' : 'small'" 
-              @click="handleRedo" 
+            <n-button
+              quaternary
+              :size="isMobile ? 'medium' : 'small'"
+              @click="handleRedo"
               :disabled="!canRedo"
             >
               <template #icon>
@@ -61,10 +61,10 @@
           </n-space>
           <n-divider v-if="!isMobile" vertical />
           <n-space :size="isMobile ? 4 : 0">
-            <n-button 
-              type="primary" 
-              :size="isMobile ? 'medium' : 'small'" 
-              @click="handleSave" 
+            <n-button
+              type="primary"
+              :size="isMobile ? 'medium' : 'small'"
+              @click="handleSave"
               :loading="saving"
             >
               <template #icon>
@@ -72,10 +72,10 @@
               </template>
               保存
             </n-button>
-            <n-button 
+            <n-button
               v-if="workflowId"
-              type="success" 
-              :size="isMobile ? 'medium' : 'small'" 
+              type="success"
+              :size="isMobile ? 'medium' : 'small'"
               @click="handleTrigger"
             >
               <template #icon>
@@ -89,10 +89,10 @@
         <!-- 第二行：缩放控制和横屏切换（移动端显示横屏切换） -->
         <n-space align="center" :size="isMobile ? 4 : 0">
           <n-divider v-if="!isMobile" vertical />
-          <n-button 
+          <n-button
             v-if="isMobile"
-            quaternary 
-            :size="isMobile ? 'medium' : 'small'" 
+            quaternary
+            :size="isMobile ? 'medium' : 'small'"
             @click="toggleLandscapeMode"
             :type="isLandscapeMode ? 'primary' : 'default'"
           >
@@ -129,7 +129,7 @@
 
     <div class="editor-body" :class="{ 'landscape-mode': isLandscapeMode }">
       <!-- 左侧节点面板 -->
-      <div class="left-panel" 
+      <div class="left-panel"
            v-show="!isMobile || !leftPanelCollapsed"
            :class="{ 'collapsed': leftPanelCollapsed, 'landscape': isLandscapeMode }">
         <div v-if="isMobile && isLandscapeMode" class="panel-header">
@@ -138,8 +138,8 @@
             {{ leftPanelCollapsed ? '展开' : '收起' }}
           </n-button>
         </div>
-        <n-card 
-          title="节点类型" 
+        <n-card
+          title="节点类型"
           :size="isMobile ? 'small' : 'small'"
           :style="{ width: isMobile ? '100%' : 'auto' }"
         >
@@ -159,8 +159,8 @@
             </div>
           </div>
         </n-card>
-        <n-card 
-          :size="isMobile ? 'small' : 'small'" 
+        <n-card
+          :size="isMobile ? 'small' : 'small'"
           :style="{ marginTop: isMobile ? '8px' : '12px' }"
         >
           <template #header>
@@ -187,8 +187,13 @@
           :max-zoom="4"
           :fit-view-on-init="true"
           :fit-view-options="{ padding: isMobile ? 0.4 : 0.2 }"
+          :selectable="true"
+          :selectable-nodes="true"
+          :selectable-edges="true"
           @node-click="onNodeClick"
           @edge-click="onEdgeClick"
+          @edge-update="onEdgeClick"
+          @selection-change="onSelectionChange"
           @connect="onConnect"
           @dragover.prevent
           @drop="onDrop"
@@ -261,16 +266,18 @@
       </div>
 
       <!-- 右侧属性面板 -->
-      <div class="right-panel" 
+      <div class="right-panel"
            :class="{ 'collapsed': rightPanelCollapsed, 'landscape': isLandscapeMode }"
-           v-if="selectedNode">
+           v-if="selectedNode || selectedEdge">
         <div v-if="isMobile && isLandscapeMode" class="panel-header">
           <n-button text @click="rightPanelCollapsed = !rightPanelCollapsed" size="small">
             <n-icon :size="16"><InformationCircleIcon /></n-icon>
             {{ rightPanelCollapsed ? '展开' : '收起' }}
           </n-button>
         </div>
-        <n-card title="节点属性" size="small">
+
+        <!-- 节点属性面板 -->
+        <n-card title="节点属性" size="small" v-if="selectedNode">
           <n-form label-placement="top" size="small">
             <n-form-item>
               <template #label>
@@ -346,26 +353,26 @@
                   </div>
                 </div>
               </n-alert>
-              
+
               <n-form-item label="条件表达式">
-                <n-input 
-                  v-model:value="editConfig.expression" 
-                  placeholder="True" 
+                <n-input
+                  v-model:value="editConfig.expression"
+                  placeholder="True"
                   @blur="applyEdit"
                   type="textarea"
                   :autosize="{ minRows: 3, maxRows: 6 }"
                   style="font-family: 'Courier New', monospace; font-size: 13px;"
                 />
               </n-form-item>
-              
+
               <n-form-item label="选择前置节点">
-                <n-select 
+                <n-select
                   :options="previousNodes"
                   placeholder="选择要引用的节点"
                   @update:value="(val) => { insertNodeVariable(val); applyEdit() }"
                 />
               </n-form-item>
-              
+
               <n-form-item label="可用变量">
                 <n-collapse size="small">
                   <n-collapse-item v-if="previousNodes.length > 0" title="前置节点变量">
@@ -411,10 +418,10 @@
                   </n-collapse-item>
                 </n-collapse>
               </n-form-item>
-              
+
               <n-form-item label="常用表达式">
                 <n-space vertical style="width: 100%">
-                  <n-select 
+                  <n-select
                     :options="dynamicConditionExamples"
                     placeholder="选择示例"
                     @update:value="(val) => { editConfig.expression = val; applyEdit() }"
@@ -444,14 +451,14 @@
                   </div>
                 </div>
               </n-alert>
-              
+
               <n-form-item label="标题">
                 <n-input v-model:value="editConfig.title" @blur="applyEdit" placeholder="例如：任务执行成功" />
               </n-form-item>
               <n-form-item label="内容">
                 <n-input v-model:value="editConfig.content" type="textarea" @blur="applyEdit" placeholder="例如：用户&lbrace;&lbrace;inputs.name&rbrace;&rbrace;的任务执行完成，状态：&lbrace;&lbrace;outputs.task1.status&rbrace;&rbrace;" />
               </n-form-item>
-              
+
               <n-form-item label="可用变量">
                 <n-collapse size="small">
                   <n-collapse-item v-if="previousNodes.length > 0" title="前置节点变量">
@@ -498,12 +505,12 @@
             删除此节点
           </n-button>
         </n-card>
-        
+
         <!-- 连线属性面板 -->
         <n-card title="连线属性" size="small" v-if="selectedEdge">
           <n-form label-placement="top" size="small">
             <n-form-item label="执行条件">
-              <n-select 
+              <n-select
                 v-model:value="editEdgeCondition"
                 :options="currentEdgeConditionOptions"
                 @update:value="applyEdgeEdit"
@@ -534,7 +541,7 @@
             删除此连线
           </n-button>
         </n-card>
-        
+
         <n-card v-else-if="!selectedNode && !selectedEdge" title="属性面板" size="small">
           <n-empty description="点击节点或连线编辑属性" />
         </n-card>
@@ -875,10 +882,10 @@ const saveSchedule = () => {
 // 计算前置节点选项
 const previousNodes = computed(() => {
   if (!selectedNode.value) return []
-  
+
   const nodeId = selectedNode.value.id
   const prevNodeIds = new Set()
-  
+
   // 找到所有直接连接到当前节点的源节点
   edges.value.forEach(edge => {
     if (edge.target === nodeId) {
@@ -888,7 +895,7 @@ const previousNodes = computed(() => {
       }
     }
   })
-  
+
   // 转换为选项格式
   return Array.from(prevNodeIds).map(id => {
     const node = nodes.value.find(n => n.id === id)
@@ -902,15 +909,15 @@ const previousNodes = computed(() => {
 // 计算当前连线可用的条件选项
 const currentEdgeConditionOptions = computed(() => {
   if (!selectedEdge.value) return edgeConditionOptions
-  
+
   const sourceNode = nodes.value.find(n => n.id === selectedEdge.value.source)
   if (!sourceNode) return edgeConditionOptions
-  
+
   // 根据源节点类型过滤选项
   switch (sourceNode.type) {
     case 'condition':
       // 条件节点只能用 true/false
-      return edgeConditionOptions.filter(opt => ['true', 'false'].includes(opt.value))
+      return edgeConditionOptions.filter(opt => ['always','true', 'false'].includes(opt.value))
     default:
       // 其他节点只用 always
       return edgeConditionOptions.filter(opt => opt.value === 'always')
@@ -938,10 +945,10 @@ const selectedEdgeSourceNode = computed(() => {
 // 插入节点变量
 const insertNodeVariable = (nodeId) => {
   if (!nodeId) return
-  
+
   const node = nodes.value.find(n => n.id === nodeId)
   if (!node) return
-  
+
   let variable = ''
   switch (node.type) {
     case 'task':
@@ -959,14 +966,14 @@ const insertNodeVariable = (nodeId) => {
     default:
       variable = `outputs.${nodeId}.status == 'success'`
   }
-  
+
   // 追加到表达式
   if (editConfig.value.expression) {
     editConfig.value.expression += ` and ${variable}`
   } else {
     editConfig.value.expression = variable
   }
-  
+
   // 自动应用更改
   applyEdit()
 }
@@ -990,7 +997,7 @@ const dynamicConditionExamples = computed(() => {
   if (!selectedNode.value || selectedNode.value.type !== 'condition') {
     return []
   }
-  
+
   const prevNodes = previousNodes.value
   if (prevNodes.length === 0) {
     return [
@@ -998,16 +1005,16 @@ const dynamicConditionExamples = computed(() => {
       { label: '总是为假', value: 'False' }
     ]
   }
-  
+
   const examples = [
     { label: '总是为真', value: 'True' },
     { label: '总是为假', value: 'False' }
   ]
-  
+
   // 根据前置节点类型生成表达式
   const taskNodes = prevNodes.filter(n => getNodeById(n.value)?.type !== 'condition')
   const conditionNodes = prevNodes.filter(n => getNodeById(n.value)?.type === 'condition')
-  
+
   // 任务节点表达式
   if (taskNodes.length > 0) {
     if (taskNodes.length === 1) {
@@ -1043,7 +1050,7 @@ const dynamicConditionExamples = computed(() => {
       })
     }
   }
-  
+
   // 条件节点表达式
   if (conditionNodes.length > 0) {
     conditionNodes.forEach(node => {
@@ -1057,11 +1064,11 @@ const dynamicConditionExamples = computed(() => {
       })
     })
   }
-  
+
   // 输入参数表达式
   examples.push({ label: '输入参数大于5', value: 'inputs.count > 5' })
   examples.push({ label: '输入参数等于指定值', value: "inputs.status == 'active'" })
-  
+
   return examples
 })
 
@@ -1090,7 +1097,7 @@ const loadJobs = async () => {
       type: 'cron',
       group: '定时任务'
     }))
-    
+
     // 加载 acme 申请任务
     const acmeRes = await window.$request.get('/ssl/applications', { page: 1, page_size: 1000 })
     const acmeApps = (acmeRes?.items || acmeRes || []).map(a => ({
@@ -1099,7 +1106,7 @@ const loadJobs = async () => {
       type: 'acme',
       group: '证书申请'
     }))
-    
+
     // 合并任务列表
     jobOptions.value = [...cronJobs, ...acmeApps]
   } catch (e) {
@@ -1112,14 +1119,14 @@ const renderJobOption = (option) => {
   const groupColor = option.type === 'cron' ? '#18a058' : '#2080f0'
   const groupLabel = option.type === 'cron' ? '定时任务' : '证书申请'
   return h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
-    h('span', { 
-      style: { 
-        padding: '2px 6px', 
-        borderRadius: '3px', 
-        fontSize: '10px', 
-        color: 'white', 
-        backgroundColor: groupColor 
-      } 
+    h('span', {
+      style: {
+        padding: '2px 6px',
+        borderRadius: '3px',
+        fontSize: '10px',
+        color: 'white',
+        backgroundColor: groupColor
+      }
     }, groupLabel),
     h('span', option.label)
   ])
@@ -1155,7 +1162,7 @@ onMounted(() => {
       condition: e.condition || 'always'
     }))
   }
-  
+
   // 初始化历史记录
   saveToHistory()
 })
@@ -1192,15 +1199,15 @@ const saveToHistory = () => {
     nodes: JSON.parse(JSON.stringify(nodes.value)),
     edges: JSON.parse(JSON.stringify(edges.value))
   }
-  
+
   // 如果当前不在历史记录末尾，删除后面的记录
   if (historyIndex.value < history.value.length - 1) {
     history.value = history.value.slice(0, historyIndex.value + 1)
   }
-  
+
   history.value.push(state)
   historyIndex.value = history.value.length - 1
-  
+
   // 限制历史记录数量
   if (history.value.length > 50) {
     history.value.shift()
@@ -1235,34 +1242,34 @@ const onDragStart = (e, item) => {
 
 const onDrop = (e) => {
   if (!dragType) return
-  
+
   const rect = canvasRef.value.getBoundingClientRect()
   const viewport = getViewport()
-  
+
   // 计算鼠标相对于画布的位置
   const mouseX = e.clientX - rect.left
   const mouseY = e.clientY - rect.top
-  
+
   // 考虑画布的缩放和平移
   // 坐标转换公式：worldPosition = (screenPosition - translate) / zoom
   const x = (mouseX - viewport.x) / viewport.zoom
   const y = (mouseY - viewport.y) / viewport.zoom
-  
+
   // 节点中心点偏移（假设节点宽度约 100px，高度约 40px）
   const nodeWidth = 100
   const nodeHeight = 40
-  
+
   const id = `n${nodeCounter.value++}`
   nodes.value.push({
     id,
     type: dragType.type,
-    position: { 
+    position: {
       x: x - nodeWidth / 2,  // 居中对齐
       y: y - nodeHeight / 2
     },
     data: { label: `${dragType.label}节点`, config: {} }
   })
-  
+
   dragType = null
   editConfig.value = {}
   saveToHistory()
@@ -1279,10 +1286,31 @@ const onNodeClick = (e) => {
 
 // 点击连线
 const onEdgeClick = (e) => {
+  if (!e || !e.edge) {
+    return
+  }
   selectedEdge.value = e.edge
   selectedNode.value = null
   selectedId.value = null
   editEdgeCondition.value = e.edge.condition || 'always'
+}
+
+// 选择变化事件
+const onSelectionChange = (params) => {
+  if (params.edges && params.edges.length > 0) {
+    const edge = params.edges[0]
+    selectedEdge.value = edge
+    selectedNode.value = null
+    selectedId.value = null
+    editEdgeCondition.value = edge.condition || 'always'
+  } else if (params.nodes && params.nodes.length > 0) {
+    const node = params.nodes[0]
+    selectedNode.value = node
+    selectedEdge.value = null
+    selectedId.value = node.id
+    editLabel.value = node.data.label
+    editConfig.value = { ...node.data.config }
+  }
 }
 
 // 连线
@@ -1353,8 +1381,8 @@ const handleSave = () => {
       config: n.data.config,
       position: n.position
     })),
-    edges: edges.value.map(e => ({ 
-      source: e.source, 
+    edges: edges.value.map(e => ({
+      source: e.source,
       target: e.target,
       condition: e.condition || 'always'
     }))
@@ -1474,36 +1502,36 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
   transform: scale(1.02);
 }
 
-.wf-node.task { 
+.wf-node.task {
   border-color: #1890ff;
   background: linear-gradient(135deg, #e3f2fd 0%, #fff 100%);
 }
-.wf-node.condition { 
+.wf-node.condition {
   border-color: #fa8c16;
   background: linear-gradient(135deg, #ffe3e3 0%, #fff 100%);
 }
-.wf-node.wait { 
+.wf-node.wait {
   border-color: #8c8c8c;
   background: linear-gradient(135deg, #f5f5f5 0%, #fff 100%);
 }
-.wf-node.notification { 
+.wf-node.notification {
   border-color: #722ed1;
   background: linear-gradient(135deg, #e8d4f8 0%, #fff 100%);
 }
-.wf-node.and { 
+.wf-node.and {
   border-color: #13c2c2;
   background: linear-gradient(135deg, #d4f8e8 0%, #fff 100%);
 }
-.wf-node.or { 
+.wf-node.or {
   border-color: #eb2f96;
   background: linear-gradient(135deg, #f8e8d4 0%, #fff 100%);
 }
-.wf-node.start { 
-  border-color: #52c41a; 
+.wf-node.start {
+  border-color: #52c41a;
   background: linear-gradient(135deg, #e6fffa 0%, #fff 100%);
 }
-.wf-node.end { 
-  border-color: #ff4d4f; 
+.wf-node.end {
+  border-color: #ff4d4f;
   background: linear-gradient(135deg, #ffe8e6 0%, #fff 100%);
 }
 
@@ -1675,5 +1703,34 @@ defineExpose({ getData: () => ({ nodes: nodes.value, edges: edges.value }) })
 /* 全局样式 */
 .vue-flow { background: #fafafa; }
 .vue-flow__handle { width: 10px !important; height: 10px !important; background: #18a058 !important; border: 2px solid #fff !important; }
-.vue-flow__edge-path { stroke: #999; stroke-width: 2; }
+
+/* 连线样式 */
+.vue-flow__edge-path {
+  stroke: #999;
+  stroke-width: 2;
+  transition: all 0.2s ease;
+}
+
+/* 选中状态的连线 */
+.vue-flow__edge.selected .vue-flow__edge-path,
+.vue-flow__edge:focus .vue-flow__edge-path,
+.vue-flow__edge:active .vue-flow__edge-path {
+  stroke: #18a058;
+  stroke-width: 3;
+}
+
+/* 增加连线点击区域 */
+.vue-flow__edge {
+  cursor: pointer;
+}
+
+.vue-flow__edge:hover .vue-flow__edge-path {
+  stroke: #52c41a;
+  stroke-width: 3;
+}
+
+/* 选中的边 */
+.vue-flow__edge.selected {
+  stroke: #18a058;
+}
 </style>
