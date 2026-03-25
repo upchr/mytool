@@ -22,10 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class AttrDict(dict):
-    """支持属性访问的字典类"""
+    """支持属性访问的字典类（支持嵌套访问）"""
     def __getattr__(self, key):
         try:
-            return self[key]
+            value = self[key]
+            # 如果值是字典，自动包装成 AttrDict 以支持嵌套访问
+            if isinstance(value, dict) and not isinstance(value, AttrDict):
+                return AttrDict(value)
+            return value
         except KeyError:
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{key}'")
 
