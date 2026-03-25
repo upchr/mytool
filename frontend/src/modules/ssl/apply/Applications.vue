@@ -216,7 +216,7 @@
           </n-tag>
         </n-descriptions-item>
         <n-descriptions-item label="触发方式">
-          {{ currentExecution.triggered_by === 'system' ? '系统自动' : '手动触发' }}
+          {{ currentExecution.triggered_by === 'system' ? '系统自动' :(currentExecution.triggered_by === 'workflow' ?'工作流': '手动触发') }}
         </n-descriptions-item>
         <n-descriptions-item label="开始时间">{{ formatDate(currentExecution.started_at) }}</n-descriptions-item>
         <n-descriptions-item label="完成时间">{{ formatDate(currentExecution.completed_at) }}</n-descriptions-item>
@@ -723,7 +723,7 @@ const executionColumns = [
     key: "triggered_by",
     width: 100,
     render(row) {
-      return row.triggered_by === 'system' ? '系统自动' : '手动'
+      return row.triggered_by === 'system' ? '系统自动' :(row.triggered_by === 'workflow' ?'工作流': '手动')
     }
   },
   {
