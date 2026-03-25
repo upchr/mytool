@@ -965,11 +965,7 @@ const getNodeById = (nodeId) => {
 
 // 复制变量到剪贴板
 const copyVariable = (variable) => {
-  navigator.clipboard.writeText(variable).then(() => {
-    window.$message.success(`已复制: ${variable}`)
-  }).catch(() => {
-    window.$message.error('复制失败')
-  })
+  window.$copyCode(`{{${variable}}}`)
 }
 
 // 动态生成常用表达式
