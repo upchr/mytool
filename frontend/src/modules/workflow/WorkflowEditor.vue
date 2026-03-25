@@ -28,19 +28,19 @@
           </n-button>
           <n-divider v-if="!isMobile" vertical />
           <n-input
-            v-model:value="currentWorkflowName"
-            placeholder="工作流名称"
-            :style="{ width: isMobile ? '150px' : '200px' }"
-            :size="isMobile ? 'medium' : 'small'"
-            @update:value="onWorkflowNameChange"
+              v-model:value="currentWorkflowName"
+              placeholder="工作流名称"
+              :style="{ width: isMobile ? '150px' : '200px' }"
+              :size="isMobile ? 'medium' : 'small'"
+              @update:value="onWorkflowNameChange"
           />
           <n-divider v-if="!isMobile" vertical />
           <n-space :size="isMobile ? 4 : 0">
             <n-button
-              quaternary
-              :size="isMobile ? 'medium' : 'small'"
-              @click="handleUndo"
-              :disabled="!canUndo"
+                quaternary
+                :size="isMobile ? 'medium' : 'small'"
+                @click="handleUndo"
+                :disabled="!canUndo"
             >
               <template #icon>
                 <n-icon :size="isMobile ? 18 : 16"><UndoIcon /></n-icon>
@@ -48,10 +48,10 @@
               <span v-if="!isMobile">撤销</span>
             </n-button>
             <n-button
-              quaternary
-              :size="isMobile ? 'medium' : 'small'"
-              @click="handleRedo"
-              :disabled="!canRedo"
+                quaternary
+                :size="isMobile ? 'medium' : 'small'"
+                @click="handleRedo"
+                :disabled="!canRedo"
             >
               <template #icon>
                 <n-icon :size="isMobile ? 18 : 16"><RedoIcon /></n-icon>
@@ -62,10 +62,10 @@
           <n-divider v-if="!isMobile" vertical />
           <n-space :size="isMobile ? 4 : 0">
             <n-button
-              type="primary"
-              :size="isMobile ? 'medium' : 'small'"
-              @click="handleSave"
-              :loading="saving"
+                type="primary"
+                :size="isMobile ? 'medium' : 'small'"
+                @click="handleSave"
+                :loading="saving"
             >
               <template #icon>
                 <n-icon :size="isMobile ? 18 : 16"><SaveIcon /></n-icon>
@@ -73,10 +73,10 @@
               保存
             </n-button>
             <n-button
-              v-if="workflowId"
-              type="success"
-              :size="isMobile ? 'medium' : 'small'"
-              @click="handleTrigger"
+                v-if="workflowId"
+                type="success"
+                :size="isMobile ? 'medium' : 'small'"
+                @click="handleTrigger"
             >
               <template #icon>
                 <n-icon :size="isMobile ? 18 : 16"><PlayIcon /></n-icon>
@@ -90,11 +90,11 @@
         <n-space align="center" :size="isMobile ? 4 : 0">
           <n-divider v-if="!isMobile" vertical />
           <n-button
-            v-if="isMobile"
-            quaternary
-            :size="isMobile ? 'medium' : 'small'"
-            @click="toggleLandscapeMode"
-            :type="isLandscapeMode ? 'primary' : 'default'"
+              v-if="isMobile"
+              quaternary
+              :size="isMobile ? 'medium' : 'small'"
+              @click="toggleLandscapeMode"
+              :type="isLandscapeMode ? 'primary' : 'default'"
           >
             <template #icon>
               <n-icon :size="isMobile ? 18 : 16">
@@ -139,17 +139,17 @@
           </n-button>
         </div>
         <n-card
-          title="节点类型"
-          :size="isMobile ? 'small' : 'small'"
-          :style="{ width: isMobile ? '100%' : 'auto' }"
+            title="节点类型"
+            :size="isMobile ? 'small' : 'small'"
+            :style="{ width: isMobile ? '100%' : 'auto' }"
         >
           <div class="node-list">
             <div
-              v-for="item in nodeTypes"
-              :key="item.type"
-              class="draggable-node"
-              draggable="true"
-              @dragstart="onDragStart($event, item)"
+                v-for="item in nodeTypes"
+                :key="item.type"
+                class="draggable-node"
+                draggable="true"
+                @dragstart="onDragStart($event, item)"
             >
               <span class="icon">{{ item.icon }}</span>
               <div class="info">
@@ -160,8 +160,8 @@
           </div>
         </n-card>
         <n-card
-          :size="isMobile ? 'small' : 'small'"
-          :style="{ marginTop: isMobile ? '8px' : '12px' }"
+            :size="isMobile ? 'small' : 'small'"
+            :style="{ marginTop: isMobile ? '8px' : '12px' }"
         >
           <template #header>
             <n-space align="center">
@@ -181,22 +181,22 @@
       <!-- 画布 -->
       <div class="canvas" ref="canvasRef">
         <VueFlow
-          v-model:nodes="nodes"
-          v-model:edges="edges"
-          :min-zoom="0.2"
-          :max-zoom="4"
-          :fit-view-on-init="true"
-          :fit-view-options="{ padding: isMobile ? 0.4 : 0.2 }"
-          :selectable="true"
-          :selectable-nodes="true"
-          :selectable-edges="true"
-          @node-click="onNodeClick"
-          @edge-click="onEdgeClick"
-          @edge-update="onEdgeClick"
-          @selection-change="onSelectionChange"
-          @connect="onConnect"
-          @dragover.prevent
-          @drop="onDrop"
+            v-model:nodes="nodes"
+            v-model:edges="edges"
+            :min-zoom="0.2"
+            :max-zoom="4"
+            :fit-view-on-init="true"
+            :fit-view-options="{ padding: isMobile ? 0.4 : 0.2 }"
+            :selectable="true"
+            :selectable-nodes="true"
+            :selectable-edges="true"
+            @node-click="onNodeClick"
+            @edge-click="onEdgeClick"
+            @edge-update="onEdgeClick"
+            @selection-change="onSelectionChange"
+            @connect="onConnect"
+            @dragover.prevent
+            @drop="onDrop"
         >
           <Background />
           <Controls v-if="isMobile" />
@@ -327,11 +327,11 @@
             <template v-if="selectedNode.type === 'task'">
               <n-form-item label="选择任务">
                 <n-select
-                  v-model:value="editConfig.job_id"
-                  :options="jobOptions"
-                  placeholder="请选择要执行的任务"
-                  @update:value="onJobSelect"
-                  :render-label="renderJobOption"
+                    v-model:value="editConfig.job_value"
+                    :options="jobOptions"
+                    placeholder="请选择要执行的任务"
+                    @update:value="onJobSelect"
+                    :render-label="renderJobOption"
                 />
               </n-form-item>
               <n-text depth="3" style="font-size: 11px">
@@ -356,20 +356,20 @@
 
               <n-form-item label="条件表达式">
                 <n-input
-                  v-model:value="editConfig.expression"
-                  placeholder="True"
-                  @blur="applyEdit"
-                  type="textarea"
-                  :autosize="{ minRows: 3, maxRows: 6 }"
-                  style="font-family: 'Courier New', monospace; font-size: 13px;"
+                    v-model:value="editConfig.expression"
+                    placeholder="True"
+                    @blur="applyEdit"
+                    type="textarea"
+                    :autosize="{ minRows: 3, maxRows: 6 }"
+                    style="font-family: 'Courier New', monospace; font-size: 13px;"
                 />
               </n-form-item>
 
               <n-form-item label="选择前置节点">
                 <n-select
-                  :options="previousNodes"
-                  placeholder="选择要引用的节点"
-                  @update:value="(val) => { insertNodeVariable(val); applyEdit() }"
+                    :options="previousNodes"
+                    placeholder="选择要引用的节点"
+                    @update:value="(val) => { insertNodeVariable(val); applyEdit() }"
                 />
               </n-form-item>
 
@@ -422,9 +422,9 @@
               <n-form-item label="常用表达式">
                 <n-space vertical style="width: 100%">
                   <n-select
-                    :options="dynamicConditionExamples"
-                    placeholder="选择示例"
-                    @update:value="(val) => { editConfig.expression = val; applyEdit() }"
+                      :options="dynamicConditionExamples"
+                      placeholder="选择示例"
+                      @update:value="(val) => { editConfig.expression = val; applyEdit() }"
                   />
                 </n-space>
               </n-form-item>
@@ -511,9 +511,9 @@
           <n-form label-placement="top" size="small">
             <n-form-item label="执行条件">
               <n-select
-                v-model:value="editEdgeCondition"
-                :options="currentEdgeConditionOptions"
-                @update:value="applyEdgeEdit"
+                  v-model:value="editEdgeCondition"
+                  :options="currentEdgeConditionOptions"
+                  @update:value="applyEdgeEdit"
               />
             </n-form-item>
             <n-alert type="info" size="small" style="margin-top: 8px">
@@ -553,41 +553,41 @@
       <n-form label-placement="left" label-width="auto">
         <n-form-item label="分钟">
           <n-select
-            v-model:value="scheduleMinute"
-            :options="minuteOptions"
-            @update:value="updateSchedule"
+              v-model:value="scheduleMinute"
+              :options="minuteOptions"
+              @update:value="updateSchedule"
           />
           <n-input v-if="scheduleMinute === 'custom'" v-model:value="customMinute" placeholder="输入分钟值" @input="updateSchedule" />
         </n-form-item>
         <n-form-item label="小时">
           <n-select
-            v-model:value="scheduleHour"
-            :options="hourOptions"
-            @update:value="updateSchedule"
+              v-model:value="scheduleHour"
+              :options="hourOptions"
+              @update:value="updateSchedule"
           />
           <n-input v-if="scheduleHour === 'custom'" v-model:value="customHour" placeholder="输入小时值" @input="updateSchedule" />
         </n-form-item>
         <n-form-item label="日期（天）">
           <n-select
-            v-model:value="scheduleDay"
-            :options="dayOptions"
-            @update:value="updateSchedule"
+              v-model:value="scheduleDay"
+              :options="dayOptions"
+              @update:value="updateSchedule"
           />
           <n-input v-if="scheduleDay === 'custom'" v-model:value="customDay" placeholder="输入日期值" @input="updateSchedule" />
         </n-form-item>
         <n-form-item label="月份">
           <n-select
-            v-model:value="scheduleMonth"
-            :options="monthOptions"
-            @update:value="updateSchedule"
+              v-model:value="scheduleMonth"
+              :options="monthOptions"
+              @update:value="updateSchedule"
           />
           <n-input v-if="scheduleMonth === 'custom'" v-model:value="customMonth" placeholder="输入月份值" @input="updateSchedule" />
         </n-form-item>
         <n-form-item label="星期（1=星期一）">
           <n-select
-            v-model:value="scheduleWeekday"
-            :options="weekdayOptions"
-            @update:value="updateSchedule"
+              v-model:value="scheduleWeekday"
+              :options="weekdayOptions"
+              @update:value="updateSchedule"
           />
           <n-input v-if="scheduleWeekday === 'custom'" v-model:value="customWeekday" placeholder="输入星期值" @input="updateSchedule" />
         </n-form-item>
@@ -595,12 +595,12 @@
 
       <n-space vertical>
         <n-split
-          direction="horizontal"
-          style="height: 200px"
-          :default-size="0.4"
-          :resize-trigger-size="16"
-          :min="0.25"
-          :max="0.75"
+            direction="horizontal"
+            style="height: 200px"
+            :default-size="0.4"
+            :resize-trigger-size="16"
+            :min="0.25"
+            :max="0.75"
         >
           <template #1>
             <n-card title="当前表达式" size="small" hoverable>
@@ -618,7 +618,7 @@
           </template>
           <template #resize-trigger>
             <div
-              :style="{
+                :style="{
                 height: '100%',
                 backgroundColor: '#a9d7dd',
                 display: 'flex',
@@ -693,7 +693,6 @@ const rightPanelCollapsed = ref(false)
 const checkOrientation = () => {
   const width = window.innerWidth
   const height = window.innerHeight
-  // 如果宽度大于高度，自动启用横屏模式
   isLandscapeMode.value = width > height
 }
 
@@ -861,7 +860,7 @@ const nodeTypes = [
 const selectedNode = ref(null)
 const selectedEdge = ref(null)
 const editEdgeCondition = ref('always')
-const jobOptions = ref([])  // 任务列表选项
+const jobOptions = ref([])
 
 const edgeConditionOptions = [
   { label: '总是执行', value: 'always' },
@@ -886,7 +885,6 @@ const previousNodes = computed(() => {
   const nodeId = selectedNode.value.id
   const prevNodeIds = new Set()
 
-  // 找到所有直接连接到当前节点的源节点
   edges.value.forEach(edge => {
     if (edge.target === nodeId) {
       const sourceNode = nodes.value.find(n => n.id === edge.source)
@@ -896,7 +894,6 @@ const previousNodes = computed(() => {
     }
   })
 
-  // 转换为选项格式
   return Array.from(prevNodeIds).map(id => {
     const node = nodes.value.find(n => n.id === id)
     return {
@@ -913,27 +910,12 @@ const currentEdgeConditionOptions = computed(() => {
   const sourceNode = nodes.value.find(n => n.id === selectedEdge.value.source)
   if (!sourceNode) return edgeConditionOptions
 
-  // 根据源节点类型过滤选项
   switch (sourceNode.type) {
     case 'condition':
-      // 条件节点只能用 true/false
-      return edgeConditionOptions.filter(opt => ['always','true', 'false'].includes(opt.value))
+      return edgeConditionOptions.filter(opt => ['always', 'true', 'false'].includes(opt.value))
     default:
-      // 其他节点只用 always
       return edgeConditionOptions.filter(opt => opt.value === 'always')
   }
-})
-
-// 连线条件描述
-const edgeConditionDescription = computed(() => {
-  const descriptions = {
-    'always': '无论节点执行结果如何，都会执行后续节点',
-    'true': '当前置条件节点结果为真时执行',
-    'false': '当前置条件节点结果为假时执行',
-    'success': '当节点执行成功时执行后续节点',
-    'failed': '当节点执行失败时执行后续节点'
-  }
-  return descriptions[editEdgeCondition.value] || ''
 })
 
 // 获取选中的连线源节点
@@ -967,14 +949,12 @@ const insertNodeVariable = (nodeId) => {
       variable = `outputs.${nodeId}.status == 'success'`
   }
 
-  // 追加到表达式
   if (editConfig.value.expression) {
     editConfig.value.expression += ` and ${variable}`
   } else {
     editConfig.value.expression = variable
   }
 
-  // 自动应用更改
   applyEdit()
 }
 
@@ -1011,11 +991,9 @@ const dynamicConditionExamples = computed(() => {
     { label: '总是为假', value: 'False' }
   ]
 
-  // 根据前置节点类型生成表达式
   const taskNodes = prevNodes.filter(n => getNodeById(n.value)?.type !== 'condition')
   const conditionNodes = prevNodes.filter(n => getNodeById(n.value)?.type === 'condition')
 
-  // 任务节点表达式
   if (taskNodes.length > 0) {
     if (taskNodes.length === 1) {
       const node = taskNodes[0]
@@ -1039,7 +1017,6 @@ const dynamicConditionExamples = computed(() => {
         value: `outputs.${node1.value}.status == 'failed' or outputs.${node2.value}.status == 'failed'`
       })
     } else if (taskNodes.length >= 3) {
-      const nodeIds = taskNodes.map(n => n.value).join(', ')
       examples.push({
         label: `所有任务都成功 (${taskNodes.length}个)`,
         value: taskNodes.map(n => `outputs.${n.value}.status == 'success'`).join(' and ')
@@ -1051,7 +1028,6 @@ const dynamicConditionExamples = computed(() => {
     }
   }
 
-  // 条件节点表达式
   if (conditionNodes.length > 0) {
     conditionNodes.forEach(node => {
       examples.push({
@@ -1065,49 +1041,33 @@ const dynamicConditionExamples = computed(() => {
     })
   }
 
-  // 输入参数表达式
   examples.push({ label: '输入参数大于5', value: 'inputs.count > 5' })
   examples.push({ label: '输入参数等于指定值', value: "inputs.status == 'active'" })
 
   return examples
 })
 
-const conditionExamples = [
-  { label: '总是为真', value: 'True' },
-  { label: '总是为假', value: 'False' },
-  { label: '任务节点(n1)执行成功', value: "outputs.n1.status == 'success'" },
-  { label: '任务节点(n1)执行失败', value: "outputs.n1.status == 'failed'" },
-  { label: '条件节点(condition1)结果为真', value: "outputs.condition1.condition_result == True" },
-  { label: '条件节点(condition1)结果为假', value: "outputs.condition1.condition_result == False" },
-  { label: '输入参数大于5', value: 'inputs.count > 5' },
-  { label: '输入参数等于指定值', value: "inputs.status == 'active'" },
-  { label: '多个任务都成功', value: "outputs.n1.status == 'success' and outputs.n2.status == 'success'" },
-  { label: '任意一个任务失败', value: "outputs.n1.status == 'failed' or outputs.n2.status == 'failed'" },
-  { label: '引用前置条件节点结果', value: "outputs.condition1.condition_result == True" }
-]
-
 // 加载任务列表
 const loadJobs = async () => {
   try {
-    // 加载 cron 任务
-    const cronRes = await window.$request.post('/cron/jobsList', {node_ids:[] } )
+    const cronRes = await window.$request.post('/cron/jobsList', { node_ids: [] })
     const cronJobs = (cronRes?.items || cronRes || []).map(j => ({
       label: `${j.name} (ID: ${j.id})`,
-      value: j.id,
+      value: `cron_${j.id}`,
+      id: j.id,
       type: 'cron',
       group: '定时任务'
     }))
 
-    // 加载 acme 申请任务
     const acmeRes = await window.$request.get('/ssl/applications', { page: 1, page_size: 1000 })
     const acmeApps = (acmeRes?.items || acmeRes || []).map(a => ({
-      label: `${a.domains.join(', ')} (ID: ${a.id})`,
-      value: a.id,
+      label: `${a.domains?.join(', ') || a.domain || a.domains} (ID: ${a.id})`,
+      value: `acme_${a.id}`,
+      id: a.id,
       type: 'acme',
       group: '证书申请'
     }))
 
-    // 合并任务列表
     jobOptions.value = [...cronJobs, ...acmeApps]
   } catch (e) {
     console.error('加载任务列表失败', e)
@@ -1136,21 +1096,29 @@ const renderJobOption = (option) => {
 const onJobSelect = (value) => {
   const selectedOption = jobOptions.value.find(opt => opt.value === value)
   if (selectedOption) {
+    editConfig.value.job_id = selectedOption.id
     editConfig.value.job_type = selectedOption.type
+    editConfig.value.job_value = selectedOption.value
   }
   applyEdit()
 }
 
 onMounted(() => {
-  loadJobs()  // 加载任务列表
+  loadJobs()
 
   if (props.initialData?.nodes?.length > 0) {
-    nodes.value = props.initialData.nodes.map(n => ({
-      id: n.id,
-      type: n.type,
-      position: n.position || { x: 100, y: 100 },
-      data: { label: n.name || '节点', config: n.config || {} }
-    }))
+    nodes.value = props.initialData.nodes.map(n => {
+      const config = n.config || {}
+      if (config.job_id && config.job_type) {
+        config.job_value = `${config.job_type}_${config.job_id}`
+      }
+      return {
+        id: n.id,
+        type: n.type,
+        position: n.position || { x: 100, y: 100 },
+        data: { label: n.name || '节点', config: config }
+      }
+    })
     nodeCounter.value = props.initialData.nodes.length + 1
   }
   if (props.initialData?.edges?.length > 0) {
@@ -1163,15 +1131,12 @@ onMounted(() => {
     }))
   }
 
-  // 初始化历史记录
   saveToHistory()
 })
 
 // 监听 schedule 属性变化
 watch(() => props.schedule, (newSchedule) => {
-  if (!newSchedule) {
-    return
-  }
+  if (!newSchedule) return
   try {
     const parts = newSchedule.split(' ')
     if (parts.length === 5) {
@@ -1200,7 +1165,6 @@ const saveToHistory = () => {
     edges: JSON.parse(JSON.stringify(edges.value))
   }
 
-  // 如果当前不在历史记录末尾，删除后面的记录
   if (historyIndex.value < history.value.length - 1) {
     history.value = history.value.slice(0, historyIndex.value + 1)
   }
@@ -1208,7 +1172,6 @@ const saveToHistory = () => {
   history.value.push(state)
   historyIndex.value = history.value.length - 1
 
-  // 限制历史记录数量
   if (history.value.length > 50) {
     history.value.shift()
     historyIndex.value--
@@ -1246,16 +1209,12 @@ const onDrop = (e) => {
   const rect = canvasRef.value.getBoundingClientRect()
   const viewport = getViewport()
 
-  // 计算鼠标相对于画布的位置
   const mouseX = e.clientX - rect.left
   const mouseY = e.clientY - rect.top
 
-  // 考虑画布的缩放和平移
-  // 坐标转换公式：worldPosition = (screenPosition - translate) / zoom
   const x = (mouseX - viewport.x) / viewport.zoom
   const y = (mouseY - viewport.y) / viewport.zoom
 
-  // 节点中心点偏移（假设节点宽度约 100px，高度约 40px）
   const nodeWidth = 100
   const nodeHeight = 40
 
@@ -1264,7 +1223,7 @@ const onDrop = (e) => {
     id,
     type: dragType.type,
     position: {
-      x: x - nodeWidth / 2,  // 居中对齐
+      x: x - nodeWidth / 2,
       y: y - nodeHeight / 2
     },
     data: { label: `${dragType.label}节点`, config: {} }
@@ -1286,9 +1245,7 @@ const onNodeClick = (e) => {
 
 // 点击连线
 const onEdgeClick = (e) => {
-  if (!e || !e.edge) {
-    return
-  }
+  if (!e || !e.edge) return
   selectedEdge.value = e.edge
   selectedNode.value = null
   selectedId.value = null
@@ -1374,13 +1331,16 @@ const deleteNode = () => {
 const handleSave = () => {
   saving.value = true
   emit('save', {
-    nodes: nodes.value.map(n => ({
-      id: n.id,
-      type: n.type,
-      name: n.data.label,
-      config: n.data.config,
-      position: n.position
-    })),
+    nodes: nodes.value.map(n => {
+      const { job_value, ...restConfig } = n.data.config
+      return {
+        id: n.id,
+        type: n.type,
+        name: n.data.label,
+        config: restConfig,
+        position: n.position
+      }
+    }),
     edges: edges.value.map(e => ({
       source: e.source,
       target: e.target,
