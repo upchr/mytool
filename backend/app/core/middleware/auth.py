@@ -49,6 +49,7 @@ async def jwt_auth_middleware(request: Request, call_next):
         "/sys/init/check",
         "/sys/init/setup",
         "/sys/login",
+        "/sys/runtime",
         "/api/auth/login",
         "/version",
         "/example",
