@@ -525,60 +525,67 @@ onUnmounted(() => {
 })
 
 // ========== 表格列定义 ==========
+
 // 容器操作下拉菜单
-const getContainerActionDropdown = (row) => [
-  {
-    label: row.state === 'running' ? '停止' : '启动',
-    key: 'toggle',
-    icon: () => h(NIcon, null, { default: () => h(row.state === 'running' ? StopCircle : Play) }),
-    props: {
-      onClick: () => handleContainerAction(row.id, row.state === 'running' ? 'stop' : 'start')
+const getContainerActionDropdown = (row) => {
+  return [
+    {
+      label: row.state === 'running' ? '停止' : '启动',
+      key: 'toggle',
+      icon: () => h(NIcon, null, { default: () => h(row.state === 'running' ? StopCircle : Play) })
+    },
+    {
+      label: '重启',
+      key: 'restart',
+      icon: () => h(NIcon, null, { default: () => h(Refresh) })
+    },
+    {
+      label: '日志',
+      key: 'logs',
+      icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
+    },
+    {
+      label: '终端',
+      key: 'terminal',
+      icon: () => h(NIcon, null, { default: () => h(TerminalOutline) })
+    },
+    {
+      type: 'divider'
+    },
+    {
+      label: '删除',
+      key: 'remove',
+      icon: () => h(NIcon, null, { default: () => h(TrashOutline) })
     }
-  },
-  {
-    label: '重启',
-    key: 'restart',
-    icon: () => h(NIcon, null, { default: () => h(Refresh) }),
-    props: {
-      onClick: () => handleContainerAction(row.id, 'restart')
-    }
-  },
-  {
-    label: '日志',
-    key: 'logs',
-    icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) }),
-    props: {
-      onClick: () => viewLogs(row.id)
-    }
-  },
-  {
-    label: '终端',
-    key: 'terminal',
-    icon: () => h(NIcon, null, { default: () => h(TerminalOutline) }),
-    props: {
-      onClick: () => openTerminal(row.id)
-    }
-  },
-  {
-    type: 'divider'
-  },
-  {
-    label: '删除',
-    key: 'remove',
-    icon: () => h(NIcon, null, { default: () => h(TrashOutline) }),
-    props: {
-      onClick: () => {
-        window.$dialog.warning({
-          title: '确认删除',
-          content: '确定要删除此容器吗？',
-          positiveText: '确定',
-          negativeText: '取消',
-          onPositiveClick: () => handleContainerAction(row.id, 'remove')
-        })
-      }
-    }
+  ]
+}
+
+// 容器操作下拉菜单处理
+const handleContainerDropdownSelect = (row, key) => {
+  switch (key) {
+    case 'toggle':
+      handleContainerAction(row.id, row.state === 'running' ? 'stop' : 'start')
+      break
+    case 'restart':
+      handleContainerAction(row.id, 'restart')
+      break
+    case 'logs':
+      viewLogs(row.id)
+      break
+    case 'terminal':
+      openTerminal(row.id)
+      break
+    case 'remove':
+      window.$dialog.warning({
+        title: '确认删除',
+        content: '确定要删除此容器吗？',
+        positiveText: '确定',
+        negativeText: '取消',
+        onPositiveClick: () => handleContainerAction(row.id, 'remove')
+      })
+      break
   }
-]
+}
 
 const containerColumns = computed(() => {
   const columns = []
@@ -634,15 +641,18 @@ const containerColumns = computed(() => {
     render: (row) => {
       if (isMobile.value) {
         // 移动端显示下拉菜单
-        return h(NButton, {
-          size: 'small',
-          circle: true,
-          onClick: (e) => {
-            e.stopPropagation()
-          }
+        return h(NDropdown, {
+          trigger: 'click',
+          options: getContainerActionDropdown(row),
+          onSelect: (key) => handleContainerDropdownSelect(row, key)
         }, {
-          icon: () => h(NIcon, null, { default: () => h(EllipsisHorizontalOutline) }),
-          default: () => null
+          default: () => h(NButton, {
+            size: 'small',
+            circle: true
+          }, {
+            icon: () => h(NIcon, null, { default: () => h(EllipsisHorizontalOutline) }),
+            default: () => null
+          })
         })
       } else {
         // 桌面端显示所有按钮
@@ -697,43 +707,51 @@ const containerColumns = computed(() => {
 })
 
 // Compose 操作下拉菜单
-const getComposeActionDropdown = (row) => [
-  {
-    label: '启动',
-    key: 'up',
-    icon: () => h(NIcon, null, { default: () => h(Play) }),
-    props: {
-      onClick: () => handleComposeAction(row.path, 'up')
+const getComposeActionDropdown = (row) => {
+  return [
+    {
+      label: '启动',
+      key: 'up',
+      icon: () => h(NIcon, null, { default: () => h(Play) })
+    },
+    {
+      label: '停止',
+      key: 'down',
+      icon: () => h(NIcon, null, { default: () => h(StopCircle) })
+    },
+    {
+      label: '重启',
+      key: 'restart',
+      icon: () => h(NIcon, null, { default: () => h(Refresh) })
+    },
+    {
+      type: 'divider'
+    },
+    {
+      label: '编辑',
+      key: 'edit',
+      icon: () => h(NIcon, null, { default: () => h(CreateOutline) })
     }
-  },
-  {
-    label: '停止',
-    key: 'down',
-    icon: () => h(NIcon, null, { default: () => h(StopCircle) }),
-    props: {
-      onClick: () => handleComposeAction(row.path, 'down')
-    }
-  },
-  {
-    label: '重启',
-    key: 'restart',
-    icon: () => h(NIcon, null, { default: () => h(Refresh) }),
-    props: {
-      onClick: () => handleComposeAction(row.path, 'restart')
-    }
-  },
-  {
-    type: 'divider'
-  },
-  {
-    label: '编辑',
-    key: 'edit',
-    icon: () => h(NIcon, null, { default: () => h(CreateOutline) }),
-    props: {
-      onClick: () => editComposeProject(row)
-    }
+  ]
+}
+
+// Compose 操作下拉菜单处理
+const handleComposeDropdownSelect = (row, key) => {
+  switch (key) {
+    case 'up':
+      handleComposeAction(row.path, 'up')
+      break
+    case 'down':
+      handleComposeAction(row.path, 'down')
+      break
+    case 'restart':
+      handleComposeAction(row.path, 'restart')
+      break
+    case 'edit':
+      editComposeProject(row)
+      break
   }
-]
+}
 
 const composeColumns = computed(() => {
   const columns = []
@@ -775,15 +793,18 @@ const composeColumns = computed(() => {
     render: (row) => {
       if (isMobile.value) {
         // 移动端显示下拉菜单
-        return h(NButton, {
-          size: 'small',
-          circle: true,
-          onClick: (e) => {
-            e.stopPropagation()
-          }
+        return h(NDropdown, {
+          trigger: 'click',
+          options: getComposeActionDropdown(row),
+          onSelect: (key) => handleComposeDropdownSelect(row, key)
         }, {
-          icon: () => h(NIcon, null, { default: () => h(EllipsisHorizontalOutline) }),
-          default: () => null
+          default: () => h(NButton, {
+            size: 'small',
+            circle: true
+          }, {
+            icon: () => h(NIcon, null, { default: () => h(EllipsisHorizontalOutline) }),
+            default: () => null
+          })
         })
       } else {
         // 桌面端显示所有按钮
