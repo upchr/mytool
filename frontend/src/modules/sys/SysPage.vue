@@ -36,10 +36,7 @@
         <n-descriptions-item label="启动时间">
           <span class="info-value">{{ runtimeData.startTime || '加载中...' }}</span>
         </n-descriptions-item>
-        <n-descriptions-item label="当前时间">
-          <span class="info-value">{{ runtimeData.currentTime || '加载中...' }}</span>
-        </n-descriptions-item>
-        <n-descriptions-item label="运行时长" :span="isMobile ? 1 : 2">
+        <n-descriptions-item label="运行时长" :span="isMobile ? 1 : 1">
           <n-tag type="success" size="large" round>
             <template #icon>
               <n-icon><Time /></n-icon>
@@ -99,21 +96,47 @@ const loading = ref(false)
 // 运行时长数据
 const runtimeData = ref({
   startTime: '',
-  currentTime: '',
+  startTimeObj: null,
   runtimeSeconds: 0,
   runtimeStr: ''
 })
 
-// 获取运行时长数据
+// 格式化运行时长
+const formatRuntime = (seconds) => {
+  const days = Math.floor(seconds / 86400)
+  const hours = Math.floor((seconds % 86400) / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = seconds % 60
+
+  const parts = []
+  if (days > 0) parts.push(`${days}天`)
+  if (hours > 0) parts.push(`${hours}小时`)
+  if (minutes > 0) parts.push(`${minutes}分钟`)
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}秒`)
+
+  return parts.join('')
+}
+
+// 更新运行时长（前端计算）
+const updateRuntime = () => {
+  if (!runtimeData.value.startTimeObj) return
+
+  const now = new Date()
+  const diff = Math.floor((now - runtimeData.value.startTimeObj) / 1000)
+  runtimeData.value.runtimeSeconds = diff
+  runtimeData.value.runtimeStr = formatRuntime(diff)
+}
+
+// 获取运行时长数据（只获取一次启动时间）
 const fetchRuntimeData = async () => {
   try {
     loading.value = true
     const data = await window.$request.get('/sys/runtime')
-    runtimeData.value = {
-      startTime: data.start_time ? new Date(data.start_time).toLocaleString('zh-CN') : '',
-      currentTime: data.current_time ? new Date(data.current_time).toLocaleString('zh-CN') : '',
-      runtimeSeconds: data.runtime_seconds || 0,
-      runtimeStr: data.runtime_str || '未知'
+    if (data.start_time) {
+      runtimeData.value.startTime = new Date(data.start_time).toLocaleString('zh-CN')
+      runtimeData.value.startTimeObj = new Date(data.start_time)
+      // 立即计算一次
+      updateRuntime()
     }
   } catch (error) {
     console.error('获取运行时长失败:', error)
@@ -128,10 +151,10 @@ let runtimeTimer = null
 
 // 组件挂载时
 onMounted(() => {
-  // 立即获取一次数据
+  // 只获取一次启动时间
   fetchRuntimeData()
-  // 每秒更新一次
-  runtimeTimer = setInterval(fetchRuntimeData, 1000)
+  // 每秒在前端计算运行时长
+  runtimeTimer = setInterval(updateRuntime, 1000)
 })
 
 // 组件卸载时清理定时器
