@@ -39,6 +39,7 @@ import {
     BookOutline as KnowledgeIcon,
     DiamondOutline as AssetIcon,
     WifiOutline as CPEIcon,
+    CubeOutline as DockerIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -57,6 +58,7 @@ const routes = [
     { path: '/ai-knowledge', component: KnowledgeBase },
     { path: '/asset', component: AssetList },
     { path: '/cpe', component: CPEManager },
+    { path: '/docker', component: DockerManager },
     { path: '/ssl-dns', component: SSLDns },
     {
         path: '/ssl-apply',
@@ -155,6 +157,12 @@ const routeLabels = [
         label: 'CPE 设备',
         icon: CPEIcon,
         key: 'cpe'
+    },
+    {
+        path: '/docker',
+        label: 'Docker 管理',
+        icon: DockerIcon,
+        key: 'docker'
     },
     {
         label: 'AI 助手',
@@ -268,5 +276,8 @@ const routeLabels = [
 export default createRouter({
     history: createWebHistory(),
     routes,
+})
+export { routeLabels }
+outes,
 })
 export { routeLabels }
