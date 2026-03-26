@@ -47,18 +47,19 @@
 
     <n-empty v-else description="请先选择一个节点" />
 
-    <!-- 日志弹窗 -->
-    <n-modal v-model:show="showLogs" preset="card" title="📋 容器日志" style="width: 80vw">
+    <!-- 日志弹窗 - WebSocket 实时 -->
+    <n-modal v-model:show="showLogs" preset="card" title="📋 容器日志（实时）" style="width: 80vw">
       <n-space vertical>
-        <n-input
-          v-model:value="tailLines"
-          type="number"
-          placeholder="显示行数"
-          style="width: 120px"
-        >
-          <template #prefix>行数：</template>
-        </n-input>
-        <n-code :code="containerLogs" language="text" style="max-height: 60vh; overflow: auto" />
+        <n-space align="center">
+          <n-switch v-model:value="logsFollowing" @update:value="toggleLogsFollow">
+            <template #checked>实时跟踪</template>
+            <template #unchecked>暂停</template>
+          </n-switch>
+          <n-button size="small" @click="clearLogs">清空</n-button>
+        </n-space>
+        <div class="logs-container">
+          <pre ref="logsRef" class="logs-content">{{ containerLogs }}</pre>
+        </div>
       </n-space>
     </n-modal>
 
@@ -91,10 +92,11 @@
 
     <!-- 终端弹窗 -->
     <n-modal v-model:show="showTerminal" preset="card" title="💻 容器终端" style="width: 80vw">
-      <div class="terminal-container">
-        <div ref="terminalRef" class="terminal"></div>
+      <div class="terminal-container" tabindex="0" ref="terminalContainer" @keydown="handleTerminalKeydown">
+        <pre ref="terminalRef" class="terminal-output">{{ terminalOutput }}</pre>
       </div>
       <n-space style="margin-top: 12px">
+        <n-text depth="3">直接输入命令，按回车执行</n-text>
         <n-button @click="showTerminal = false">关闭</n-button>
       </n-space>
     </n-modal>
@@ -102,7 +104,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted, onUnmounted, h, nextTick } from 'vue'
 import { NButton, NTag, NSpace, NPopconfirm, NIcon } from 'naive-ui'
 import { Play, StopCircle, Refresh, TrashOutline, TerminalOutline, DocumentTextOutline, CreateOutline } from '@vicons/ionicons5'
 import MonacoEditor from '@/components/MonacoEditor.vue'
@@ -122,10 +124,12 @@ const composeProjects = ref([])
 const loading = ref(false)
 const activeTab = ref('containers')
 
-// 日志
+// 日志 - WebSocket
 const showLogs = ref(false)
 const containerLogs = ref('')
-const tailLines = ref(200)
+const logsRef = ref(null)
+const logsFollowing = ref(true)
+const logsWs = ref(null)
 const currentContainerId = ref('')
 
 // Compose 编辑器
@@ -135,10 +139,13 @@ const composeContent = ref('')
 const isNewCompose = ref(false)
 const saving = ref(false)
 
-// 终端
+// 终端 - WebSocket
 const showTerminal = ref(false)
 const terminalRef = ref(null)
-let wsTerminal = null
+const terminalContainer = ref(null)
+const terminalOutput = ref('')
+const terminalWs = ref(null)
+const terminalInputBuffer = ref('')
 
 // 加载节点列表
 const loadNodes = async () => {
@@ -156,9 +163,34 @@ const loadDockerData = async () => {
   
   loading.value = true
   try {
-    await Promise.all([loadContainers(), loadComposeProjects()])
+    // 并行加载，使用快速接口
+    const [containersRes, composeRes] = await Promise.all([
+      window.$request.get(`/docker/nodes/${selectedNodeId.value}/containers`),
+      window.$request.get(`/docker/nodes/${selectedNodeId.value}/compose`)
+    ])
+    containers.value = containersRes || []
+    composeProjects.value = composeRes || []
+  } catch (error) {
+    window.$message.error('加载数据失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 容器操作 - 异步立即返回
+const handleContainerAction = async (containerId, action) => {
+  try {
+    // 使用异步接口
+    const res = await window.$request.post(`/docker/nodes/${selectedNodeId.value}/containers/action/async`, {
+      action,
+      container_id: containerId
+    })
+    window.$message.success(res.message || `容器 ${containerId} 正在${action}...`)
+    
+    // 延迟刷新列表
+    setTimeout(() => loadContainers(), 1500)
+  } catch (error) {
+    window.$message.error(`操作失败: ${error.message || error}`)
   }
 }
 
@@ -172,88 +204,179 @@ const loadContainers = async () => {
   }
 }
 
-// 加载 Compose 项目
-const loadComposeProjects = async () => {
-  try {
-    const res = await window.$request.get(`/docker/nodes/${selectedNodeId.value}/compose`)
-    composeProjects.value = res || []
-  } catch (error) {
-    console.error('加载 Compose 项目失败:', error)
-  }
-}
-
-// 容器操作
-const handleContainerAction = async (containerId, action) => {
-  try {
-    await window.$request.post(`/docker/nodes/${selectedNodeId.value}/containers/action`, {
-      action,
-      container_id: containerId
-    })
-    window.$message.success(`容器 ${containerId} 已${action}`)
-    loadContainers()
-  } catch (error) {
-    window.$message.error(`操作失败: ${error.message || error}`)
-  }
-}
-
-// 查看日志
+// 查看日志 - WebSocket 实时
 const viewLogs = async (containerId) => {
   currentContainerId.value = containerId
-  try {
-    const res = await window.$request.get(
-      `/docker/nodes/${selectedNodeId.value}/containers/${containerId}/logs`,
-      { params: { tail: tailLines.value } }
-    )
-    containerLogs.value = res.logs || '无日志'
-    showLogs.value = true
-  } catch (error) {
-    window.$message.error('获取日志失败')
+  containerLogs.value = ''
+  showLogs.value = true
+  logsFollowing.value = true
+  
+  // 启动 WebSocket 连接
+  startLogsStream(containerId)
+}
+
+const startLogsStream = (containerId) => {
+  // 关闭旧连接
+  if (logsWs.value) {
+    logsWs.value.close()
   }
+  
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${wsProtocol}//${location.host}/api/docker/nodes/${selectedNodeId.value}/containers/${containerId}/logs/stream?tail=200&follow=true`
+  
+  logsWs.value = new WebSocket(wsUrl)
+  
+  logsWs.value.onopen = () => {
+    console.log('日志 WebSocket 已连接')
+  }
+  
+  logsWs.value.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.log) {
+        containerLogs.value += data.log
+        // 自动滚动到底部
+        nextTick(() => {
+          if (logsRef.value) {
+            logsRef.value.scrollTop = logsRef.value.scrollHeight
+          }
+        })
+      } else if (data.done) {
+        containerLogs.value += '\n[日志流结束]\n'
+      } else if (data.error) {
+        containerLogs.value += `\n[错误: ${data.error}]\n`
+      }
+    } catch (e) {
+      // 如果不是 JSON，直接追加
+      containerLogs.value += event.data
+    }
+  }
+  
+  logsWs.value.onerror = (error) => {
+    console.error('日志 WebSocket 错误:', error)
+  }
+  
+  logsWs.value.onclose = () => {
+    console.log('日志 WebSocket 已关闭')
+  }
+}
+
+const toggleLogsFollow = (value) => {
+  // 暂停/恢复日志接收可以在这里实现
+}
+
+const clearLogs = () => {
+  containerLogs.value = ''
 }
 
 // 打开终端
 const openTerminal = async (containerId) => {
   currentContainerId.value = containerId
+  terminalOutput.value = ''
+  terminalInputBuffer.value = ''
   showTerminal.value = true
   
-  // 等待 DOM 更新后初始化终端
-  await new Promise(resolve => setTimeout(resolve, 100))
-  initTerminal(containerId)
+  // 等待 DOM 更新
+  await nextTick()
+  
+  // 启动 WebSocket 终端
+  startTerminal(containerId)
+  
+  // 聚焦到终端容器
+  terminalContainer.value?.focus()
 }
 
-// 初始化终端 WebSocket
-const initTerminal = (containerId) => {
-  const wsUrl = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/api/docker/nodes/${selectedNodeId.value}/containers/${containerId}/terminal`
-  
-  wsTerminal = new WebSocket(wsUrl)
-  
-  wsTerminal.onopen = () => {
-    console.log('终端连接成功')
+const startTerminal = (containerId) => {
+  // 关闭旧连接
+  if (terminalWs.value) {
+    terminalWs.value.close()
   }
   
-  wsTerminal.onmessage = (event) => {
-    if (terminalRef.value) {
-      terminalRef.value.innerHTML += event.data
-      terminalRef.value.scrollTop = terminalRef.value.scrollHeight
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${wsProtocol}//${location.host}/api/docker/nodes/${selectedNodeId.value}/containers/${containerId}/terminal`
+  
+  terminalWs.value = new WebSocket(wsUrl)
+  
+  terminalWs.value.onopen = () => {
+    console.log('终端 WebSocket 已连接')
+    terminalOutput.value += '[已连接到容器终端]\n'
+  }
+  
+  terminalWs.value.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.output) {
+        terminalOutput.value += data.output
+        nextTick(() => {
+          if (terminalRef.value) {
+            terminalRef.value.scrollTop = terminalRef.value.scrollHeight
+          }
+        })
+      } else if (data.error) {
+        terminalOutput.value += `\n[错误: ${data.error}]\n`
+      }
+    } catch (e) {
+      terminalOutput.value += event.data
     }
   }
   
-  wsTerminal.onerror = (error) => {
-    console.error('终端错误:', error)
+  terminalWs.value.onerror = (error) => {
+    console.error('终端 WebSocket 错误:', error)
     window.$message.error('终端连接失败')
   }
   
-  wsTerminal.onclose = () => {
-    console.log('终端连接关闭')
+  terminalWs.value.onclose = () => {
+    console.log('终端 WebSocket 已关闭')
+    terminalOutput.value += '\n[连接已关闭]\n'
+  }
+}
+
+// 处理终端键盘输入
+const handleTerminalKeydown = (e) => {
+  if (!terminalWs.value || terminalWs.value.readyState !== WebSocket.OPEN) {
+    return
   }
   
-  // 键盘输入
-  terminalRef.value?.addEventListener('keydown', (e) => {
-    if (wsTerminal?.readyState === WebSocket.OPEN) {
-      wsTerminal.send(JSON.stringify({ input: e.key }))
-      e.preventDefault()
+  // 阻止默认行为
+  e.preventDefault()
+  
+  let input = ''
+  
+  // 处理特殊键
+  if (e.key === 'Enter') {
+    input = '\r'
+  } else if (e.key === 'Backspace') {
+    input = '\b'
+  } else if (e.key === 'Tab') {
+    input = '\t'
+  } else if (e.key === 'ArrowUp') {
+    input = '\x1b[A'
+  } else if (e.key === 'ArrowDown') {
+    input = '\x1b[B'
+  } else if (e.key === 'ArrowRight') {
+    input = '\x1b[C'
+  } else if (e.key === 'ArrowLeft') {
+    input = '\x1b[D'
+  } else if (e.ctrlKey) {
+    // Ctrl 组合键
+    const key = e.key.toLowerCase()
+    if (key === 'c') {
+      input = '\x03'  // Ctrl+C
+    } else if (key === 'd') {
+      input = '\x04'  // Ctrl+D
+    } else if (key === 'l') {
+      input = '\x0c'  // Ctrl+L
+    } else if (key === 'z') {
+      input = '\x1a'  // Ctrl+Z
     }
-  })
+  } else if (e.key.length === 1) {
+    // 普通字符
+    input = e.key
+  }
+  
+  if (input) {
+    terminalWs.value.send(JSON.stringify({ input }))
+  }
 }
 
 // Compose 相关
@@ -306,7 +429,7 @@ const saveComposeFile = async () => {
     )
     window.$message.success('保存成功')
     showComposeEditor.value = false
-    loadComposeProjects()
+    loadDockerData()
   } catch (error) {
     window.$message.error('保存失败')
   } finally {
@@ -333,6 +456,16 @@ const handleComposeAction = async (path, action) => {
     window.$message.error(`操作失败: ${error.message || error}`)
   }
 }
+
+// 清理 WebSocket 连接
+onUnmounted(() => {
+  if (logsWs.value) {
+    logsWs.value.close()
+  }
+  if (terminalWs.value) {
+    terminalWs.value.close()
+  }
+})
 
 // 表格列定义
 const containerColumns = [
@@ -478,20 +611,43 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.logs-container {
+  background: #1e1e1e;
+  border-radius: 4px;
+  padding: 12px;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.logs-content {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
 .terminal-container {
   background: #1e1e1e;
   border-radius: 4px;
   padding: 12px;
   min-height: 400px;
+  outline: none;
+  cursor: text;
 }
 
-.terminal {
+.terminal-container:focus {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.terminal-output {
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 14px;
   color: #d4d4d4;
   white-space: pre-wrap;
   word-break: break-all;
+  margin: 0;
   min-height: 400px;
-  outline: none;
 }
 </style>

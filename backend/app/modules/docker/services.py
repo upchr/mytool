@@ -5,6 +5,7 @@ from app.core.db.database import engine
 import json
 import re
 from typing import List, Optional, Tuple
+import os
 
 
 class DockerService:
@@ -32,11 +33,36 @@ class DockerService:
             self._ssh = None
     
     def list_containers(self, all: bool = True) -> List[dict]:
-        """获取容器列表"""
+        """获取容器列表 - 优化版"""
         ssh = self._get_ssh()
         flag = "-a" if all else ""
+        # 使用更高效的格式化输出
         cmd = f"docker ps {flag} --format '{{{{json .}}}}'"
-        _, output, _ = ssh.execute_command(cmd)
+        _, output, _ = ssh.execute_command(cmd, timeout=10)
+        
+        containers = []
+        for line in output.strip().split('\n'):
+            if line:
+                try:
+                    data = json.loads(line)
+                    containers.append({
+                        "id": data.get("ID", "")[:12],
+                        "name": data.get("Names", ""),
+                        "image": data.get("Image", ""),
+                        "status": data.get("Status", ""),
+                        "state": data.get("State", ""),
+                        "ports": data.get("Ports", ""),
+                        "created": data.get("CreatedAt", "")
+                    })
+                except json.JSONDecodeError:
+                    continue
+        return containers
+    
+    def list_containers_fast(self) -> List[dict]:
+        """快速获取容器列表（仅运行中的）"""
+        ssh = self._get_ssh()
+        cmd = "docker ps --format '{{json .}}'"
+        _, output, _ = ssh.execute_command(cmd, timeout=5)
         
         containers = []
         for line in output.strip().split('\n'):
@@ -69,29 +95,46 @@ class DockerService:
         else:
             cmd = f"docker {action} {container_id}"
         
-        exit_code, output, error = ssh.execute_command(cmd)
+        exit_code, output, error = ssh.execute_command(cmd, timeout=30)
         
         if exit_code == 0:
             return True, f"容器 {container_id} 已{action}"
         else:
             return False, error or output
     
+    def container_action_async(self, container_id: str, action: str) -> Tuple[bool, str]:
+        """容器操作 - 异步模式（后台执行）"""
+        ssh = self._get_ssh()
+        
+        valid_actions = ["start", "stop", "restart", "remove"]
+        if action not in valid_actions:
+            return False, f"无效操作: {action}"
+        
+        if action == "remove":
+            cmd = f"nohup docker rm -f {container_id} > /dev/null 2>&1 &"
+        else:
+            cmd = f"nohup docker {action} {container_id} > /dev/null 2>&1 &"
+        
+        _, output, error = ssh.execute_command(cmd, timeout=5)
+        return True, f"容器 {container_id} 正在{action}..."
+    
     def get_container_logs(self, container_id: str, tail: int = 100) -> str:
         """获取容器日志"""
         ssh = self._get_ssh()
         cmd = f"docker logs --tail {tail} {container_id} 2>&1"
-        _, output, _ = ssh.execute_command(cmd)
+        _, output, _ = ssh.execute_command(cmd, timeout=30)
         return output
     
     def list_compose_projects(self) -> List[dict]:
-        """列出 compose 项目"""
+        """列出 compose 项目 - 优化版"""
         ssh = self._get_ssh()
         
-        # 方法1: 使用 docker compose ls (新版本)
-        cmd = "docker compose ls --format json 2>/dev/null || docker-compose ls 2>/dev/null"
-        exit_code, output, _ = ssh.execute_command(cmd)
-        
         projects = []
+        
+        # 方法1: 使用 docker compose ls (新版本) - 一次性获取
+        cmd = "docker compose ls --format json 2>/dev/null || docker-compose ls --format json 2>/dev/null"
+        exit_code, output, _ = ssh.execute_command(cmd, timeout=5)
+        
         if output.strip():
             try:
                 data = json.loads(output)
@@ -100,46 +143,58 @@ class DockerService:
                         projects.append({
                             "name": p.get("Name", ""),
                             "status": p.get("Status", ""),
-                            "path": ""
+                            "path": "",
+                            "services": 0
                         })
             except:
                 pass
         
-        # 方法2: 查找常见目录下的 docker-compose.yml
-        search_paths = [
-            "/opt/docker-compose",
-            "/opt/compose",
-            "/root/compose",
-            "/home/*/compose",
-            "/home/*/docker-compose"
-        ]
+        return projects
+    
+    def list_compose_projects_with_search(self, search_paths: List[str] = None) -> List[dict]:
+        """列出 compose 项目 - 包含目录搜索（较慢）"""
+        ssh = self._get_ssh()
         
-        for search_path in search_paths:
-            cmd = f"find {search_path} -name 'docker-compose.yml' -o -name 'docker-compose.yaml' 2>/dev/null"
-            _, output, _ = ssh.execute_command(cmd)
-            
-            for filepath in output.strip().split('\n'):
-                if filepath:
-                    import os
-                    path = os.path.dirname(filepath)
-                    name = os.path.basename(path)
-                    
-                    # 检查是否已存在
-                    if not any(p["path"] == path for p in projects):
-                        # 获取服务数量
-                        cmd = f"grep -c '^  [a-z]' {filepath} 2>/dev/null || echo 0"
-                        _, count_output, _ = ssh.execute_command(cmd)
-                        try:
-                            services = int(count_output.strip())
-                        except:
-                            services = 0
-                        
+        projects = []
+        
+        # 先用 docker compose ls
+        cmd = "docker compose ls --format json 2>/dev/null || docker-compose ls --format json 2>/dev/null"
+        _, output, _ = ssh.execute_command(cmd, timeout=5)
+        
+        if output.strip():
+            try:
+                data = json.loads(output)
+                if isinstance(data, list):
+                    for p in data:
                         projects.append({
-                            "name": name,
-                            "path": path,
-                            "status": "未知",
-                            "services": services
+                            "name": p.get("Name", ""),
+                            "status": p.get("Status", ""),
+                            "path": "",
+                            "services": 0
                         })
+            except:
+                pass
+        
+        # 默认搜索路径
+        if search_paths is None:
+            search_paths = ["/opt/docker-compose", "/opt/compose", "/root/compose"]
+        
+        # 合并搜索命令 - 一次性执行
+        find_cmd = "find " + " ".join(search_paths) + " -name 'docker-compose.yml' -o -name 'docker-compose.yaml' 2>/dev/null"
+        _, output, _ = ssh.execute_command(find_cmd, timeout=10)
+        
+        for filepath in output.strip().split('\n'):
+            if filepath:
+                path = os.path.dirname(filepath)
+                name = os.path.basename(path)
+                
+                if not any(p["path"] == path for p in projects):
+                    projects.append({
+                        "name": name,
+                        "path": path,
+                        "status": "未知",
+                        "services": 0
+                    })
         
         return projects
     
@@ -151,7 +206,7 @@ class DockerService:
         for filename in ["docker-compose.yml", "docker-compose.yaml"]:
             filepath = f"{path}/{filename}"
             cmd = f"cat {filepath} 2>/dev/null"
-            _, output, _ = ssh.execute_command(cmd)
+            _, output, _ = ssh.execute_command(cmd, timeout=10)
             if output.strip():
                 return output
         
@@ -164,13 +219,9 @@ class DockerService:
         # 确保目录存在
         ssh.execute_command(f"mkdir -p {path}")
         
-        # 写入文件
-        import io
-        fileobj = io.BytesIO(content.encode('utf-8'))
-        
         # 使用 heredoc 方式写入（避免转义问题）
         cmd = f"cat > {path}/docker-compose.yml << 'EOFCOMPOSE'\n{content}\nEOFCOMPOSE"
-        exit_code, output, error = ssh.execute_command(cmd)
+        exit_code, output, error = ssh.execute_command(cmd, timeout=10)
         
         if exit_code == 0:
             return True, "保存成功"
@@ -183,7 +234,7 @@ class DockerService:
         
         # 检测 compose 命令
         cmd_check = "docker compose version &>/dev/null && echo 'docker compose' || echo 'docker-compose'"
-        _, compose_cmd, _ = ssh.execute_command(cmd_check)
+        _, compose_cmd, _ = ssh.execute_command(cmd_check, timeout=5)
         compose_cmd = compose_cmd.strip()
         
         service_str = " ".join(services) if services else ""
@@ -199,7 +250,7 @@ class DockerService:
         else:
             return False, f"无效操作: {action}"
         
-        exit_code, output, error = ssh.execute_command(cmd, timeout=60)
+        exit_code, output, error = ssh.execute_command(cmd, timeout=120)
         
         if exit_code == 0:
             return True, output or "操作成功"
@@ -210,5 +261,9 @@ class DockerService:
         """在容器中执行命令"""
         ssh = self._get_ssh()
         cmd = f"docker exec {container_id} {command}"
-        exit_code, output, error = ssh.execute_command(cmd)
+        exit_code, output, error = ssh.execute_command(cmd, timeout=30)
         return exit_code == 0, output or error
+    
+    def get_ssh_client(self) -> SSHClient:
+        """获取 SSH 客户端（用于 WebSocket）"""
+        return self._get_ssh()
