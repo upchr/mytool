@@ -485,4 +485,140 @@ onMounted(() => {
 .dark .config-time {
   color: #666;
 }
+
+/* ==================== 移动端响应式样式 ==================== */
+@media (max-width: 768px) {
+  .ai-config-container {
+    padding: 12px;
+    max-width: 100%;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .section-header h3 {
+    font-size: 15px;
+  }
+
+  /* 配置列表项优化 */
+  .config-list-section :deep(.n-list-item) {
+    padding: 12px;
+  }
+
+  .config-avatar {
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+  }
+
+  .config-name {
+    font-size: 14px;
+  }
+
+  .config-details {
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .config-time {
+    font-size: 11px;
+  }
+
+  .config-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .config-actions button {
+    width: 100%;
+  }
+
+  /* 配置说明优化 */
+  .config-info {
+    margin-top: 16px;
+  }
+
+  .config-info :deep(.n-alert) {
+    font-size: 13px;
+  }
+
+  .config-info ul {
+    margin: 6px 0 0 16px;
+  }
+
+  .config-info li {
+    margin: 6px 0;
+    line-height: 1.5;
+  }
+
+  /* 对话框优化 */
+  .ai-config-container :deep(.n-modal) {
+    width: 95% !important;
+    max-width: 500px !important;
+  }
+
+  .dialog-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dialog-footer button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-config-container {
+    padding: 8px;
+  }
+
+  .section-header h3 {
+    font-size: 14px;
+  }
+
+  .config-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .config-name {
+    font-size: 13px;
+  }
+
+  .config-details {
+    font-size: 11px;
+  }
+
+  .config-time {
+    font-size: 10px;
+  }
+
+  .config-info :deep(.n-alert) {
+    font-size: 12px;
+  }
+
+  .config-info li {
+    font-size: 12px;
+  }
+}
+
+/* 横屏模式适配 */
+@media (max-height: 600px) and (orientation: landscape) {
+  .ai-config-container {
+    padding: 8px;
+  }
+
+  .config-list-section {
+    margin-bottom: 12px;
+  }
+
+  .section-header {
+    margin-bottom: 12px;
+  }
+}
 </style>

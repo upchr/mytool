@@ -64,6 +64,24 @@ async def lifespan(app: FastAPI):
     # 6. 路由配置
     from app.core.routers import router_manager
     router_manager.register_routers(app)
+
+    # 7. 记录应用启动时间
+    from datetime import datetime
+    from app.core.db.database import get_engine
+    from app.modules.sys.models import system_config_table
+    try:
+        engine = get_engine()
+        with engine.begin() as conn:
+            # 更新应用启动时间
+            conn.execute(
+                system_config_table.update()
+                .where(system_config_table.c.id == 1)
+                .values(app_start_time=datetime.now())
+            )
+        logger.info("应用启动时间已记录")
+    except Exception as e:
+        logger.warning(f"记录应用启动时间失败: {e}")
+
     # 运行应用
     yield
 

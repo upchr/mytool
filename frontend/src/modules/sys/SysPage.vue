@@ -1,10 +1,54 @@
 <template>
-  <div style="padding: 20px">
-    <h2>👤 用户设置</h2>
-    <n-space vertical style="margin-top: 10px ">
-      <n-button @click="showDialog = true" type="error">修改密码</n-button>
-      <n-button @click="logoutSystem" type="warning">退出登录</n-button>
-    </n-space>
+  <div class="sys-page">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h2 class="page-title">👤 系统设置</h2>
+      <p class="page-description">管理系统配置和查看运行状态</p>
+    </div>
+
+    <!-- 操作按钮区域 -->
+    <div class="action-buttons">
+      <n-button @click="showDialog = true" type="error" size="large" block>
+        <template #icon>
+          <n-icon><LockClosed /></n-icon>
+        </template>
+        修改密码
+      </n-button>
+      <n-button @click="logoutSystem" type="warning" size="large" block>
+        <template #icon>
+          <n-icon><LogOut /></n-icon>
+        </template>
+        退出登录
+      </n-button>
+    </div>
+
+    <!-- 项目运行时长展示 -->
+    <n-card title="📊 项目运行信息" class="runtime-card">
+      <template #header-extra>
+        <n-button text @click="fetchRuntimeData" :loading="loading">
+          <template #icon>
+            <n-icon><Refresh /></n-icon>
+          </template>
+          刷新
+        </n-button>
+      </template>
+      <n-descriptions bordered :column="isMobile ? 1 : 2" label-placement="left" size="medium">
+        <n-descriptions-item label="启动时间">
+          <span class="info-value">{{ runtimeData.startTime || '加载中...' }}</span>
+        </n-descriptions-item>
+        <n-descriptions-item label="当前时间">
+          <span class="info-value">{{ runtimeData.currentTime || '加载中...' }}</span>
+        </n-descriptions-item>
+        <n-descriptions-item label="运行时长" :span="isMobile ? 1 : 2">
+          <n-tag type="success" size="large" round>
+            <template #icon>
+              <n-icon><Time /></n-icon>
+            </template>
+            {{ runtimeData.runtimeStr || '加载中...' }}
+          </n-tag>
+        </n-descriptions-item>
+      </n-descriptions>
+    </n-card>
     <!-- 使用通用表单对话框 -->
     <DialogForm
         ref="dialogRef"
@@ -14,7 +58,7 @@
         :use-field-groups="true"
         :field-groups="fieldGroups"
         :rules="formRules"
-        title="用户设置"
+        title="系统设置"
         positive-text="保存"
         :validate-on-submit="true"
         :show-success-message="true"
@@ -37,10 +81,65 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import DialogForm from '@/components/DialogForm.vue'
+import { LockClosed, LogOut, Refresh, Time } from '@vicons/ionicons5'
 import {logoutSystem, resetPassword} from "@/utils/auth.js";
+import { useWindowSize } from '@vueuse/core'
+
 const dialogRef = ref(null)//action按钮表单要调用dialogRef.validate子组件验证
+
+// 响应式窗口大小
+const { width } = useWindowSize()
+const isMobile = computed(() => width.value < 768)
+
+// 加载状态
+const loading = ref(false)
+
+// 运行时长数据
+const runtimeData = ref({
+  startTime: '',
+  currentTime: '',
+  runtimeSeconds: 0,
+  runtimeStr: ''
+})
+
+// 获取运行时长数据
+const fetchRuntimeData = async () => {
+  try {
+    loading.value = true
+    const data = await window.$request.get('/sys/runtime')
+    runtimeData.value = {
+      startTime: data.start_time ? new Date(data.start_time).toLocaleString('zh-CN') : '',
+      currentTime: data.current_time ? new Date(data.current_time).toLocaleString('zh-CN') : '',
+      runtimeSeconds: data.runtime_seconds || 0,
+      runtimeStr: data.runtime_str || '未知'
+    }
+  } catch (error) {
+    console.error('获取运行时长失败:', error)
+    window.$message.error('获取运行时长失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 定时器引用
+let runtimeTimer = null
+
+// 组件挂载时
+onMounted(() => {
+  // 立即获取一次数据
+  fetchRuntimeData()
+  // 每秒更新一次
+  runtimeTimer = setInterval(fetchRuntimeData, 1000)
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (runtimeTimer) {
+    clearInterval(runtimeTimer)
+  }
+})
 
 // 表单数据
 const formData = ref({
@@ -173,39 +272,182 @@ const saveAndClose = (data) => {
 </script>
 
 <style scoped>
+.sys-page {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 页面头部 */
+.page-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--n-text-color);
+}
+
+.page-description {
+  font-size: 14px;
+  color: var(--n-text-color-3);
+  margin: 0;
+}
+
+/* 操作按钮区域 */
+.action-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.action-buttons :deep(.n-button) {
+  height: 48px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 运行时长卡片 */
+.runtime-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.runtime-card :deep(.n-card__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--n-divider-color);
+}
+
+.runtime-card :deep(.n-card__content) {
+  padding: 24px;
+}
+
+.info-value {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 14px;
+  color: var(--n-text-color-2);
+}
+
 /* 移动端适配 */
 @media (max-width: 768px) {
-  div[style*="padding: 20px"] {
-    padding: 10px !important;
+  .sys-page {
+    padding: 16px;
   }
 
-  h2 {
-    font-size: 18px;
-    margin-bottom: 8px;
+  .page-title {
+    font-size: 24px;
   }
 
-  .n-space {
-    flex-wrap: wrap;
+  .page-description {
+    font-size: 13px;
   }
 
-  .n-button {
-    width: 100%;
-    margin-bottom: 8px;
+  .action-buttons {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .action-buttons :deep(.n-button) {
+    height: 44px;
+    font-size: 15px;
+  }
+
+  .runtime-card {
+    border-radius: 8px;
+  }
+
+  .runtime-card :deep(.n-card__header) {
+    padding: 16px;
+  }
+
+  .runtime-card :deep(.n-card__content) {
+    padding: 16px;
+  }
+
+  .runtime-card :deep(.n-descriptions-table) {
+    font-size: 13px;
+  }
+
+  .info-value {
+    font-size: 12px;
   }
 }
 
 @media (max-width: 480px) {
-  div[style*="padding: 20px"] {
-    padding: 5px !important;
+  .sys-page {
+    padding: 12px;
   }
 
-  h2 {
-    font-size: 16px;
+  .page-title {
+    font-size: 20px;
   }
 
-  .n-button {
+  .page-description {
+    font-size: 12px;
+  }
+
+  .action-buttons {
+    gap: 10px;
+  }
+
+  .action-buttons :deep(.n-button) {
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .runtime-card :deep(.n-card__header) {
+    padding: 12px;
+  }
+
+  .runtime-card :deep(.n-card__content) {
+    padding: 12px;
+  }
+
+  .runtime-card :deep(.n-descriptions-table) {
+    font-size: 12px;
+  }
+
+  .runtime-card :deep(.n-tag) {
     font-size: 13px;
-    padding: 8px 12px;
   }
+}
+
+/* 深色模式适配 */
+:deep(.n-card) {
+  background-color: var(--n-card-color);
+  border-color: var(--n-border-color);
+}
+
+:deep(.n-descriptions) {
+  --n-td-color: var(--n-modal-color);
+}
+
+:deep(.n-descriptions-table) {
+  --n-th-color: var(--n-th-color);
+  --n-td-text-color: var(--n-text-color);
+  --n-th-text-color: var(--n-text-color-2);
+}
+
+/* 动画效果 */
+.runtime-card {
+  transition: all 0.3s ease;
+}
+
+.runtime-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.action-buttons :deep(.n-button) {
+  transition: all 0.2s ease;
+}
+
+.action-buttons :deep(.n-button:hover) {
+  transform: translateY(-2px);
 }
 </style>

@@ -189,7 +189,7 @@ const routeLabels = [
         children: [
             {
                 path: '/sys',
-                label: '用户设置',
+                label: '系统设置',
                 icon: AboutIcon,
                 key: 'sys-users'
             },

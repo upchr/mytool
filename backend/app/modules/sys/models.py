@@ -6,5 +6,6 @@ system_config_table = Table(
     Column("id", Integer, primary_key=True, default=1),
     Column("is_initialized", Boolean, default=False),
     Column("admin_password_hash", String(128)),  # bcrypt 哈希
-    Column("created_at", DateTime, server_default=func.now())
+    Column("created_at", DateTime, server_default=func.now()),
+    Column("app_start_time", DateTime)  # 应用启动时间
 )

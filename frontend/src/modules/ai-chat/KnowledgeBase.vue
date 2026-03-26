@@ -791,4 +791,199 @@ onMounted(() => {
 .knowledge-card {
   margin: 16px;
 }
+
+/* ==================== 移动端响应式样式 ==================== */
+@media (max-width: 768px) {
+  .knowledge-card {
+    margin: 8px;
+  }
+
+  /* 顶部工具栏优化 */
+  .knowledge-card :deep(.n-space) {
+    flex-wrap: wrap;
+  }
+
+  .knowledge-card :deep(.n-space > .n-space) {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .knowledge-card :deep(.n-input) {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  /* 表格优化 */
+  .knowledge-card :deep(.n-data-table) {
+    font-size: 13px;
+  }
+
+  .knowledge-card :deep(.n-data-table .n-data-table-th) {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+
+  .knowledge-card :deep(.n-data-table .n-data-table-td) {
+    padding: 8px 4px;
+  }
+
+  /* 按钮优化 */
+  .knowledge-card :deep(.n-button) {
+    font-size: 13px;
+  }
+
+  .knowledge-card :deep(.n-button--tiny) {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  /* 标签优化 */
+  .knowledge-card :deep(.n-tag) {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+
+  /* 对话框优化 */
+  .knowledge-card :deep(.n-modal) {
+    width: 95% !important;
+    max-width: 500px !important;
+  }
+
+  .knowledge-card :deep(.n-modal .n-card) {
+    max-height: 90vh;
+    overflow: hidden;
+  }
+
+  .knowledge-card :deep(.n-modal .n-card__content) {
+    overflow-y: auto;
+    max-height: calc(90vh - 120px);
+  }
+
+  /* 分页优化 */
+  .knowledge-card :deep(.n-pagination) {
+    font-size: 12px;
+  }
+
+  /* 文档对话框特殊处理 */
+  .knowledge-card :deep(.n-modal[style*="width: 900px"]) {
+    width: 95% !important;
+    max-width: 500px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .knowledge-card {
+    margin: 4px;
+  }
+
+  /* 搜索框全宽 */
+  .knowledge-card :deep(.n-input) {
+    width: 100% !important;
+  }
+
+  /* 工具栏按钮堆叠 */
+  .knowledge-card :deep(.n-space > .n-space > .n-space) {
+    width: 100%;
+    flex-direction: column;
+    gap: 6px !important;
+  }
+
+  .knowledge-card :deep(.n-space > .n-space > .n-space > .n-button) {
+    width: 100%;
+  }
+
+  /* 表格更紧凑 */
+  .knowledge-card :deep(.n-data-table) {
+    font-size: 12px;
+  }
+
+  .knowledge-card :deep(.n-data-table .n-data-table-th) {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+
+  .knowledge-card :deep(.n-data-table .n-data-table-td) {
+    padding: 6px 2px;
+  }
+
+  /* 隐藏次要列 */
+  .knowledge-card :deep(.n-data-table td:nth-child(1)),
+  .knowledge-card :deep(.n-data-table th:nth-child(1)) {
+    display: none;
+  }
+
+  /* 对话框更小 */
+  .knowledge-card :deep(.n-modal) {
+    width: 98% !important;
+    max-width: 100% !important;
+  }
+
+  /* DialogForm 优化 */
+  .knowledge-card :deep(.n-form-item-label) {
+    font-size: 13px;
+  }
+
+  .knowledge-card :deep(.n-input__input) {
+    font-size: 14px;
+  }
+
+  .knowledge-card :deep(.n-textarea) {
+    font-size: 14px;
+  }
+
+  /* 标签间距 */
+  .knowledge-card :deep(.n-space > .n-tag) {
+    margin: 2px;
+  }
+}
+
+/* 横屏模式适配 */
+@media (max-height: 600px) and (orientation: landscape) {
+  .knowledge-card {
+    margin: 4px;
+  }
+
+  /* 减少表格行高 */
+  .knowledge-card :deep(.n-data-table .n-data-table-tr) {
+    height: 40px;
+  }
+
+  .knowledge-card :deep(.n-data-table .n-data-table-th),
+  .knowledge-card :deep(.n-data-table .n-data-table-td) {
+    padding: 4px 6px;
+  }
+
+  /* 对话框高度限制 */
+  .knowledge-card :deep(.n-modal .n-card) {
+    max-height: 95vh;
+  }
+
+  .knowledge-card :deep(.n-modal .n-card__content) {
+    max-height: calc(95vh - 100px);
+  }
+}
+
+/* 深色模式移动端优化 */
+.dark .knowledge-card {
+  background: #1e1e1e;
+}
+
+@media (max-width: 768px) {
+  .dark .knowledge-card :deep(.n-data-table) {
+    background: #1e1e1e;
+  }
+
+  .dark .knowledge-card :deep(.n-data-table .n-data-table-th) {
+    background: #2d2d2d;
+    color: #e0e0e0;
+  }
+
+  .dark .knowledge-card :deep(.n-data-table .n-data-table-td) {
+    border-color: #333;
+  }
+
+  .dark .knowledge-card :deep(.n-modal .n-card) {
+    background: #1e1e1e;
+  }
+}
 </style>

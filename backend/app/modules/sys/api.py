@@ -3,6 +3,7 @@ from sqlalchemy import select,update
 from app.core.db.database import engine, metadata
 from fastapi import APIRouter
 import logging
+from datetime import datetime
 
 from .models import system_config_table
 from .schemas import SysBase, ResetSysBase
@@ -21,6 +22,52 @@ def check_initialization():
         stmt = select(system_config_table.c.is_initialized)
         is_initialized = conn.execute(stmt).scalar()
         return BaseResponse.success({"is_initialized": bool(is_initialized)})
+
+
+@router.get("/runtime")
+def get_runtime():
+    """
+    获取应用运行时长
+    返回应用启动时间、当前时间和运行时长（秒）
+    """
+    with engine.connect() as conn:
+        stmt = select(system_config_table.c.app_start_time)
+        start_time = conn.execute(stmt).scalar()
+
+        if not start_time:
+            return BaseResponse.success({
+                "start_time": None,
+                "current_time": datetime.now().isoformat(),
+                "runtime_seconds": 0,
+                "runtime_str": "未启动"
+            })
+
+        start_time = datetime.fromisoformat(start_time) if isinstance(start_time, str) else start_time
+        current_time = datetime.now()
+        runtime_seconds = int((current_time - start_time).total_seconds())
+
+        # 格式化运行时长
+        days = runtime_seconds // 86400
+        hours = (runtime_seconds % 86400) // 3600
+        minutes = (runtime_seconds % 3600) // 60
+        seconds = runtime_seconds % 60
+
+        runtime_str = []
+        if days > 0:
+            runtime_str.append(f"{days}天")
+        if hours > 0:
+            runtime_str.append(f"{hours}小时")
+        if minutes > 0:
+            runtime_str.append(f"{minutes}分钟")
+        if seconds > 0 or len(runtime_str) == 0:
+            runtime_str.append(f"{seconds}秒")
+
+        return BaseResponse.success({
+            "start_time": start_time.isoformat(),
+            "current_time": current_time.isoformat(),
+            "runtime_seconds": runtime_seconds,
+            "runtime_str": "".join(runtime_str)
+        })
 
 @router.post("/init/setup")
 def setup_initialization(req: SysBase):
