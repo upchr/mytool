@@ -18,6 +18,8 @@ import WorkflowManager from '../modules/workflow/WorkflowManager.vue'
 import WorkflowExecutionLog from '../modules/workflow/WorkflowExecutionLog.vue'
 import AssetList from '../modules/asset/AssetList.vue'
 import CPEManager from '../modules/cpe/CPEManager.vue'
+import DockerManager from '../modules/docker/DockerManager.vue'
+
 
 import {
     AccessibilityOutline as AboutIcon,
@@ -276,8 +278,5 @@ const routeLabels = [
 export default createRouter({
     history: createWebHistory(),
     routes,
-})
-export { routeLabels }
-outes,
 })
 export { routeLabels }
