@@ -28,6 +28,7 @@ def upgrade():
             logger.info(f"表 {table} 自动添加了字段: {', '.join(fields)}")
     else:
         logger.info("✅ 所有表已是最新")
+    
     logger.debug("✅ 检测数据库字段升级完成！")
 
 

@@ -1,5 +1,20 @@
 <template>
   <n-card title="📢 通知渠道" :bordered="false" class="notify-card">
+    <!-- 提示信息 -->
+    <n-alert type="info" style="margin-bottom: 24px">
+      <template #header>
+        <n-icon><InformationCircleOutline /></n-icon>
+        <span>配置说明</span>
+      </template>
+      配置通知渠道后，可以用于：
+      <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+        <li>定时任务执行结果通知</li>
+        <li>系统异常告警通知</li>
+        <li>密码重置验证码发送</li>
+        <li>工作流执行状态通知</li>
+      </ul>
+    </n-alert>
+
     <!-- 通知方式选择 -->
     <div class="section">
       <div class="section-header">
@@ -107,6 +122,7 @@ import {
   Mail,
   Notifications,
   Navigate as TestIcon,
+  InformationCircleOutline,
   Pencil as EditIcon,
   CloseOutline,
 } from '@vicons/ionicons5'

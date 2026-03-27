@@ -29,25 +29,54 @@ export async function initializeSystem(password) {
 export async function loginSystem(password) {
     try {
         const response = await window.$request.post('/sys/login', { password })
-        localStorage.setItem('admin_token', response.token)
-        window.$message.success('登录成功！')
-        return true
+        
+        console.log('登录响应:', response)
+        
+        // 注意：request.js 拦截器在 code === 200 时只返回 data
+        // 所以 response 实际上是 { token: "xxx", remaining_attempts: null }
+        if (response && response.token) {
+            localStorage.setItem('admin_token', response.token)
+            console.log('Token已保存:', response.token)
+            return {
+                success: true,
+                remaining_attempts: response.remaining_attempts
+            }
+        }
+        
+        // 失败响应：拦截器会抛出异常，不会到这里
+        console.log('登录失败，无token')
+        return {
+            success: false,
+            message: '登录失败'
+        }
     } catch (error) {
-        const msg = error.response?.data?.detail || '登录失败'
-        // window.$message.error(msg)
+        // 异常响应：error.response.data = { code: 422, message: "密码错误", data: "..." }
+        const errorData = error.response?.data
+        const msg = errorData?.message || errorData?.detail || '登录失败'
         console.error('登录失败:', error)
-        return false
+        return {
+            success: false,
+            message: msg,
+            detail: errorData?.data
+        }
     }
 }
+
 // 重置密码
-export async function resetPassword(oldPassword,newPassword) {
+export async function resetPassword(oldPassword, newPassword) {
     try {
-        const response = await window.$request.post('/sys/resetPassword', { "old_password":oldPassword,"password":newPassword })
+        const response = await window.$request.post('/sys/resetPassword', { 
+            old_password: oldPassword,
+            password: newPassword 
+        })
         clearAuthToken()
         window.$message.success('修改成功，请重新登录！')
         useLoginStore().openLoginDialog()
+        return true
     } catch (error) {
-        throw error
+        const msg = error.response?.data?.detail || '修改失败'
+        window.$message.error(msg)
+        return false
     }
 }
 
