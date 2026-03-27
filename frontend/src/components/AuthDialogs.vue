@@ -110,19 +110,19 @@
 
     <n-form ref="resetFormRef" :model="resetForm" :rules="resetRules">
       <n-form-item path="code" label="验证码">
-        <n-space align="center" style="width: 100%">
+        <n-space align="center" :size="12" style="width: 100%">
           <n-input
               v-model:value="resetForm.code"
               placeholder="请输入6位验证码"
               maxlength="6"
-              style="flex: 1"
+              style="flex: 1; min-width: 0"
           />
           <n-button
               type="primary"
               @click="handleSendResetCode"
               :loading="sendCodeLoading"
               :disabled="sendCodeCooldown > 0"
-              style="min-width: 120px"
+              style="min-width: 120px; flex-shrink: 0"
           >
             {{ sendCodeCooldown > 0 ? `${sendCodeCooldown}秒` : '发送验证码' }}
           </n-button>
@@ -166,13 +166,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { 
-  LockClosedOutline, 
-  LogInOutline, 
-  KeyOutline, 
-  WarningOutline, 
-  InformationCircleOutline 
+import { ref, onMounted, computed } from 'vue'
+import { useBreakpoints } from '@vueuse/core'
+import {
+  LockClosedOutline,
+  LogInOutline,
+  KeyOutline,
+  WarningOutline,
+  InformationCircleOutline
 } from '@vicons/ionicons5'
 import {
   checkSystemInitialized,
@@ -181,6 +182,16 @@ import {
   getAuthToken
 } from '@/utils/auth'
 import { useLoginStore } from '@/stores/login.js'
+
+// 响应式断点
+const breakpoints = useBreakpoints({
+  mobile: 640,
+  tablet: 768,
+  laptop: 1024,
+  desktop: 1280,
+})
+
+const isMobile = breakpoints.smaller('mobile')
 
 const loginStore = useLoginStore()
 const initFormRef = ref(null)
@@ -228,7 +239,7 @@ const loginRules = {
 
 const resetRules = {
   code: [
-    { 
+    {
       validator: (rule, value) => {
         if (resetCodeSent.value && !value) {
           return new Error('请输入验证码')
@@ -296,11 +307,11 @@ const handleLoginSubmit = async () => {
     await loginFormRef.value?.validate()
     loginLoading.value = true
     loginError.value = ''
-    
+
     const result = await loginSystem(loginForm.value.password)
-    
+
     console.log('登录结果:', result)
-    
+
     if (result.success) {
       loginStore.closeLoginDialog()
       loginForm.value = { password: '' }
@@ -314,7 +325,7 @@ const handleLoginSubmit = async () => {
       }, 500)
     } else {
       loginError.value = result.message || '登录失败'
-      
+
       // 从 detail 中提取剩余尝试次数
       if (result.detail) {
         const match = result.detail.match(/剩余尝试次数：(\d+)/)
@@ -330,7 +341,7 @@ const handleLoginSubmit = async () => {
     const errorData = error.response?.data
     const msg = errorData?.message || errorData?.detail || error.message || '登录失败'
     loginError.value = msg
-    
+
     // 从错误响应中提取剩余尝试次数
     if (errorData?.detail) {
       const match = errorData.detail.match(/剩余尝试次数：(\d+)/)
@@ -352,30 +363,19 @@ const showResetPasswordDialog = () => {
 const handleSendResetCode = async () => {
   try {
     sendCodeLoading.value = true
-    
+
     const result = await window.$request.post('/sys/password-reset/send-code')
-    
+
     console.log('发送验证码响应:', result)
-    
-    if (result && result.code) {
-      resetCodeSent.value = true
-      window.$message.success(result.message || '验证码已发送')
-      
-      window.$notification.info({
-        title: '测试环境',
-        content: `验证码：${result.code}`,
-        duration: 10000
-      })
-      
-      startCooldown()
-    } else {
-      window.$message.error('发送验证码失败')
-    }
+
+    // 请求成功，无论 data 是否为 null 都表示成功
+    resetCodeSent.value = true
+    window.$message.success('验证码已发送到通知渠道，请查收')
+    startCooldown()
   } catch (error) {
     console.error('发送验证码失败:', error)
-    const errorData = error.response?.data
-    const msg = errorData?.message || errorData?.detail || '发送验证码失败'
-    window.$message.error(msg)
+    // 发送失败也启动倒计时，防止频繁点击
+    startCooldown()
   } finally {
     sendCodeLoading.value = false
   }
@@ -385,18 +385,18 @@ const handleVerifyResetCode = async () => {
   try {
     await resetFormRef.value?.validate()
     verifyLoading.value = true
-    
+
     const result = await window.$request.post('/sys/password-reset/verify', {
       code: resetForm.value.code,
       new_password: resetForm.value.newPassword
     })
-    
+
     console.log('验证验证码响应:', result)
-    
+
     window.$message.success(result || '密码重置成功')
     showResetDialog.value = false
     closeResetModal()
-    
+
     loginForm.value = { password: '' }
     loginError.value = ''
     remainingAttempts.value = null
@@ -404,7 +404,7 @@ const handleVerifyResetCode = async () => {
     console.error('验证验证码失败:', error)
     const errorData = error.response?.data
     const msg = errorData?.message || errorData?.detail || '验证验证码失败'
-    window.$message.error(msg)
+    // window.$message.error(msg)
   } finally {
     verifyLoading.value = false
   }

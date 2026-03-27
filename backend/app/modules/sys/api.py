@@ -34,6 +34,9 @@ MAX_LOGIN_ATTEMPTS = 5
 LOGIN_ATTEMPT_WINDOW = timedelta(minutes=15)  # 15分钟内
 RESET_CODE_EXPIRE_MINUTES = 10  # 验证码10分钟过期
 
+# 内存存储验证码：{ip_address: {"code": "xxx", "expires_at": datetime}}
+reset_codes_cache = {}
+
 
 def get_client_ip(request: Request) -> str:
     """获取客户端IP地址"""
@@ -402,7 +405,7 @@ async def send_reset_code(request: Request):
         request: HTTP请求对象
     
     Returns:
-        发送结果（包含验证码，测试环境）
+        发送结果
     """
     ip_address = get_client_ip(request)
     logger.info(f"收到发送验证码请求: IP={ip_address}")
@@ -411,28 +414,12 @@ async def send_reset_code(request: Request):
     code = generate_reset_code()
     expires_at = datetime.now() + timedelta(minutes=RESET_CODE_EXPIRE_MINUTES)
     
-    # 保存验证码到数据库
-    try:
-        with engine.begin() as conn:
-            # 先删除该IP的旧验证码
-            delete_stmt = (
-                delete(password_reset_codes_table)
-                .where(password_reset_codes_table.c.ip_address == ip_address)
-            )
-            conn.execute(delete_stmt)
-            
-            # 插入新验证码
-            conn.execute(
-                password_reset_codes_table.insert().values(
-                    code=code,
-                    expires_at=expires_at,
-                    ip_address=ip_address
-                )
-            )
-        logger.info(f"验证码已保存到数据库: IP={ip_address}, Code={code}")
-    except Exception as e:
-        logger.error(f"保存重置验证码失败: {e}", exc_info=True)
-        raise ValidationException(detail="发送验证码失败，请稍后重试")
+    # 保存验证码到内存
+    reset_codes_cache[ip_address] = {
+        "code": code,
+        "expires_at": expires_at
+    }
+    logger.info(f"验证码已保存到内存: IP={ip_address}, Code={code}")
     
     # 发送通知
     try:
@@ -441,7 +428,7 @@ async def send_reset_code(request: Request):
         if not success:
             logger.warning(f"没有可用的通知服务: IP={ip_address}")
             raise ValidationException(
-                detail="没有可用的通知服务，无法发送验证码。请先配置通知渠道。"
+                detail="没有配置通知服务，无法发送验证码。请先配置通知渠道。"
             )
     except ValidationException:
         raise
@@ -451,12 +438,8 @@ async def send_reset_code(request: Request):
     
     logger.info(f"密码重置验证码已发送: IP={ip_address}, Code={code}")
     
-    # 测试环境返回验证码
     return BaseResponse.success(
-        ResetPasswordResponse(
-            message="验证码已发送到通知渠道，请查收",
-            code=code  # 测试环境返回，生产环境应删除
-        )
+        message="验证码已发送到通知渠道，请查收"
     )
 
 
@@ -477,57 +460,49 @@ async def verify_reset_code(req: VerifyResetCodeRequest, request: Request):
     if len(req.new_password) < 6:
         raise ValidationException(detail="密码至少6位")
     
-    # 验证验证码
+    # 从内存中验证验证码
+    cached_data = reset_codes_cache.get(ip_address)
+    
+    if not cached_data:
+        raise ValidationException(detail="验证码无效或已过期")
+    
+    # 检查验证码是否匹配
+    if cached_data["code"] != req.code:
+        raise ValidationException(detail="验证码无效或已过期")
+    
+    # 检查验证码是否过期
+    if cached_data["expires_at"] < datetime.now():
+        # 清除过期的验证码
+        del reset_codes_cache[ip_address]
+        raise ValidationException(detail="验证码无效或已过期")
+    
+    # 验证码有效，更新密码
     try:
-        with engine.connect() as conn:
-            # 查询验证码
+        with engine.begin() as conn:
+            # 更新密码
+            password_hash = security_manager.hash_password(req.new_password)
             stmt = (
-                select(password_reset_codes_table)
-                .where(
-                    and_(
-                        password_reset_codes_table.c.code == req.code,
-                        password_reset_codes_table.c.ip_address == ip_address,
-                        password_reset_codes_table.c.is_used == False,
-                        password_reset_codes_table.c.expires_at >= datetime.now()
-                    )
-                )
+                update(system_config_table)
+                .where(system_config_table.c.id == 1)
+                .values(admin_password_hash=password_hash)
             )
-            result = conn.execute(stmt).fetchone()
+            conn.execute(stmt)
             
-            if not result:
-                raise ValidationException(detail="验证码无效或已过期")
-            
-            # 验证码有效，更新密码
-            with engine.begin() as conn2:
-                # 标记验证码为已使用
-                update_stmt = (
-                    update(password_reset_codes_table)
-                    .where(password_reset_codes_table.c.id == result.id)
-                    .values(is_used=True)
-                )
-                conn2.execute(update_stmt)
-                
-                # 更新密码
-                password_hash = security_manager.hash_password(req.new_password)
-                stmt = (
-                    update(system_config_table)
-                    .where(system_config_table.c.id == 1)
-                    .values(admin_password_hash=password_hash)
-                )
-                conn2.execute(stmt)
-                
-                # 清除该IP的登录失败记录
-                delete_stmt = (
-                    delete(login_failed_records_table)
-                    .where(login_failed_records_table.c.ip_address == ip_address)
-                )
-                conn2.execute(delete_stmt)
-            
-            logger.info(f"用户密码重置成功: IP={ip_address}")
-            return BaseResponse.success(message="密码重置成功，请使用新密码登录")
-            
+            # 清除该IP的登录失败记录
+            delete_stmt = (
+                delete(login_failed_records_table)
+                .where(login_failed_records_table.c.ip_address == ip_address)
+            )
+            conn.execute(delete_stmt)
+        
+        # 清除已使用的验证码
+        del reset_codes_cache[ip_address]
+        
+        logger.info(f"用户密码重置成功: IP={ip_address}")
+        return BaseResponse.success(message="密码重置成功，请使用新密码登录")
+        
     except ValidationException:
         raise
     except Exception as e:
-        logger.error(f"密码重置失败: {e}")
+        logger.error(f"密码重置失败: {e}", exc_info=True)
         raise ServerException(detail="密码重置失败，请稍后重试")
