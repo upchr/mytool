@@ -138,23 +138,23 @@ class CPEMonitorService:
     def auto_start_monitor(engine) -> bool:
         """
         系统启动时自动启动监控
-        
+
         检查所有 auto_monitor=True 且 is_active=True 的配置，启动第一个
         """
         global _monitor_running, _current_config
-        
+
         if _monitor_running:
             return False
-        
+
         config_service = CPEConfigService(engine)
         configs = config_service.get_all(active_only=True)
-        
+
         # 找到第一个启用自动监控的配置
         for config in configs:
             if config.get("auto_monitor"):
                 logger.info(f"自动启动 CPE 监控: {config['name']}")
                 return CPEMonitorService.start_monitor(config)
-        
+
         return False
 
     @staticmethod
@@ -180,56 +180,97 @@ class CPEMonitorService:
             engine = get_engine()
             sms_service = CPESMSService(engine)
 
+            # === 新增：登录状态缓存 ===
+            last_login_time = 0  # 上次成功登录时间戳
+            login_cache_ttl = 600  # 10 分钟缓存
+
+            min_flag=True
             while _monitor_running:
                 try:
+                    current_time = time.time()
                     # 登录
                     if not client.is_logged_in():
+                        # 检查是否在 10 分钟缓存期内
+                        if min_flag and (current_time - last_login_time) <= login_cache_ttl:
+                            last_login_time = current_time -1
+                            min_flag = False
+
+                        if (current_time - last_login_time) <= login_cache_ttl:
+                            # 缓存期内，跳过登录尝试，直接等待
+                            remaining = login_cache_ttl - (current_time - last_login_time)
+                            logger.info(f"登录缓存期内，等待 {remaining:.0f} 秒后重试")
+                            time.sleep(min(remaining, 30))  # 分段等待，便于响应停止信号
+                            continue
+
+                        # 缓存期外，尝试登录
                         success, msg = client.login()
                         if not success:
-                            # 判断是否被其他用户挤掉
                             if "已有用户在其他地方登录" in msg or "其他地方登录" in msg:
-                                logger.warning(f"被其他用户挤掉登录，等待 10 分钟后再尝试: {msg}")
-                                time.sleep(600)  # 等待10分钟，给用户浏览器登录的时间窗口
+                                logger.warning(f"被其他用户挤掉登录，等待 10 分钟：{msg}")
+                                last_login_time = current_time  # 记录时间，开始 10 分钟等待
+                                time.sleep(600)
                             else:
-                                logger.warning(f"登录失败: {msg}")
+                                logger.warning(f"登录失败：{msg}")
                                 time.sleep(60)
                             continue
+                        else:
+                            # 登录成功，记录时间
+                            last_login_time = current_time
+                            logger.info("登录成功")
+                            min_flag=True
 
                     # 心跳
                     if not client.heartbeat():
-                        logger.warning("心跳失败，可能被其他用户登出，等待 10 分钟后再尝试")
-                        time.sleep(600)  # 等待10分钟
-                        continue
+                        logger.warning("心跳失败，可能被其他用户登出")
+                        # 检查是否在 10 分钟缓存期内
+                        if (current_time - last_login_time) < login_cache_ttl:
+                            remaining = login_cache_ttl - (current_time - last_login_time)
+                            logger.info(f"心跳失败但在缓存期内，等待 {remaining:.0f} 秒后重试")
+                            time.sleep(min(remaining, 30))
+                            continue
+                        else:
+                            logger.warning("心跳失败且缓存期已过，等待 10 分钟后重新登录")
+                            last_login_time = current_time  # 重置缓存时间
+                            client._logged_in = False  # 强制标记为未登录
+                            time.sleep(600)
+                            continue
 
                     # 检查新短信
                     if client.get_new_sms_flag():
                         sms_list = client.get_unread_sms()
                         for sms in sms_list:
-                            # 保存短信
-                            sms_service.create({
-                                "config_id": config["id"],
-                                "sms_id": sms["id"],
-                                "phone": sms["phone"],
-                                "content": sms["content"],
-                                "time": sms["time"],
-                                "is_read": sms["is_read"],
-                                "is_sent": sms["is_sent"],
-                                "notified": False
-                            })
+                            try:
+                                # 保存短信
+                                sms_service.create({
+                                    "config_id": config["id"],
+                                    "sms_id": sms["id"],
+                                    "phone": sms["phone"],
+                                    "content": sms["content"],
+                                    "time": sms["time"],
+                                    "is_read": sms["is_read"],
+                                    "is_sent": sms["is_sent"],
+                                    "notified": False
+                                })
 
-                            # 发送通知
-                            CPEMonitorService._send_notification(config, sms)
+                                # 发送通知
+                                CPEMonitorService._send_notification(config, sms)
 
-                            # 标记已读
-                            client.mark_sms_read(sms["id"])
+                                # 标记已读
+                                client.mark_sms_read(sms["id"])
+                            except Exception as sms_err:
+                                logger.error(f"处理短信出错：{sms_err}")
+                                continue
 
                     time.sleep(config.get("check_interval", 3.0))
 
                 except Exception as e:
-                    logger.error(f"监控出错: {e}")
+                    logger.error(f"监控出错：{e}")
                     time.sleep(10)
 
-            client.logout()
+            try:
+                client.logout()
+            except Exception:
+                pass
 
         _monitor_thread = threading.Thread(target=monitor_loop, daemon=True)
         _monitor_thread.start()
