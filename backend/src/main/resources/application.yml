@@ -64,10 +64,24 @@ mybatis-plus:
     db-config:
       id-type: auto
 
-# JWT 配置
-jwt:
-  secret: mytool-jwt-secret-key-2024-very-long-secret
-  expiration: 604800000  # 7天（毫秒）
+# Sa-Token 配置
+sa-token:
+  # Token 名称
+  token-name: Authorization
+  # Token 有效期（秒），默认 7 天
+  timeout: 604800
+  # Token 最低活跃频率（秒），默认 2 小时
+  active-timeout: 7200
+  # 是否允许同一账号多地同时登录
+  is-concurrent: true
+  # 多人登录同一账号时，是否共用一个 Token
+  is-share: false
+  # Token 风格
+  token-style: uuid
+  # 是否输出操作日志
+  is-log: true
+  # JWT 密钥
+  jwt-secret-key: mytool-jwt-secret-key-2024
 
 # 线程池配置
 thread-pool:

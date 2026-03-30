@@ -1,8 +1,8 @@
 package com.upchr.mytool.modules.sys.service;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.upchr.mytool.common.exception.BusinessException;
-import com.upchr.mytool.common.utils.JwtUtil;
 import com.upchr.mytool.common.utils.SecurityUtil;
 import com.upchr.mytool.modules.sys.entity.SystemConfig;
 import com.upchr.mytool.modules.sys.mapper.SystemConfigMapper;
@@ -25,7 +25,6 @@ public class SysService {
 
     private final SystemConfigMapper systemConfigMapper;
     private final SecurityUtil securityUtil;
-    private final JwtUtil jwtUtil;
 
     /**
      * 检查是否已初始化
@@ -72,13 +71,11 @@ public class SysService {
         config.setAppStartTime(LocalDateTime.now());
         systemConfigMapper.updateById(config);
 
-        // 生成 Token
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("user_id", 1L);
-        claims.put("username", "admin");
-        claims.put("role", "admin");
+        // Sa-Token 登录
+        StpUtil.login(1);
 
-        return jwtUtil.generateToken(claims);
+        // 返回 Token
+        return StpUtil.getTokenValue();
     }
 
     /**
