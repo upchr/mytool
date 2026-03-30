@@ -6,6 +6,9 @@ import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import path from 'path' // 导入 path 模块
 
 export default defineConfig({
+  // GitHub Pages 部署需要设置 base
+  base: process.env.NODE_ENV === 'production' ? '/mytool/' : '/',
+  
   plugins: [
     vue(),
     // 👇 添加自动按需引入
@@ -34,5 +37,14 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: false
+  },
+  // 定义环境变量
+  define: {
+    __API_BASE_URL__: JSON.stringify(
+      process.env.VITE_API_BASE_URL || 
+      (process.env.NODE_ENV === 'production' 
+        ? '' // 生产环境使用相对路径，由 GitHub Actions 注入
+        : 'http://localhost:8000')
+    )
   }
 })
