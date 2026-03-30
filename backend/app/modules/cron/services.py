@@ -211,24 +211,24 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual", input
 
     # 替换命令中的输入参数和输出参数
     command = job['command']
-    logger.info(f"原始命令: {command}")
-    logger.info(f"输入参数: {inputs}")
-    logger.info(f"输出参数: {outputs}")
-    
+    logger.debug(f"原始命令: {command}")
+    logger.debug(f"输入参数: {inputs}")
+    logger.debug(f"输出参数: {outputs}")
+
     # 替换输入参数 {{inputs.xxx}}
     if inputs:
         for key, value in inputs.items():
             placeholder = f"{{inputs.{key}}}"
             if placeholder in command:
                 command = command.replace(placeholder, str(value))
-                logger.info(f"替换输入参数: {placeholder} -> {value}")
-    
+                logger.debug(f"替换输入参数: {placeholder} -> {value}")
+
     # 替换输出参数 {{outputs.node_id}} 或 {{outputs.node_id.xxx}}
     if outputs:
         import re
         output_pattern = r'\{\{outputs\.(\w+)(?:\.(\w+))?\}\}'
         matches = re.findall(output_pattern, command)
-        
+
         for node_id, field in matches:
             if node_id in outputs:
                 node_output = outputs[node_id]
@@ -240,12 +240,12 @@ def execute_job(engine: Engine, job_id: int, triggered_by: str = "manual", input
                     # 替换整个输出对象 {{outputs.node_id}}
                     value = str(node_output)
                     placeholder = f"{{outputs.{node_id}}}"
-                
+
                 if placeholder in command:
                     command = command.replace(placeholder, str(value))
                     logger.info(f"替换输出参数: {placeholder} -> {value}")
-    
-    logger.info(f"最终命令: {command}")
+
+    logger.debug(f"最终命令: {command}")
 
     # 工作流调用时，同步执行任务；否则后台执行
     if triggered_by == "workflow":
@@ -261,7 +261,7 @@ def _execute_job_sync(engine: Engine, job_id: int, command: str, node: dict, job
     ssh = None
     output_buffer = []
     error_buffer = []
-    
+
     # 创建执行记录
     stmt = insert(models.job_executions_table).values(
         job_id=job_id,
@@ -273,11 +273,11 @@ def _execute_job_sync(engine: Engine, job_id: int, command: str, node: dict, job
         result = conn.execute(stmt)
         execution_id = result.inserted_primary_key[0]
         logger.info(f"✅ 工作流任务调度：时间（{datetime.now().replace(second=0, microsecond=0)}），设备（{node['name']}），任务（{job['name']}）")
-    
+
     try:
         # 初始化执行日志
         _init_execution_log(engine, execution_id)
-        
+
         from app.modules.node.schemas import NodeRead
         ssh = SSHClient(NodeRead(**node))
         ssh.connect()
@@ -313,11 +313,11 @@ def _execute_job_sync(engine: Engine, job_id: int, command: str, node: dict, job
 
         final_output = "".join(output_buffer)
         final_error = "".join(error_buffer)
-        
+
         # 保存输出和错误日志
         if output_buffer or error_buffer:
             _save_and_clear_buffer(engine, execution_id, output_buffer, error_buffer, status)
-        
+
         # 更新最终状态
         _update_execution_final_status(engine, execution_id, status, job, final_error)
 
@@ -332,11 +332,11 @@ def _execute_job_sync(engine: Engine, job_id: int, command: str, node: dict, job
     except Exception as e:
         error_msg = str(e)
         logger.error(f"任务执行异常: job_id={job_id}, error={error_msg}")
-        
+
         # 保存错误日志
         if error_buffer:
             _save_and_clear_buffer(engine, execution_id, [], error_buffer, "failed")
-        
+
         # 更新最终状态
         _update_execution_final_status(engine, execution_id, "failed", job, error_msg)
 
