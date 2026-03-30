@@ -1,0 +1,1308 @@
+<template>
+  <div class="ai-chat-container">
+    <!-- 移动端顶部栏 -->
+    <div class="mobile-header" v-if="isMobile">
+      <n-button text @click="showHistoryDrawer = true">
+        <template #icon>
+          <n-icon :component="MenuIcon" :size="24" />
+        </template>
+      </n-button>
+      <span class="mobile-title">{{ currentConversationTitle }}</span>
+      <n-button text @click="showSettingsDrawer = true">
+        <template #icon>
+          <n-icon :component="SettingsIcon" :size="24" />
+        </template>
+      </n-button>
+    </div>
+
+    <div class="chat-layout">
+      <!-- 左侧历史对话列表 -->
+      <div class="history-sidebar" v-if="showHistory && !isMobile">
+        <n-card title="💬 历史对话" class="history-card" size="small">
+          <template #header-extra>
+            <n-button text type="primary" @click="createNewConversation" title="新建对话">
+              <template #icon>
+                <n-icon :component="AddIcon" />
+              </template>
+            </n-button>
+          </template>
+
+          <div class="history-list">
+            <div
+              v-for="conv in conversations"
+              :key="conv.id"
+              :class="['history-item', { active: currentConversationId === conv.id }]"
+              @click="loadConversation(conv.id)"
+            >
+              <div class="history-title">{{ conv.title }}</div>
+              <div class="history-time">{{ formatDateTime(conv.updated_at) }}</div>
+              <div class="history-actions">
+                <n-button text size="tiny" @click.stop="editConversationTitle(conv)">
+                  <template #icon>
+                    <n-icon :component="EditIcon" />
+                  </template>
+                </n-button>
+                <n-button text size="tiny" type="error" @click.stop="deleteConversation(conv.id)">
+                  <template #icon>
+                    <n-icon :component="DeleteIcon" />
+                  </template>
+                </n-button>
+              </div>
+            </div>
+
+            <n-empty v-if="conversations.length === 0" description="暂无历史对话" size="small" />
+          </div>
+        </n-card>
+      </div>
+
+      <!-- 右侧聊天区域 -->
+      <div class="chat-main">
+        <n-card :title="currentConversationTitle" class="chat-card" :class="{ 'no-header': isMobile }">
+          <template #header-extra v-if="!isMobile">
+            <n-space>
+              <n-select
+                  v-model:value="currentConfigId"
+                  :options="configOptions"
+                  placeholder="选择配置"
+                  size="small"
+                  style="width: 150px"
+                  @update:value="handleConfigChange"
+                  :loading="loadingConfigs"
+              >
+                <template #render-label="{ option }">
+                  <div class="config-option">
+                    <n-icon :component="option.is_enabled ? CheckmarkCircleIcon : RadioIcon" :size="14" />
+                    <span>{{ option.label }}</span>
+                    <n-tag v-if="option.is_enabled" type="success" size="tiny" style="margin-left: 4px">当前</n-tag>
+                  </div>
+                </template>
+              </n-select>
+              <n-switch
+                  v-model:value="useKnowledgeBase"
+                  size="small"
+                  @update:value="handleKnowledgeBaseChange"
+              >
+                <template #checked>知识库开启</template>
+                <template #unchecked>知识库关闭</template>
+              </n-switch>
+              <n-select
+                  v-if="useKnowledgeBase"
+                  v-model:value="selectedKnowledgeBaseId"
+                  :options="knowledgeBaseOptions"
+                  placeholder="选择知识库"
+                  size="small"
+                  style="width: 150px"
+                  @update:value="handleKnowledgeBaseSelect"
+                  :loading="loadingKnowledgeBases"
+              />
+            </n-space>
+          </template>
+          <div class="chat-messages" ref="messagesContainer">
+            <div
+                v-for="(message, index) in messages"
+                :key="index"
+                :class="['message', message.role]"
+            >
+              <div class="message-avatar">
+                <n-icon :size="isMobile ? 20 : 24" :component="message.role === 'user' ? PersonIcon : RobotIcon" />
+              </div>
+              <div class="message-content">
+                <div class="message-text markdown-body" v-html="renderMarkdown(message.content)"></div>
+                <div class="message-time">{{ formatTime(message.timestamp) }}</div>
+              </div>
+            </div>
+
+            <!-- API Key 配置提示 -->
+            <div v-if="!isConfigured" class="config-notice">
+              <n-alert type="info" title="💡 配置提示" :bordered="false">
+                当前未配置 AI API Key，仅支持模拟响应。
+                <br/>
+                📖 获取密钥方法：访问
+                <a href="https://platform.iflow.cn/profile?tab=apiKey" target="_blank" rel="noopener noreferrer">
+                  iFlow 开放平台（免费）
+                </a>
+                申请 API Key，然后在系统设置中配置。
+              </n-alert>
+            </div>
+          </div>
+
+          <div class="chat-input">
+            <n-input
+                v-model:value="inputMessage"
+                type="textarea"
+                placeholder="输入消息..."
+                :autosize="{ minRows: isMobile ? 2 : 2, maxRows: isMobile ? 4 : 6 }"
+                @keydown.enter.exact="sendMessage"
+                :disabled="isLoading"
+            />
+            <div class="chat-actions">
+              <n-button
+                  type="primary"
+                  :loading="isLoading"
+                  @click="sendMessage"
+                  :disabled="!inputMessage.trim() || isLoading"
+                  :size="isMobile ? 'medium' : 'default'"
+              >
+                发送
+              </n-button>
+              <n-button
+                  v-if="isLoading"
+                  type="warning"
+                  @click="cancelMessage"
+                  :size="isMobile ? 'medium' : 'default'"
+              >
+                <template #icon>
+                  <n-icon :component="StopIcon" />
+                </template>
+                中断
+              </n-button>
+              <n-button 
+                @click="clearMessages" 
+                :disabled="messages.length === 0 || isLoading"
+                :size="isMobile ? 'medium' : 'default'"
+              >
+                清空
+              </n-button>
+            </div>
+          </div>
+        </n-card>
+      </div>
+    </div>
+
+    <!-- 编辑标题对话框 -->
+    <n-modal v-model:show="showEditDialog" preset="card" title="编辑对话标题" :style="{ width: isMobile ? '90%' : '400px' }">
+      <n-form :model="{ title: editingTitle }" label-placement="left" label-width="80px">
+        <n-form-item label="对话标题" path="title">
+          <n-input
+              v-model:value="editingTitle"
+              placeholder="请输入对话标题"
+              maxlength="50"
+              show-count
+              @keydown.enter="saveEditedTitle"
+          />
+        </n-form-item>
+      </n-form>
+      <template #footer>
+        <div class="dialog-footer">
+          <n-button @click="showEditDialog = false">取消</n-button>
+          <n-button type="primary" @click="saveEditedTitle">保存</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- 移动端历史记录抽屉 -->
+    <n-drawer v-model:show="showHistoryDrawer" :width="isMobile ? '80%' : '300px'" placement="left">
+      <n-drawer-content title="💬 历史对话">
+        <template #header-extra>
+          <n-button text type="primary" @click="createNewConversation" title="新建对话">
+            <template #icon>
+              <n-icon :component="AddIcon" />
+            </template>
+          </n-button>
+        </template>
+
+        <div class="history-list mobile-history-list">
+          <div
+            v-for="conv in conversations"
+            :key="conv.id"
+            :class="['history-item', { active: currentConversationId === conv.id }]"
+            @click="loadConversation(conv.id); showHistoryDrawer = false"
+          >
+            <div class="history-title">{{ conv.title }}</div>
+            <div class="history-time">{{ formatDateTime(conv.updated_at) }}</div>
+            <div class="history-actions">
+              <n-button text size="tiny" @click.stop="editConversationTitle(conv)">
+                <template #icon>
+                  <n-icon :component="EditIcon" />
+                </template>
+              </n-button>
+              <n-button text size="tiny" type="error" @click.stop="deleteConversation(conv.id)">
+                <template #icon>
+                  <n-icon :component="DeleteIcon" />
+                </template>
+              </n-button>
+            </div>
+          </div>
+
+          <n-empty v-if="conversations.length === 0" description="暂无历史对话" size="small" />
+        </div>
+      </n-drawer-content>
+    </n-drawer>
+
+    <!-- 移动端设置抽屉 -->
+    <n-drawer v-model:show="showSettingsDrawer" :width="isMobile ? '80%' : '300px'" placement="right">
+      <n-drawer-content title="⚙️ 设置">
+        <n-form label-placement="left" label-width="auto">
+          <n-form-item label="AI 配置">
+            <n-select
+                v-model:value="currentConfigId"
+                :options="configOptions"
+                placeholder="选择配置"
+                @update:value="handleConfigChange"
+                :loading="loadingConfigs"
+            >
+              <template #render-label="{ option }">
+                <div class="config-option">
+                  <n-icon :component="option.is_enabled ? CheckmarkCircleIcon : RadioIcon" :size="14" />
+                  <span>{{ option.label }}</span>
+                  <n-tag v-if="option.is_enabled" type="success" size="tiny" style="margin-left: 4px">当前</n-tag>
+                </div>
+              </template>
+            </n-select>
+          </n-form-item>
+
+          <n-form-item label="知识库">
+            <n-switch
+                v-model:value="useKnowledgeBase"
+                @update:value="handleKnowledgeBaseChange"
+            >
+              <template #checked>开启</template>
+              <template #unchecked>关闭</template>
+            </n-switch>
+          </n-form-item>
+
+          <n-form-item v-if="useKnowledgeBase" label="选择知识库">
+            <n-select
+                v-model:value="selectedKnowledgeBaseId"
+                :options="knowledgeBaseOptions"
+                placeholder="选择知识库"
+                @update:value="handleKnowledgeBaseSelect"
+                :loading="loadingKnowledgeBases"
+            />
+          </n-form-item>
+        </n-form>
+      </n-drawer-content>
+    </n-drawer>
+  </div>
+</template>
+
+<script setup>
+import {ref, nextTick, onMounted, computed, onUnmounted} from 'vue'
+import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag, NModal, NForm, NFormItem, NDrawer, NDrawerContent, NSpace, NSwitch} from 'naive-ui'
+import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon, StopCircleOutline as StopIcon, MenuOutline as MenuIcon, SettingsOutline as SettingsIcon} from '@vicons/ionicons5'
+import {getAuthToken} from '@/utils/auth'
+import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github-dark.min.css'
+
+const messages = ref([])
+const inputMessage = ref('')
+const isLoading = ref(false)
+const messagesContainer = ref(null)
+const message = useMessage()
+const isConfigured = ref(true) // API Key 配置状态
+
+// 移动端检测
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
+
+// 移动端抽屉状态
+const showHistoryDrawer = ref(false)
+const showSettingsDrawer = ref(false)
+
+// 中断相关
+const abortController = ref(null)
+const currentAssistantMsg = ref(null) // 当前正在接收的助手消息
+
+// AI 配置相关
+const configList = ref([])
+const currentConfigId = ref(null)
+const loadingConfigs = ref(false)
+
+// 知识库相关
+const useKnowledgeBase = ref(false)
+const selectedKnowledgeBaseId = ref(null)
+const knowledgeBaseList = ref([])
+const loadingKnowledgeBases = ref(false)
+
+const configOptions = computed(() => {
+  return configList.value.map(config => ({
+    label: `${config.name || '未命名配置'} - ${config.model}`,
+    value: config.id,
+    is_enabled: config.is_enabled,
+    api_base: config.api_base
+  }))
+})
+
+// 知识库选项
+const knowledgeBaseOptions = computed(() => {
+  return knowledgeBaseList.value.map(kb => ({
+    label: kb.name,
+    value: kb.id
+  }))
+})
+
+// 历史对话相关
+const showHistory = ref(true)
+const conversations = ref([])
+const currentConversationId = ref(null)
+const currentConversationTitle = ref('AI 助手')
+const editingConversationId = ref(null)
+const editingTitle = ref('')
+const showEditDialog = ref(false)
+
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true,
+  highlight: (code, lang) => {
+    try {
+      if (lang && hljs.getLanguage(lang)) {
+        return `<pre class="hljs"><code>${hljs.highlight(code, {language: lang}).value}</code></pre>`
+      }
+      return `<pre class="hljs"><code>${hljs.highlightAuto(code).value}</code></pre>`
+    } catch {
+      const escaped = md.utils.escapeHtml(code)
+      return `<pre class="hljs"><code>${escaped}</code></pre>`
+    }
+  }
+})
+
+const renderMarkdown = (text) => md.render(String(text ?? ''))
+
+// 格式化时间
+const formatTime = (timestamp) => {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('zh-CN', {hour: '2-digit', minute: '2-digit'})
+}
+
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  const date = new Date(dateTimeStr)
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 滚动到底部
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
+}
+
+const appendAssistantDelta = (assistantMsg, delta) => {
+  // 使用 Vue 的响应式更新
+  const newContent = `${assistantMsg.content || ''}${delta || ''}`
+  assistantMsg.content = newContent
+
+  // 强制触发视图更新
+  // console.log('🌊 收到流式数据:', delta, '| 当前内容:', newContent)
+
+  // 强制触发响应式更新（重要！）
+  messages.value = [...messages.value]
+
+  scrollToBottom()
+}
+
+// 智能生成对话标题
+const generateConversationTitle = (message) => {
+  // 移除标点符号和特殊字符，只保留中文、英文、数字
+  const cleanedText = message.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, '').trim()
+
+  // 移除常见的无意义词汇
+  const stopWords = ['你好', '您好', '请问', '帮我', '能不能', '可以', '如何', '怎么样', '为什么', '什么', '怎么', '吗', '呢', '啊', '吧', '的', '了', '是', '在', '有', '和', '与', '或', '但是', '因为', '所以', '如果', '那么', '这个', '那个', '这些', '那些', '我', '你', '他', '她', '它', '我们', '你们', '他们']
+  const words = cleanedText.split(/\s+/).filter(word => word && !stopWords.includes(word))
+
+  // 如果有足够的关键词，使用前3个关键词组合
+  if (words.length >= 3) {
+    return words.slice(0, 3).join(' ')
+  }
+
+  // 如果有1-2个关键词，直接使用
+  if (words.length > 0) {
+    return words.join(' ')
+  }
+
+  // 如果没有提取到关键词，使用原始消息的前20个字符
+  return message.length > 20 ? message.substring(0, 20) + '...' : message
+}
+
+// 加载对话列表
+const loadConversations = async () => {
+  try {
+    const result = await window.$request.get('/ai-chat/conversations')
+    conversations.value = result || []
+  } catch (e) {
+    console.warn('加载对话列表失败:', e)
+  }
+}
+
+// 加载指定对话
+const loadConversation = async (conversationId) => {
+  try {
+    currentConversationId.value = conversationId
+    const conversation = await window.$request.get(`/ai-chat/conversations/${conversationId}`)
+
+    // 加载消息
+    messages.value = conversation.messages.map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.created_at).getTime()
+    }))
+
+    currentConversationTitle.value = conversation.title
+    scrollToBottom()
+  } catch (e) {
+    console.error('加载对话失败:', e)
+    message.error('加载对话失败')
+  }
+}
+
+// 创建新对话
+const createNewConversation = async () => {
+  const defaultTitle = '新对话'
+
+  try {
+    const result = await window.$request.post('/ai-chat/conversations', {
+      title: defaultTitle
+    })
+    currentConversationId.value = result.id
+    currentConversationTitle.value = result.title
+    messages.value = []
+    await loadConversations()
+    message.success('已创建新对话')
+  } catch (e) {
+    console.error('创建对话失败:', e)
+    message.error('创建对话失败')
+  }
+}
+
+// 删除对话
+const deleteConversation = async (conversationId) => {
+  try {
+    await window.$request.delete(`/ai-chat/conversations/${conversationId}`)
+
+    if (currentConversationId.value === conversationId) {
+      currentConversationId.value = null
+      currentConversationTitle.value = 'AI 助手'
+      messages.value = []
+    }
+    await loadConversations()
+    message.success('对话已删除')
+  } catch (e) {
+    console.error('删除对话失败:', e)
+    message.error('删除对话失败')
+  }
+}
+
+// 编辑对话标题
+const editConversationTitle = (conversation) => {
+  editingConversationId.value = conversation.id
+  editingTitle.value = conversation.title
+  showEditDialog.value = true
+}
+
+// 保存编辑的标题
+const saveEditedTitle = async () => {
+  if (!editingTitle.value.trim()) {
+    message.warning('标题不能为空')
+    return
+  }
+
+  try {
+    await window.$request.put(`/ai-chat/conversations/${editingConversationId.value}`, {
+      title: editingTitle.value.trim()
+    })
+
+    // 如果编辑的是当前对话，更新标题
+    if (editingConversationId.value === currentConversationId.value) {
+      currentConversationTitle.value = editingTitle.value.trim()
+    }
+
+    await loadConversations()
+    showEditDialog.value = false
+    message.success('标题已更新')
+  } catch (e) {
+    console.error('更新标题失败:', e)
+    message.error('更新标题失败')
+  }
+}
+
+// 保存消息到数据库
+const saveMessageToDB = async (role, content) => {
+  if (!currentConversationId.value) return
+
+  try {
+    await window.$request.post(`/ai-chat/conversations/${currentConversationId.value}/messages`, {
+      role: role,
+      content: content
+    })
+  } catch (e) {
+    console.warn('保存消息失败:', e)
+  }
+}
+
+// 发送消息
+const sendMessage = async () => {
+  const content = inputMessage.value.trim()
+  if (!content || isLoading.value) return
+
+  // 如果没有当前对话，自动创建一个新对话
+  if (!currentConversationId.value) {
+    // 使用智能生成的标题
+    const title = generateConversationTitle(content)
+    try {
+      const result = await window.$request.post('/ai-chat/conversations', {
+        title: title
+      })
+      currentConversationId.value = result.id
+      currentConversationTitle.value = result.title
+
+      // 保存欢迎消息到数据库
+      if (messages.value.length > 0 && messages.value[0].role === 'assistant') {
+        await saveMessageToDB('assistant', messages.value[0].content)
+      }
+
+      // 刷新对话列表
+      await loadConversations()
+    } catch (e) {
+      console.error('创建对话失败:', e)
+      message.error('创建对话失败')
+      return
+    }
+  }
+
+  // 添加用户消息
+  messages.value.push({
+    role: 'user',
+    content,
+    timestamp: Date.now()
+  })
+
+  inputMessage.value = ''
+  scrollToBottom()
+
+  // 保存到数据库
+  await saveMessageToDB('user', content)
+
+  try {
+    isLoading.value = true
+    // 创建 AbortController 用于中断请求
+    abortController.value = new AbortController()
+
+    // 先创建一个空的 assistant 消息，后续流式追加
+    const assistantMsg = {
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now()
+    }
+    messages.value.push(assistantMsg)
+    currentAssistantMsg.value = assistantMsg
+    scrollToBottom()
+
+    // 判断是否使用知识库
+    let apiEndpoint = '/api/ai-chat/chat/stream'
+    let requestBody = {
+      message: content,
+      history: messages.value.slice(0, -2), // 排除当前 user + 这个空 assistant
+      conversation_id: currentConversationId.value
+    }
+
+    // 如果开启知识库，使用带知识库的接口
+    if (useKnowledgeBase.value && selectedKnowledgeBaseId.value) {
+      apiEndpoint = '/api/ai-chat/chat-with-knowledge'
+      requestBody.use_knowledge = true
+      requestBody.knowledge_base_id = selectedKnowledgeBaseId.value
+      console.log('启用知识库功能:', {
+        use_knowledge: true,
+        knowledge_base_id: selectedKnowledgeBaseId.value,
+        message: content
+      })
+    }
+
+    console.log('请求参数:', {
+      apiEndpoint,
+      requestBody
+    })
+
+    const token = getAuthToken()
+    const res = await fetch(apiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody),
+      signal: abortController.value.signal
+    })
+
+    if (!res.ok || !res.body) {
+      throw new Error(`stream request failed: ${res.status}`)
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let buffer = ''
+    let receivedCount = 0
+
+    try {
+      while (true) {
+            const {value, done} = await reader.read()
+            if (done) break
+      
+            const text = decoder.decode(value, {stream: true})
+            buffer += text
+            receivedCount++
+      
+            // SSE 以 \n\n 分隔事件
+            const parts = buffer.split('\n\n')
+            buffer = parts.pop() || ''
+      
+            for (const part of parts) {
+              const lines = part.split('\n')
+              for (const line of lines) {
+                if (!line.startsWith('data:')) continue
+                const jsonStr = line.slice(5).trim()
+                try {
+                  const data = JSON.parse(jsonStr)
+                  if (data.delta) {
+                    appendAssistantDelta(assistantMsg, data.delta)
+                    // 每次更新后强制刷新视图
+                    await nextTick()
+                  }
+                  if (data.knowledge_used !== undefined) {
+                    // 保存知识库使用信息
+                    assistantMsg.knowledge_used = data.knowledge_used
+                    assistantMsg.knowledge_sources = data.knowledge_sources
+                    if (data.knowledge_used) {
+                      message.info(`使用了知识库，共 ${data.knowledge_sources} 个来源`)
+                    }
+                  }
+                  if (data.error) {
+                  console.error('AI 服务错误:', data.error)
+                  // 设置错误信息到消息内容
+                  assistantMsg.content = `错误：${data.error}`
+                  await saveMessageToDB('assistant', assistantMsg.content)
+                  message.error(data.error)
+                  return
+                }
+                } catch (e) {
+                  // JSON 解析失败直接跳过
+                  console.warn('JSON 解析失败:', jsonStr, e)
+                  continue
+                }
+              }
+            }
+          }    } catch (readError) {
+      // 处理各种类型的错误
+      console.error('AI chat 错误:', readError)
+      
+      // 如果是主动中断，不显示额外错误消息
+      if (readError.name === 'AbortError') {
+        console.log('用户中断了回答')
+        // 保存已接收的部分内容
+        if (assistantMsg.content) {
+          assistantMsg.content += '\n\n[回答已被中断]'
+          await saveMessageToDB('assistant', assistantMsg.content)
+        }
+      } else {
+        // 其他错误：检查是否有部分内容，如果有就保存
+        if (assistantMsg.content) {
+          message.error('AI 回复过程中出现错误，但已保存部分内容')
+          await saveMessageToDB('assistant', assistantMsg.content)
+        } else {
+          message.error('发送消息失败，请重试')
+        }
+      }
+    }
+
+    // 流式完成后，保存完整的 AI 回复到数据库
+    if (assistantMsg.content) {
+      try {
+        await saveMessageToDB('assistant', assistantMsg.content)
+        console.log('AI 回复已保存到数据库')
+      } catch (saveError) {
+        console.error('保存 AI 回复失败:', saveError)
+        message.warning('AI 回复已生成，但保存到数据库失败')
+      }
+    } else {
+      console.warn('AI 回复内容为空，不保存')
+    }
+
+  } catch (error) {
+    message.error('发送消息失败，请重试')
+    console.error('AI chat error:', error)
+  } finally {
+    isLoading.value = false
+    abortController.value = null
+    currentAssistantMsg.value = null
+    scrollToBottom()
+  }
+}
+
+// 清空消息
+const clearMessages = () => {
+  messages.value = []
+  message.success('消息已清空')
+}
+
+// 中断回答
+const cancelMessage = () => {
+  if (abortController.value) {
+    abortController.value.abort()
+    message.info('已中断回答')
+  }
+}
+
+// 加载配置列表
+const loadConfigList = async () => {
+  loadingConfigs.value = true
+  try {
+    const data = await window.$request.get('/ai-chat/config/list')
+    configList.value = data || []
+    // 设置当前激活的配置
+    const activeConfig = configList.value.find(c => c.is_enabled)
+    if (activeConfig) {
+      currentConfigId.value = activeConfig.id
+    }
+
+    isConfigured.value = configList.value.length>0
+  } catch (error) {
+    console.error('加载配置列表失败:', error)
+  } finally {
+    loadingConfigs.value = false
+  }
+}
+
+// 加载知识库列表
+const loadKnowledgeBases = async () => {
+  loadingKnowledgeBases.value = true
+  try {
+    const data = await window.$request.get('/ai-chat/knowledge-base')
+    knowledgeBaseList.value = data || []
+    // 如果有知识库，默认选择第一个
+    if (knowledgeBaseList.value.length > 0 && !selectedKnowledgeBaseId.value) {
+      selectedKnowledgeBaseId.value = knowledgeBaseList.value[0].id
+    }
+  } catch (error) {
+    console.error('加载知识库列表失败:', error)
+  } finally {
+    loadingKnowledgeBases.value = false
+  }
+}
+
+// 切换配置
+const handleConfigChange = async (configId) => {
+  try {
+    await window.$request.post(`/ai-chat/config/${configId}/set-active`)
+    const config = configList.value.find(c => c.id === configId)
+    const configName = config ? config.name : configId
+    message.success(`已切换到配置: ${configName}`)
+    // 重新加载配置列表以更新状态
+    await loadConfigList()
+  } catch (error) {
+    console.error('切换配置失败:', error)
+    message.error('切换配置失败')
+    // 恢复原来的选择
+    const activeConfig = configList.value.find(c => c.is_enabled)
+    if (activeConfig) {
+      currentConfigId.value = activeConfig.id
+    }
+  }
+}
+
+// 知识库开关切换
+const handleKnowledgeBaseChange = (enabled) => {
+  if (enabled && !selectedKnowledgeBaseId.value && knowledgeBaseList.value.length > 0) {
+    selectedKnowledgeBaseId.value = knowledgeBaseList.value[0].id
+  }
+}
+
+// 知识库选择
+const handleKnowledgeBaseSelect = (baseId) => {
+  console.log('选择知识库:', baseId)
+}
+
+// 初始化欢迎消息和检查配置
+onMounted(async () => {
+  // 检测移动端
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+
+  messages.value.push({
+    role: 'assistant',
+    content: '您好！我是 AI 助手，有什么可以帮助您的吗？',
+    timestamp: Date.now()
+  })
+
+  // 加载配置列表
+  await loadConfigList()
+
+  // 加载历史对话列表
+  await loadConversations()
+
+  // 加载知识库列表
+  await loadKnowledgeBases()
+})
+
+// 清理事件监听器
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
+})
+</script>
+
+<style scoped>
+.ai-chat-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 移动端顶部栏 */
+.mobile-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.mobile-title {
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.chat-layout {
+  display: flex;
+  gap: 16px;
+  height: calc(100vh - 140px);
+}
+
+.history-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.history-card {
+  height: 100%;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid #eee;
+  position: relative;
+}
+
+.history-item:hover {
+  background: #f5f5f5;
+}
+
+.history-item.active {
+  background: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.history-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.history-actions {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.history-item:hover .history-actions {
+  opacity: 1;
+}
+
+.chat-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-card.no-header :deep(.n-card__header) {
+  display: none;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  max-height: calc(100vh - 300px);
+}
+
+.config-notice {
+  margin-top: 16px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message {
+  display: flex;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  flex-direction: row-reverse;
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 12px;
+}
+
+.message.user .message-avatar {
+  background: #1976d2;
+  color: white;
+}
+
+.message.assistant .message-avatar {
+  background: #4caf50;
+  color: white;
+}
+
+.message-content {
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+}
+
+.message.user .message-content {
+  align-items: flex-end;
+}
+
+.message-text {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.markdown-body :deep(pre) {
+  margin: 8px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  overflow: auto;
+}
+
+.markdown-body :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+}
+
+.message.user .message-text {
+  background: #1976d2;
+  color: white;
+}
+
+.message-time {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.chat-input {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 移动端历史记录列表 */
+.mobile-history-list {
+  padding: 8px 0;
+}
+
+/* 深色模式适配 */
+.dark .chat-messages {
+  background: #1e1e1e;
+}
+
+.dark .message-text {
+  background: #2d2d2d;
+  color: #e0e0e0;
+}
+
+.dark .message.user .message-text {
+  background: #1976d2;
+  color: white;
+}
+
+.dark .message-time {
+  color: #888;
+}
+
+.dark .history-item {
+  border-color: #333;
+}
+
+.dark .history-item:hover {
+  background: #2a2a2a;
+}
+
+.dark .history-item.active {
+  background: #1a3a5a;
+  border-color: #1890ff;
+}
+
+.dark .mobile-header {
+  background: #2d2d2d;
+  border-bottom-color: #444;
+}
+
+.dark .mobile-title {
+  color: #e0e0e0;
+}
+
+.config-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-option :deep(.n-icon) {
+  color: #1976d2;
+}
+
+.dark .config-option :deep(.n-icon) {
+  color: #4dabf7;
+}
+
+/* ==================== 移动端响应式样式 ==================== */
+@media (max-width: 768px) {
+  .ai-chat-container {
+    padding: 0;
+    max-width: 100%;
+  }
+
+  /* 显示移动端顶部栏 */
+  .mobile-header {
+    display: flex;
+  }
+
+  /* 隐藏桌面端侧边栏 */
+  .history-sidebar {
+    display: none;
+  }
+
+  /* 调整聊天布局 */
+  .chat-layout {
+    gap: 0;
+    height: calc(100vh - 60px);
+  }
+
+  /* 调整聊天卡片 */
+  .chat-card {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* 调整消息区域 */
+  .chat-messages {
+    padding: 12px;
+    border-radius: 0;
+    margin-bottom: 12px;
+    max-height: calc(100vh - 200px);
+  }
+
+  /* 调整消息样式 */
+  .message {
+    margin-bottom: 12px;
+  }
+
+  .message-avatar {
+    width: 32px;
+    height: 32px;
+    margin: 0 8px;
+  }
+
+  .message-content {
+    max-width: 85%;
+  }
+
+  .message-text {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .message-time {
+    font-size: 11px;
+  }
+
+  /* 调整输入框 */
+  .chat-input {
+    gap: 8px;
+    padding: 0 12px 12px;
+  }
+
+  .chat-actions {
+    gap: 6px;
+  }
+
+  .chat-actions button {
+    flex: 1;
+    font-size: 14px;
+  }
+
+  /* 调整配置提示 */
+  .config-notice {
+    margin-top: 12px;
+  }
+
+  .config-notice :deep(.n-alert) {
+    font-size: 13px;
+  }
+
+  /* 调整历史记录项 */
+  .history-item {
+    padding: 10px;
+  }
+
+  .history-title {
+    font-size: 13px;
+  }
+
+  .history-time {
+    font-size: 11px;
+  }
+
+  /* 移动端历史记录操作按钮始终显示 */
+  .history-item .history-actions {
+    opacity: 1;
+    position: static;
+    transform: none;
+    margin-top: 4px;
+    justify-content: flex-end;
+  }
+
+  /* 调整代码块样式 */
+  .markdown-body :deep(pre) {
+    padding: 8px;
+  }
+
+  .markdown-body :deep(code) {
+    font-size: 12px;
+  }
+}
+
+/* 小屏幕手机适配 */
+@media (max-width: 480px) {
+  .message-content {
+    max-width: 90%;
+  }
+
+  .message-text {
+    font-size: 13px;
+  }
+
+  .mobile-title {
+    font-size: 14px;
+  }
+
+  .chat-actions button {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+}
+
+/* 横屏模式适配 */
+@media (max-height: 600px) and (orientation: landscape) {
+  .chat-messages {
+    max-height: calc(100vh - 180px);
+  }
+
+  .message {
+    margin-bottom: 8px;
+  }
+
+  .message-avatar {
+    width: 28px;
+    height: 28px;
+  }
+
+  .message-text {
+    padding: 8px 10px;
+  }
+}
+</style>
