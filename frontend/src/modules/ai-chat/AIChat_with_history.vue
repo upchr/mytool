@@ -280,7 +280,6 @@
 import {ref, nextTick, onMounted, computed, onUnmounted} from 'vue'
 import {NCard, NInput, NButton, NIcon, useMessage, NAlert, NEmpty, NSelect, NTag, NModal, NForm, NFormItem, NDrawer, NDrawerContent, NSpace, NSwitch} from 'naive-ui'
 import {PersonOutline as PersonIcon, SparklesOutline as RobotIcon, AddOutline as AddIcon, TrashBinOutline as DeleteIcon, CheckmarkCircleOutline as CheckmarkCircleIcon, RadioOutline as RadioIcon, CreateOutline as EditIcon, StopCircleOutline as StopIcon, MenuOutline as MenuIcon, SettingsOutline as SettingsIcon} from '@vicons/ionicons5'
-import {getAuthToken} from '@/utils/auth'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github-dark.min.css'
@@ -598,9 +597,6 @@ const sendMessage = async () => {
     currentAssistantMsg.value = assistantMsg
     scrollToBottom()
 
-    // 获取后端基础 URL
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
-    
     // 判断是否使用知识库
     let apiEndpoint = '/ai-chat/chat/stream'
     let requestBody = {
@@ -626,13 +622,9 @@ const sendMessage = async () => {
       requestBody
     })
 
-    const token = getAuthToken()
-    const res = await fetch(baseUrl + apiEndpoint, {
+    // 使用封装的流式请求工具
+    const res = await window.$request.stream(apiEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
       body: JSON.stringify(requestBody),
       signal: abortController.value.signal
     })

@@ -90,6 +90,38 @@ function handleAuthError(status, data, error) {
     return Promise.reject(error)
 }
 
+/**
+ * 流式请求工具（用于 SSE 流式响应）
+ * 复用 baseURL 和 token 逻辑
+ * 
+ * @param {string} url - 请求路径（不含 baseURL）
+ * @param {object} options - fetch 选项
+ * @returns {Promise<Response>} - fetch Response 对象
+ */
+const streamRequest = async (url, options = {}) => {
+    const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+    const fullURL = baseURL + url
+    
+    const token = getAuthToken()
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+    
+    // 跳过认证的路径
+    const publicPaths = ['/sys/init/check', '/sys/init/setup', '/sys/login', '/sys/health']
+    if (!publicPaths.some(path => url.includes(path))) {
+        if (token) {
+            headers.Authorization = `Bearer ${token}`
+        }
+    }
+    
+    return fetch(fullURL, {
+        ...options,
+        headers
+    })
+}
+
 // 导出文件功能
 const exportFile = async (url, params = {}, fileNameD = 'export.json') => {
     try {
@@ -119,6 +151,7 @@ const exportFile = async (url, params = {}, fileNameD = 'export.json') => {
 
 export default {
     ...service,
-    exportFile
+    exportFile,
+    stream: streamRequest
 };
 
