@@ -598,8 +598,11 @@ const sendMessage = async () => {
     currentAssistantMsg.value = assistantMsg
     scrollToBottom()
 
+    // 获取后端基础 URL
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+    
     // 判断是否使用知识库
-    let apiEndpoint = '/api/ai-chat/chat/stream'
+    let apiEndpoint = '/ai-chat/chat/stream'
     let requestBody = {
       message: content,
       history: messages.value.slice(0, -2), // 排除当前 user + 这个空 assistant
@@ -608,7 +611,7 @@ const sendMessage = async () => {
 
     // 如果开启知识库，使用带知识库的接口
     if (useKnowledgeBase.value && selectedKnowledgeBaseId.value) {
-      apiEndpoint = '/api/ai-chat/chat-with-knowledge'
+      apiEndpoint = '/ai-chat/chat-with-knowledge'
       requestBody.use_knowledge = true
       requestBody.knowledge_base_id = selectedKnowledgeBaseId.value
       console.log('启用知识库功能:', {
@@ -624,7 +627,7 @@ const sendMessage = async () => {
     })
 
     const token = getAuthToken()
-    const res = await fetch(apiEndpoint, {
+    const res = await fetch(baseUrl + apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
