@@ -6,6 +6,9 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+env:
+  TAG: ${{ github.ref_name }}
+
 permissions:
   contents: read
   pages: write
@@ -46,4 +49,53 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - uses: actions/deploy-pages@v4
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # ====== 飞书通知 ======
+      - name: Send Feishu notification (success)
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "type":"template",
+                "data": {
+                  "template_id":"AAqKyUKd4t2t1",
+                  "template_version_name":"1.1.1",
+                  "template_variable": {
+                    "status":"成功",
+                    "status_color":"green",
+                    "step":"GitHub Pages 前端部署",
+                    "description":"前端部署成功\nTag: ${{ env.TAG }}\nURL: ${{ steps.deployment.outputs.page_url }}",
+                    "log_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              }
+            }'
+
+      - name: Send Feishu notification (failure)
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "type":"template",
+                "data": {
+                  "template_id":"AAqKyUKd4t2t1",
+                  "template_version_name":"1.1.1",
+                  "template_variable": {
+                    "status":"失败",
+                    "status_color":"red",
+                    "step":"GitHub Pages 前端部署",
+                    "description":"前端部署失败\nTag: ${{ env.TAG }}",
+                    "log_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              }
+            }'
