@@ -1,0 +1,100 @@
+name: Deploy Backend to Railway
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+env:
+  RAILWAY_SERVICE_ID: "3b49821a-c127-41c1-9c64-98c43865fda5"
+  RAILWAY_ENVIRONMENT_ID: "6d1817a5-ee5e-4ecb-92b3-012f27ec5615"
+  TAG: ${{ github.ref_name }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Railway deployment
+        run: |
+          DEPLOYMENT_ID=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { serviceInstanceDeployV2(serviceId: \"'${{ env.RAILWAY_SERVICE_ID }}'\", environmentId: \"'${{ env.RAILWAY_ENVIRONMENT_ID }}'\") }"}' \
+            https://backboard.railway.com/graphql/v2 | jq -r '.data.serviceInstanceDeployV2')
+          
+          echo "Deployment ID: $DEPLOYMENT_ID"
+          echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
+
+      - name: Wait for deployment
+        run: |
+          for i in {1..60}; do
+            STATUS=$(curl -s \
+              -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+              -H "Content-Type: application/json" \
+              -d '{"query":"query { deployment(id: \"'${DEPLOYMENT_ID}'\") { status } }"}' \
+              https://backboard.railway.com/graphql/v2 | jq -r '.data.deployment.status')
+            
+            echo "Deployment status: $STATUS"
+            
+            if [ "$STATUS" = "SUCCESS" ]; then
+              echo "✅ Deployment succeeded!"
+              exit 0
+            elif [ "$STATUS" = "FAILED" ]; then
+              echo "❌ Deployment failed!"
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          echo "⏰ Deployment timeout"
+          exit 1
+
+      # ====== 飞书通知 ======
+      - name: Send Feishu notification (success)
+        if: success()
+        run: |
+          curl -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "type":"template",
+                "data": {
+                  "template_id":"AAqKyUKd4t2t1",
+                  "template_version_name":"1.1.1",
+                  "template_variable": {
+                    "status":"成功",
+                    "status_color":"green",
+                    "step":"Railway 后端部署",
+                    "description":"Railway 后端部署成功\nTag: ${{ env.TAG }}",
+                    "log_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              }
+            }'
+
+      - name: Send Feishu notification (failure)
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.FEISHU_WEBHOOK_URL }}" \
+            -H 'Content-Type: application/json; charset=utf-8' \
+            -d '{
+              "msg_type": "interactive",
+              "card": {
+                "type":"template",
+                "data": {
+                  "template_id":"AAqKyUKd4t2t1",
+                  "template_version_name":"1.1.1",
+                  "template_variable": {
+                    "status":"失败",
+                    "status_color":"red",
+                    "step":"Railway 后端部署",
+                    "description":"Railway 后端部署失败\nTag: ${{ env.TAG }}",
+                    "log_url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              }
+            }'
