@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  RAILWAY_SERVICE_ID: "3b49821a-c127-41c1-9c64-98c43865fda5"
+  RAILWAY_SERVICE_ID: "3bcbf054-d98f-4ee4-8dee-510e9a486426"
   RAILWAY_ENVIRONMENT_ID: "6d1817a5-ee5e-4ecb-92b3-012f27ec5615"
   TAG: ${{ github.ref_name }}
 
