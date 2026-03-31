@@ -265,10 +265,11 @@ def setup_initialization(req: SysBase, request: Request):
         if result:
             raise ServerException(detail="系统已初始化")
 
-        # 插入初始化数据
+        # 更新初始化数据
         conn.execute(
-            system_config_table.insert().values(
-                id=1,
+            system_config_table.update()
+            .where(system_config_table.c.id == 1)
+            .values(
                 is_initialized=True,
                 admin_password_hash=password_hash
             )
