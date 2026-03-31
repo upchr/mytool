@@ -10,7 +10,7 @@
   >
     <template #title>ToolsPlus</template>
     <template #avatar>
-      <n-avatar src="/ICON_256.PNG" />
+      <n-avatar :src="import.meta.env.BASE_URL + 'ICON_256.PNG'" />
     </template>
     <template #extra>
       <n-button
