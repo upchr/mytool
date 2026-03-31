@@ -261,7 +261,8 @@ def setup_initialization(req: SysBase, request: Request):
     with engine.begin() as conn:
         # 检查是否已初始化
         check_stmt = select(system_config_table.c.is_initialized)
-        if conn.execute(check_stmt).scalar() is not None:
+        result = conn.execute(check_stmt).scalar()
+        if result:
             raise ServerException(detail="系统已初始化")
 
         # 插入初始化数据
