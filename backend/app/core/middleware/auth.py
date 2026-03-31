@@ -28,6 +28,10 @@ def check_initialization_sync():
         return result
 
 async def check_initialization_middleware(request: Request, call_next):
+    # 放行 CORS preflight 请求
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    
     public_paths = [
         "/sys/init/check",
         "/sys/init/setup",
@@ -45,6 +49,10 @@ async def check_initialization_middleware(request: Request, call_next):
 
 
 async def jwt_auth_middleware(request: Request, call_next):
+    # 放行 CORS preflight 请求
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    
     public_paths = [
         "/sys/init/check",
         "/sys/init/setup",
