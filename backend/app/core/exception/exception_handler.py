@@ -11,6 +11,13 @@ from app.core.pojo.response import BaseResponse
 logger = logging.getLogger(__name__)
 
 def setup_exception_handlers(app: FastAPI):
+    def add_cors_headers(response: JSONResponse) -> JSONResponse:
+        """为响应添加 CORS header"""
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
     @app.exception_handler(BusinessException)
     async def business_exception_handler(request: Request, exc: BusinessException):
         response = BaseResponse.error(
@@ -19,7 +26,7 @@ def setup_exception_handlers(app: FastAPI):
             detail=exc.detail
         )
         logger.error(f"业务异常: {exc.code} - {exc.message} - {exc.detail}")
-        return JSONResponse(status_code=exc.code, content=response.dict())
+        return add_cors_headers(JSONResponse(status_code=exc.code, content=response.dict()))
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -29,7 +36,7 @@ def setup_exception_handlers(app: FastAPI):
             message="参数验证失败",
             detail=errors
         )
-        return JSONResponse(status_code=422, content=response.dict())
+        return add_cors_headers(JSONResponse(status_code=422, content=response.dict()))
 
     @app.exception_handler(404)
     async def not_found_handler(request: Request, exc: Exception):
@@ -39,7 +46,7 @@ def setup_exception_handlers(app: FastAPI):
             message="接口不存在",
             detail=f"路径 {request.url.path} 未找到"
         )
-        return JSONResponse(status_code=404, content=response.dict())
+        return add_cors_headers(JSONResponse(status_code=404, content=response.dict()))
 
     @app.exception_handler(Exception)
     async def global_exception_handler(request: Request, exc: Exception):
@@ -61,4 +68,4 @@ def setup_exception_handlers(app: FastAPI):
             logger.error(f"全局异常: {str(exc)}\n{traceback.format_exc()}")
 
         # 这里必须使用响应体中的 code，而不是直接访问 exc.code（很多异常没有 code 属性）
-        return JSONResponse(status_code=response.code, content=response.dict())
+        return add_cors_headers(JSONResponse(status_code=response.code, content=response.dict()))
