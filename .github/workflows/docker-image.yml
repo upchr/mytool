@@ -3,7 +3,7 @@ name: Build and Push Multi-Arch Image to Aliyun ACR and Docker Hub
 on:
   push:
     tags:
-      - 'docker-v*.*.*'
+      - 'v*.*.*'
   workflow_dispatch:
 
 env:

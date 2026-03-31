@@ -3,7 +3,7 @@ name: Deploy Frontend to GitHub Pages
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'show-v*.*.*'
   workflow_dispatch:
 
 permissions:
