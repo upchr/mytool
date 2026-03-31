@@ -10,7 +10,7 @@
   >
     <template #title>ToolsPlus</template>
     <template #avatar>
-      <n-avatar :src="import.meta.env.BASE_URL + 'ICON_256.PNG'" />
+      <n-avatar :src="baseUrl + 'ICON_256.PNG'" />
     </template>
     <template #extra>
       <n-button
@@ -55,6 +55,7 @@ const emit = defineEmits(['toggle-menu'])
 
 const themeStore = useThemeStore()
 const { width } = useWindowSize()
+const baseUrl = import.meta.env.BASE_URL
 
 const subtitle = computed(() => {
   return width.value < 1100
