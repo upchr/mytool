@@ -11,8 +11,21 @@ def create_all_tables():
 
 def init_module_data():
     logger.debug("🔧 初始化业务数据...")
+    
+    # 初始化 system_config 默认数据
+    from app.modules.sys.models import system_config_table
+    from sqlalchemy import select
+    with engine.connect() as conn:
+        existing = conn.execute(select(system_config_table.c.id)).scalar()
+        if not existing:
+            conn.execute(system_config_table.insert().values(id=1, is_initialized=False))
+            conn.commit()
+            logger.info("✅ 已初始化 system_config 默认数据")
+    
+    # 初始化通知服务默认数据
     from app.modules.notify.models import init_default_notification_services
     init_default_notification_services()
+    
     logger.debug("✅ 初始化业务数据完成！")
 
 def upgrade():
