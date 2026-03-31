@@ -19,7 +19,7 @@ data_dir=path_utils.get_data_dir()
 #     data_dir=Path("/toolsplus/data")
 
 logger.info(f"数据库路径：{data_dir}")
-data_dir.mkdir(exist_ok=True, parents=True)
+data_dir.mkdir(parents=True, exist_ok=True)
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{data_dir}/notes.db")
 
 # Engine 全局单例
