@@ -7,10 +7,10 @@ on:
 
 jobs:
   generate-and-update:
-    # 仅当 tag 触发且第一个工作流成功时执行
+    # 仅当 docker-v 开头的 tag 触发且第一个工作流成功时执行
     if: |
       github.event.workflow_run.event == 'push' &&
-      startsWith(github.event.workflow_run.head_branch, 'v') &&
+      startsWith(github.event.workflow_run.head_branch, 'docker-v') &&
       github.event.workflow_run.conclusion == 'success'
 
     runs-on: ubuntu-latest
