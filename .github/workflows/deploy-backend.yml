@@ -16,6 +16,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 步骤1：更新 Railway 服务的代码源（确保关联正确的仓库）
+      - name: Update Railway service source
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"mutation { serviceInstanceUpdate(serviceId: \"'${{ env.RAILWAY_SERVICE_ID }}'\", environmentId: \"'${{ env.RAILWAY_ENVIRONMENT_ID }}'\", input: {source: {repo: \"upchr/mytool\"}}) }"}' \
+            https://backboard.railway.com/graphql/v2
+
+      # 步骤2：触发 Railway 部署
       - name: Trigger Railway deployment
         run: |
           DEPLOYMENT_ID=$(curl -s -X POST \
