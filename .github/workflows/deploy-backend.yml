@@ -25,16 +25,17 @@ jobs:
             -d '{"query":"mutation { serviceInstanceUpdate(serviceId: \"'${{ env.RAILWAY_SERVICE_ID }}'\", environmentId: \"'${{ env.RAILWAY_ENVIRONMENT_ID }}'\", input: {source: {repo: \"upchr/mytool\"}}) }"}' \
             https://backboard.railway.com/graphql/v2
 
-      # 步骤2：触发 Railway 部署
+      # 步骤2：触发 Railway 部署（传入 tag 对应的 commit SHA）
       - name: Trigger Railway deployment
         run: |
           DEPLOYMENT_ID=$(curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.RAILWAY_TOKEN }}" \
             -H "Content-Type: application/json" \
-            -d '{"query":"mutation { serviceInstanceDeployV2(serviceId: \"'${{ env.RAILWAY_SERVICE_ID }}'\", environmentId: \"'${{ env.RAILWAY_ENVIRONMENT_ID }}'\") }"}' \
+            -d '{"query":"mutation { serviceInstanceDeployV2(serviceId: \"'${{ env.RAILWAY_SERVICE_ID }}'\", environmentId: \"'${{ env.RAILWAY_ENVIRONMENT_ID }}'\", commitSha: \"${{ github.sha }}\") }"}' \
             https://backboard.railway.com/graphql/v2 | jq -r '.data.serviceInstanceDeployV2')
           
           echo "Deployment ID: $DEPLOYMENT_ID"
+          echo "Commit SHA: ${{ github.sha }}"
           echo "DEPLOYMENT_ID=$DEPLOYMENT_ID" >> $GITHUB_ENV
 
       - name: Wait for deployment
