@@ -34,8 +34,15 @@ MAX_LOGIN_ATTEMPTS = 5
 LOGIN_ATTEMPT_WINDOW = timedelta(minutes=15)  # 15分钟内
 RESET_CODE_EXPIRE_MINUTES = 10  # 验证码10分钟过期
 
+# 密码重置验证码速率限制
+RESET_CODE_RATE_LIMIT = 5  # 最大请求次数
+RESET_CODE_RATE_WINDOW = timedelta(minutes=3)  # 3分钟内
+
 # 内存存储验证码：{ip_address: {"code": "xxx", "expires_at": datetime}}
 reset_codes_cache = {}
+
+# 内存存储请求记录：{ip_address: [datetime1, datetime2, ...]}
+reset_code_request_cache = {}
 
 
 def get_client_ip(request: Request) -> str:
@@ -49,6 +56,44 @@ def get_client_ip(request: Request) -> str:
         return real_ip
     
     return request.client.host if request.client else "unknown"
+
+
+def check_reset_code_rate_limit(ip_address: str) -> tuple[bool, int, int | None]:
+    """
+    检查密码重置验证码请求速率限制（滑动窗口算法）
+    
+    Args:
+        ip_address: IP地址
+    
+    Returns:
+        (是否允许请求, 剩余次数, 等待秒数(拒绝时))
+    """
+    now = datetime.now()
+    
+    # 获取该IP的请求记录
+    request_times = reset_code_request_cache.get(ip_address, [])
+    
+    # 移除窗口外的旧记录
+    window_start = now - RESET_CODE_RATE_WINDOW
+    request_times = [t for t in request_times if t > window_start]
+    
+    # 检查是否超过限制
+    if len(request_times) >= RESET_CODE_RATE_LIMIT:
+        # 计算最早请求的剩余时间
+        oldest_request = request_times[0]
+        remaining_seconds = int((oldest_request + RESET_CODE_RATE_WINDOW - now).total_seconds())
+        logger.warning(f"密码重置验证码请求超过速率限制: IP={ip_address}, 请等待{remaining_seconds}秒")
+        return False, 0, remaining_seconds
+    
+    # 添加当前请求时间
+    request_times.append(now)
+    reset_code_request_cache[ip_address] = request_times
+    
+    # 计算剩余次数
+    remaining_attempts = RESET_CODE_RATE_LIMIT - len(request_times)
+    
+    logger.info(f"密码重置验证码请求速率检查通过: IP={ip_address}, 剩余次数={remaining_attempts}")
+    return True, remaining_attempts, None
 
 
 def check_login_attempts(ip_address: str) -> tuple[int, bool]:
@@ -411,6 +456,18 @@ async def send_reset_code(request: Request):
     """
     ip_address = get_client_ip(request)
     logger.info(f"收到发送验证码请求: IP={ip_address}")
+    
+    # 检查速率限制（防止恶意触发）
+    is_allowed, remaining_attempts, wait_seconds = check_reset_code_rate_limit(ip_address)
+    if not is_allowed:
+        # 格式化等待时间
+        remaining_minutes = wait_seconds // 60
+        remaining_seconds = wait_seconds % 60
+        time_str = f"{remaining_minutes}分{remaining_seconds}秒" if remaining_minutes > 0 else f"{remaining_seconds}秒"
+        
+        raise ValidationException(
+            detail=f"请求过于频繁，请在 {time_str} 后再试。3分钟内最多可请求5次。"
+        )
     
     # 生成验证码
     code = generate_reset_code()
