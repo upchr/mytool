@@ -2,6 +2,7 @@ from sqlalchemy import select, update, delete, and_
 from datetime import datetime, timedelta
 import random
 import string
+import os
 
 from app.core.db.database import engine, metadata
 from fastapi import APIRouter, Request
@@ -28,6 +29,9 @@ from ...core.utils.security import security_manager
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sys", tags=["sys"])
+
+# 只读模式检查（Railway 公开部署时启用）
+READONLY_MODE = os.getenv("READONLY_MODE", "false").lower() == "true"
 
 # 登录失败次数限制
 MAX_LOGIN_ATTEMPTS = 5
@@ -416,6 +420,10 @@ def reset_password(req: ResetSysBase, request: Request):
     Returns:
         修改结果
     """
+    # 只读模式拦截
+    if READONLY_MODE:
+        raise ValidationException(detail="演示环境不支持修改密码")
+    
     ip_address = get_client_ip(request)
     
     if len(req.password) < 6:
@@ -454,6 +462,10 @@ async def send_reset_code(request: Request):
     Returns:
         发送结果
     """
+    # 只读模式拦截
+    if READONLY_MODE:
+        raise ValidationException(detail="演示环境不支持重置密码")
+    
     ip_address = get_client_ip(request)
     logger.info(f"收到发送验证码请求: IP={ip_address}")
     
@@ -514,6 +526,10 @@ async def verify_reset_code(req: VerifyResetCodeRequest, request: Request):
     Returns:
         重置结果
     """
+    # 只读模式拦截
+    if READONLY_MODE:
+        raise ValidationException(detail="演示环境不支持重置密码")
+    
     ip_address = get_client_ip(request)
     
     if len(req.new_password) < 6:
@@ -572,3 +588,13 @@ async def verify_reset_code(req: VerifyResetCodeRequest, request: Request):
 def health_check():
     """简单健康检查，供 Railway 使用"""
     return {"status": "ok"}
+
+
+# ====== 系统状态 API ======
+@router.get("/status")
+def get_system_status():
+    """获取系统状态（包含只读模式信息）"""
+    return BaseResponse.success({
+        "readonly_mode": READONLY_MODE,
+        "environment": "demo" if READONLY_MODE else "production"
+    })
