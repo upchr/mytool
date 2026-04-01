@@ -1,4 +1,4 @@
-## 📦 ToolsPlus 项目
+## 📦 ToolsPlus 项目（[体验地址](https://upchr.github.io/mytool/)->密码：mytool123）
 
 ![status](https://img.shields.io/badge/状态-稳定-success)
 ![version](https://img.shields.io/badge/version-v3.4.0-blue)
@@ -7,10 +7,13 @@
 
 > 轻量级多设备定时任务管理、通知、AI 助手、固定资产管理、工作流自动化 + 个人便签速记
 
+
 [![GitHub](https://img.shields.io/badge/项目源码-181717?logo=github)](https://github.com/upchr/FnDepot/tree/main/toolsplus)
 
 ### 🎯 项目背景
 基于 Vue 3 和 Python 3 构建，为开发者和多设备用户提供集中式定时任务管理、个人备忘服务、AI 对话助手、SSL 证书自动续签、固定资产管理和工作流自动化功能，解决跨设备任务同步、通知和自动化问题。
+
+
 
 ### 多平台支持
 - x86
