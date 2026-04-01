@@ -565,3 +565,10 @@ async def verify_reset_code(req: VerifyResetCodeRequest, request: Request):
     except Exception as e:
         logger.error(f"密码重置失败: {e}", exc_info=True)
         raise ServerException(detail="密码重置失败，请稍后重试")
+
+
+# ====== 健康检查端点（Railway 部署用）======
+@router.get("/health")
+def health_check():
+    """简单健康检查，供 Railway 使用"""
+    return {"status": "ok"}
