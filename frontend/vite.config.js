@@ -6,8 +6,9 @@ import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import path from 'path' // 导入 path 模块
 
 export default defineConfig({
-  // GitHub Pages 部署需要设置 base
-  base: process.env.NODE_ENV === 'production' ? '/mytool/' : '/',
+  // GitHub Pages 部署需要设置 base（通过 VITE_GITHUB_PAGES=true 启用）
+  // Docker/Railway 等其他部署不需要设置
+  base: process.env.VITE_GITHUB_PAGES === 'true' ? '/mytool/' : '/',
   
   plugins: [
     vue(),
