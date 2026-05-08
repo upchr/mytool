@@ -36,6 +36,7 @@ async def check_initialization_middleware(request: Request, call_next):
         "/sys/init/check",
         "/sys/init/setup",
         "/version",
+        "/assets/",
     ]
     if any(request.url.path.startswith(path) for path in public_paths):
         return await call_next(request)
@@ -62,6 +63,7 @@ async def jwt_auth_middleware(request: Request, call_next):
         "/api/auth/login",
         "/version",
         "/example",
+        "/assets/",
     ]
 
     if any(request.url.path.startswith(path) for path in public_paths):
