@@ -55,6 +55,9 @@ jobs:
           file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          # 阿里云 ACR 拒绝 OCI 空 manifest(provenance/sbom 附件),关闭后只推送镜像清单
+          provenance: false
+          sbom: false
           build-args: |
             VERSION=${{ env.TAG }}
           tags: |
