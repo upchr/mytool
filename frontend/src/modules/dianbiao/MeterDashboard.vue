@@ -255,6 +255,22 @@
     <n-modal v-model:show="showTrigOutput" preset="card" title="初始化输出 (doctor)" style="width: 720px">
       <pre style="white-space: pre-wrap; background: #f5f7fa; border-radius: 6px; padding: 12px; max-height: 420px; overflow: auto; font-size: 12px">{{ trigOutput }}</pre>
     </n-modal>
+
+    <!-- 采集日志(节点侧 SSH tail) -->
+    <n-modal v-model:show="showTrigLog" preset="card" title="采集日志 (节点 collector.log)" style="width: 860px" :mask-closable="false">
+      <template #header>
+        <n-space align="center">
+          <span>采集日志</span>
+          <n-tag size="small" type="info">最近 {{ trigLogLines }} 行</n-tag>
+        </n-space>
+      </template>
+      <div style="color:#909399;font-size:12px;margin-bottom:8px">
+        触发器已安装自愈保活: 节点每 5 分钟自检一次, 后端 enabled=1 且采集器进程不在时自动拉起; 面板暂停(enabled=0)期间保持待命不干扰。
+      </div>
+      <n-spin :show="loadingTrigLog">
+        <pre style="white-space: pre-wrap; background: #f5f7fa; border-radius: 6px; padding: 12px; max-height: 480px; overflow: auto; font-size: 12px">{{ trigLog }}</pre>
+      </n-spin>
+    </n-modal>
   </div>
 </template>
 
@@ -332,6 +348,10 @@ const trigInterval = ref(300)
 const trigEnabled = ref(true)
 const showTrigOutput = ref(false)
 const trigOutput = ref('')
+const showTrigLog = ref(false)
+const trigLog = ref('')
+const trigLogLines = ref(300)
+const loadingTrigLog = ref(false)
 
 // ---------- 阈值告警(复用「通知渠道」页已启用渠道) ----------
 const showAlertPanel = ref(false)
@@ -423,6 +443,10 @@ const trigColumns = [
     },
   },
   {
+    title: '最近上报', key: 'last_seen', width: 150,
+    render: (r) => h('span', { style: r.last_seen ? '' : 'color:#c0c4cc' }, fmtTs(r.last_seen)),
+  },
+  {
     title: '初始化', key: 'init_status', width: 90,
     render: (r) => {
       const st = r.init_status || 'pending'
@@ -447,6 +471,10 @@ const trigColumns = [
           style: 'cursor:pointer;color:#18a058;margin-right:10px',
           onClick: () => saveTrigRow(r),
         }, '保存下发'),
+        h('a', {
+          style: 'cursor:pointer;color:#909399;margin-right:10px',
+          onClick: () => openTrigLog(r),
+        }, '日志'),
         h('a', {
           style: 'cursor:pointer;color:#d03050',
           onClick: () => removeTrigRow(r),
@@ -645,10 +673,26 @@ async function saveTrigRow(row) {
       enabled: row.enabled === 1 ? 1 : 0,
     })
     window.$message.success(res.pushed
-      ? ('配置已下发, 节点采集器下一轮自动生效' + (res.proc ? ` (${res.proc})` : ''))
-      : '已保存(初始化后自动反推配置)')
+      ? ('配置已下发, 节点采集器下一轮自动生效' + (res.proc ? ` (${res.proc})` : '') + (res.keepalive ? `; ${res.keepalive}` : ''))
+      : ('已保存(初始化后自动反推配置)' + (res.keepalive ? `; ${res.keepalive}` : '')))
     await loadTrigRows()
   } catch (e) { console.error(e) }
+}
+
+/** 查看节点侧采集日志(SSH tail collector.log) */
+async function openTrigLog(row) {
+  loadingTrigLog.value = true
+  try {
+    const res = await dianbiaoApi.getTriggerLogs(row.id, 300)
+    trigLogLines.value = res.lines || 300
+    trigLog.value = res.logs || '(空日志)'
+    showTrigLog.value = true
+  } catch (e) {
+    console.error(e)
+    window.$message.error('读取节点日志失败: ' + (e?.message || e))
+  } finally {
+    loadingTrigLog.value = false
+  }
 }
 
 async function removeTrigRow(row) {

@@ -672,6 +672,86 @@ def _ensure_collector_process(node, work_dir: str, want_start: bool) -> str:
     return "已停止采集进程" if code == 0 else f"停止采集进程失败: {out}"
 
 
+# ============================================================
+# 采集器自愈(节点保活): 脚本 + crontab(每5分钟/开机), 拉起前先查 mytool 下发 enabled
+# ============================================================
+
+def _keepalive_script(work_dir: str, meter_id: str, mytool_url: str) -> str:
+    """生成节点上的自愈脚本内容: 后端可达且 enabled=1 且进程不在 → 重新拉起。
+    面板暂停(enabled=0)或后端不可达 → 不动作(待命), 与抓取器软停语义一致。"""
+    url = mytool_url.rstrip("/")
+    return f"""#!/bin/sh
+# dianbiao 采集器自愈脚本(由 mytool 生成, 触发器删除时一并移除)
+DIR='{work_dir}'
+SK='{meter_id}'
+BURL='{url}'
+PID="$DIR/collector.pid"
+TOKEN=$(grep -E '^MYTOOL_AGENT_TOKEN=' "$DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\\r')
+# 1) 后端可达且 enabled=1 才拉; 否则待命(不做事)
+ENABLED=$(python3 -c "import json,urllib.request,sys
+t='$TOKEN'
+r=urllib.request.Request('$BURL/dianbiao/agent/config?meter_id=$SK', headers={{'X-Agent-Token':t}})
+d=json.load(urllib.request.urlopen(r,timeout=4)).get('data',{{}})
+sys.stdout.write(str(d.get('enabled',1)))" 2>/dev/null)
+RC=$?
+if [ $RC -ne 0 ] || [ "$ENABLED" != "1" ]; then exit 0; fi
+# 已在运行 → 交由采集器自身/面板管理
+[ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null && exit 0
+[ ! -f "$DIR/collector.py" ] && exit 0
+cd "$DIR" || exit 0
+nohup python3 collector.py >> collector.log 2>&1 < /dev/null &
+echo $! > "$PID"
+sleep 1
+if kill -0 "$(cat "$PID")" 2>/dev/null; then
+  echo "$(date '+%Y-%m-%d %H:%M:%S') keepalive: 采集器已自愈重启 pid $(cat "$PID")" >> keepalive.log
+else
+  echo "$(date '+%Y-%m-%d %H:%M:%S') keepalive: 拉起失败, 详见 collector.log" >> keepalive.log
+fi
+"""
+
+
+def _install_keepalive(node, work_dir: str, meter_id: str, mytool_url: str) -> str:
+    """在节点安装保活: 写脚本 + 注入 crontab(每5分钟 + @reboot, 幂等)。"""
+    if not meter_id:
+        return "跳过保活(SN 未绑定)"
+    if not mytool_url:
+        return "跳过保活(未配置 mytool 地址)"
+    script = _keepalive_script(work_dir, meter_id, mytool_url)
+    code, out = _run_on_node(
+        node, work_dir,
+        "cat > dianbiao-keepalive.sh <<'KEOF'\n" + script + "\nKEOF\nchmod +x dianbiao-keepalive.sh",
+        timeout=30,
+    )
+    if code != 0:
+        return f"保活脚本写入失败: {out}"
+    marker = f"# dbK:{work_dir}"
+    entry = f"*/5 * * * * sh {work_dir}/dianbiao-keepalive.sh >> {work_dir}/keepalive.log 2>&1"
+    reboot = f"@reboot sh {work_dir}/dianbiao-keepalive.sh >> {work_dir}/keepalive.log 2>&1"
+    cmd = (
+        f"crontab -l 2>/dev/null | grep -Fvx '{marker}' | grep -Fv 'dianbiao-keepalive.sh' > /tmp/dbk.$$; "
+        f"echo '{marker}' >> /tmp/dbk.$$; echo '{entry}' >> /tmp/dbk.$$; echo '{reboot}' >> /tmp/dbk.$$; "
+        "if crontab /tmp/dbk.$$ 2>/dev/null; then rm -f /tmp/dbk.$$; echo CRON_OK; "
+        "else echo CRON_FAIL; cat /tmp/dbk.$$; rm -f /tmp/dbk.$$; fi"
+    )
+    code, out = _run_on_node(node, work_dir, cmd, timeout=40)
+    if code == 0 and "CRON_OK" in out:
+        return "保活已安装(每5分钟自检 + 开机恢复)"
+    if code == 0 and "CRON_FAIL" in out:
+        return f"保活脚本已写(可手动执行), 但节点 crontab 不可用: {out[:150]}"
+    return f"保活安装异常: code={code} {out[:200]}"
+
+
+def _remove_keepalive(node, work_dir: str) -> str:
+    """删除触发器时清理节点的保活 crontab 与脚本(尽力而为)"""
+    marker = f"# dbK:{work_dir}"
+    cmd = (
+        f"crontab -l 2>/dev/null | grep -Fvx '{marker}' | grep -Fv 'dianbiao-keepalive.sh' | crontab - ; "
+        f"rm -f {work_dir}/dianbiao-keepalive.sh; echo OK"
+    )
+    code, out = _run_on_node(node, work_dir, cmd, timeout=30)
+    return "保活已移除" if code == 0 else f"保活清理失败: {out}"
+
+
 def _trigger_to_dict(r):
     return {
         "id": r.id, "name": r.name, "node_id": r.node_id, "node_name": r.node_name,
@@ -681,6 +761,7 @@ def _trigger_to_dict(r):
         "interval_seconds": r.interval_seconds, "enabled": r.enabled,
         "init_status": r.init_status, "init_output": r.init_output, "init_at": r.init_at,
         "created_at": r.created_at, "updated_at": r.updated_at,
+        "last_seen": (r.last_seen if hasattr(r, "last_seen") else None),
     }
 
 
@@ -688,9 +769,10 @@ def _trigger_to_dict(r):
 def list_triggers():
     with engine.connect() as conn:
         rows = conn.execute(text("""
-            SELECT t.*, n.name AS node_name
+            SELECT t.*, n.name AS node_name, m.last_seen AS last_seen
             FROM dianbiao_trigger t
             LEFT JOIN nodes n ON n.id = t.node_id
+            LEFT JOIN dianbiao_meter m ON m.meter_id = t.meter_id
             ORDER BY t.id DESC
         """)).fetchall()
     return BaseResponse.success([_trigger_to_dict(r) for r in rows])
@@ -791,6 +873,13 @@ def init_trigger(trigger_id: int):
             steps.append(run_msg)
         except Exception as e:
             steps.append(f"⚠ 自动{'启动' if row.get('enabled') == 1 else '停止'}采集失败: {e}")
+        # 自愈保活: 初始化成功后顺手安装(幂等), 节点重启/进程退出后自动恢复
+        if meter_id:
+            try:
+                mytool_url = (row.get("mytool_url") or "").strip() or _default_mytool_url()
+                steps.append(_install_keepalive(node, row["work_dir"], meter_id, mytool_url))
+            except Exception as e:
+                steps.append(f"⚠ 保活安装失败: {e}")
     else:
         steps.append("⚠ doctor 未通过, 跳过启动采集进程")
     full_output = ("\n".join(steps) + "\n" + output.strip()).strip()[-4000:]
@@ -858,6 +947,8 @@ def update_trigger(trigger_id: int, req: schemas.TriggerUpdate):
         pushed = True
     # 启停开关变更 → 同步节点上常驻采集进程
     proc = ""
+    keepalive = ""
+    node = None
     new_enabled = values.get("enabled", row["enabled"])
     if meter_id and "enabled" in values:
         try:
@@ -866,19 +957,54 @@ def update_trigger(trigger_id: int, req: schemas.TriggerUpdate):
                 node, row["work_dir"], want_start=(new_enabled == 1))
         except Exception as e:
             proc = f"同步进程失败: {e}"
-    return BaseResponse.success({"id": trigger_id, "pushed": pushed, "proc": proc, **values})
+    # 自愈保活: 有 SN 即安装/更新(幂等), 节点重启/进程退出后 5 分钟内自动恢复
+    if meter_id:
+        try:
+            if node is None:
+                node = _get_node_or_404(row["node_id"])
+            keepalive = _install_keepalive(
+                node,
+                values.get("work_dir") or row["work_dir"],
+                meter_id,
+                (values.get("mytool_url") or row["mytool_url"] or "").strip() or _default_mytool_url(),
+            )
+        except Exception as e:
+            keepalive = f"保活安装失败: {e}"
+    return BaseResponse.success({"id": trigger_id, "pushed": pushed, "proc": proc,
+                                 "keepalive": keepalive, **values})
 
 
 @router.delete("/triggers/{trigger_id}", summary="删除采集器触发器")
 def delete_trigger(trigger_id: int):
+    row = _get_trigger_or_404(trigger_id)
+    # 一并清理节点的保活 crontab 与脚本(节点已不存在时跳过, 不阻塞删除)
+    try:
+        node = _get_node_or_404(row["node_id"])
+        _remove_keepalive(node, row["work_dir"])
+    except Exception:
+        pass
     with engine.connect() as conn:
         res = conn.execute(
             text("DELETE FROM dianbiao_trigger WHERE id = :id"), {"id": trigger_id}
         )
         conn.commit()
-    if res.rowcount == 0:
-        raise NotFoundException(detail=f"触发器 {trigger_id} 不存在")
     return BaseResponse.success({"id": trigger_id})
+
+
+@router.get("/triggers/{trigger_id}/logs", summary="查看节点采集日志(最近 N 行)")
+def get_trigger_logs(trigger_id: int, lines: int = 200):
+    row = _get_trigger_or_404(trigger_id)
+    node = _get_node_or_404(row["node_id"])
+    lines = max(10, min(int(lines), 2000))
+    code, out = _run_on_node(
+        node, row["work_dir"],
+        f"tail -n {lines} collector.log 2>/dev/null "
+        f"|| echo '(collector.log 不存在: 采集器还没跑过)'",
+    )
+    if code != 0:
+        return BaseResponse.success(
+            {"logs": f"(节点侧执行失败 code={code}: {out})"})
+    return BaseResponse.success({"logs": (out or "").strip()[-20000:], "lines": lines})
 
 
 def _get_trigger_or_404(trigger_id: int):

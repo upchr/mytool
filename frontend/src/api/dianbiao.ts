@@ -100,6 +100,7 @@ export interface CollectorTrigger {
   init_at?: string
   created_at?: string
   updated_at?: string
+  last_seen?: string | null          // 最近一次上报时间(关联 dianbiao_meter)
 }
 
 /** 触发器列表 */
@@ -121,6 +122,10 @@ export const updateTrigger = (id: number, data: Partial<{ name: string; work_dir
 /** 删除触发器 */
 export const deleteTrigger = (id: number) =>
   window.$request.delete(`/dianbiao/triggers/${id}`) as Promise<{ id: number }>
+
+/** 查看节点采集日志(SSH tail collector.log) */
+export const getTriggerLogs = (id: number, lines = 300) =>
+  window.$request.get(`/dianbiao/triggers/${id}/logs`, { params: { lines } }) as Promise<{ logs: string; lines: number }>
 
 // ---------- 推送 Token 维护(需 JWT) ----------
 
