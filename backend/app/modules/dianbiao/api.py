@@ -67,7 +67,7 @@ DEFAULT_INTERVAL_SECONDS = 300
 # 采集器代码源目录(搭建触发器时打包上传到目标节点, 打包排除 .env 等敏感/临时文件)
 DEFAULT_SOURCE_DIR = os.getenv("DIANBIAO_SOURCE_DIR", "P:/workspace/tools/dianbiao")
 
-# 充值识别: 剩余电量较上一条跳升 ≥ 该值(元/度) 即判定一次充值; 报文携带 order_value 时优先按订单金额
+# 充值识别: 剩余电量较上一条跳升 > 该值(度) 即判定一次充值; 报文携带 order_value 时按增量判定
 CHARGE_DELTA_MIN = float(os.getenv("DIANBIAO_CHARGE_DELTA_MIN", "5"))
 
 
@@ -966,7 +966,7 @@ _ALERT_METRICS = {
 }
 _ALERT_CONDITIONS = {"lt": "低于", "gt": "高于"}
 _ALERT_METRIC_UNITS = {
-    "surplus_value": "元", "total_value": "度", "power": "W", "voltage": "V", "current": "A",
+    "surplus_value": "度", "total_value": "度", "power": "W", "voltage": "V", "current": "A",
 }
 
 

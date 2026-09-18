@@ -105,8 +105,13 @@
         </template>
         <n-data-table v-if="detailTab === 'samples'" :columns="columns" :data="readings"
                       size="small" :max-height="360" />
-        <n-data-table v-else :columns="chargeColumns" :data="charges"
-                      size="small" :max-height="360" :loading="loadingCharges" />
+        <div v-else>
+          <div style="margin-bottom: 6px; color: #909399; font-size: 12px">
+            识别规则: 剩余电量环比上涨大于 5 度, 或报文 order_value 增量; 充值金额按 {{ KWH_PRICE }} 元/度 折算后展示(order 模式按报文原值)
+          </div>
+          <n-data-table :columns="chargeColumns" :data="charges"
+                        size="small" :max-height="330" :loading="loadingCharges" />
+        </div>
       </n-card>
     </n-spin>
 
@@ -223,7 +228,7 @@
       <n-space align="center" style="margin-bottom: 12px" wrap>
         <n-select v-model:value="newAlert.metric" :options="metricOptions" style="width: 130px" />
         <n-select v-model:value="newAlert.condition" :options="conditionOptions" style="width: 90px" />
-        <n-input-number v-model:value="newAlert.threshold" :min="0" :step="1" placeholder="阈值"
+        <n-input-number v-model:value="newAlert.threshold" :min="0" :step="1" :placeholder="`阈值(${alertUnit})`"
                         style="width: 110px" :show-button="false" />
         <n-select v-model:value="newAlert.service_id" :options="notifyServices" style="width: 150px"
                   placeholder="通知渠道" />
@@ -338,17 +343,19 @@ const loadingAlerts = ref(false)
 const creatingAlert = ref(false)
 const notifyServices = ref([])
 const metricOptions = [
-  { label: '剩余电量', value: 'surplus_value' },
-  { label: '累计用电', value: 'total_value' },
-  { label: '功率', value: 'power' },
-  { label: '电压', value: 'voltage' },
-  { label: '电流', value: 'current' },
+  { label: '剩余电量(度)', value: 'surplus_value' },
+  { label: '累计用电(度)', value: 'total_value' },
+  { label: '功率(W)', value: 'power' },
+  { label: '电压(V)', value: 'voltage' },
+  { label: '电流(A)', value: 'current' },
 ]
 const conditionOptions = [
   { label: '低于', value: 'lt' },
   { label: '高于', value: 'gt' },
 ]
 const newAlert = ref({ metric: 'surplus_value', condition: 'lt', threshold: null, service_id: null, cooldown_minutes: 10 })
+const METRIC_UNITS = { surplus_value: '度', total_value: '度', power: 'W', voltage: 'V', current: 'A' }
+const alertUnit = computed(() => METRIC_UNITS[newAlert.value.metric] || '')
 
 async function loadNodeOptions() {
   try {
@@ -667,6 +674,7 @@ async function copyToken(token) {
 }
 
 // ---------- 充值记录(上报时自动识别) ----------
+const KWH_PRICE = 1.3 // 电费单价(元/度), 仅用于换算「充值金额」展示; 表内数值一律以度为准
 const chargeColumns = [
   { title: '时间', key: 'ts', width: 150, render: (r) => fmtTs(r.ts) },
   {
@@ -682,6 +690,15 @@ const chargeColumns = [
     render: (r) => {
       if (r.delta == null) return '-'
       return h('span', { style: 'color:#18a058;font-weight:600' }, `+${fmt(r.delta)}`)
+    },
+  },
+  {
+    title: '充值金额(元)', key: 'amount', width: 110,
+    render: (r) => {
+      if (r.delta == null) return '-'
+      // jump=剩余度增量×单价; order=报文原值增量(本身即金额)
+      const amt = r.mode === 'order' ? r.delta : r.delta * KWH_PRICE
+      return h('span', { style: 'color:#18a058;font-weight:600' }, `¥${fmt(amt)}`)
     },
   },
   {
