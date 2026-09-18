@@ -189,10 +189,28 @@ def list_collector_configs():
 
 @router.put("/collector-configs", summary="保存采集器配置(反向下发)")
 def save_collector_config(req: schemas.CollectorConfigIn):
+    """保存采集器运行配置; 启停开关变更时, 若该表存在触发器, 实时同步节点采集进程
+    (与「采集触发器」页保存下发行为一致, 两处入口等价)"""
     _upsert_collector_config(req.meter_id, req.interval_seconds, req.enabled)
-    return BaseResponse.success({"meter_id": req.meter_id,
-                                 "interval_seconds": req.interval_seconds,
-                                 "enabled": req.enabled})
+    resp = {"meter_id": req.meter_id, "interval_seconds": req.interval_seconds,
+            "enabled": req.enabled, "synced": False, "proc": ""}
+    if req.enabled is not None:
+        try:
+            with engine.connect() as conn:
+                trig = conn.execute(
+                    text("SELECT node_id, work_dir FROM dianbiao_trigger "
+                         "WHERE meter_id=:m AND node_id IS NOT NULL AND work_dir IS NOT NULL "
+                         "LIMIT 1"),
+                    {"m": req.meter_id},
+                ).fetchone()
+            if trig:
+                node = _get_node_or_404(trig[0])
+                resp["proc"] = _ensure_collector_process(
+                    node, trig[1], want_start=(req.enabled == 1))
+                resp["synced"] = True
+        except Exception as e:
+            resp["proc"] = f"节点进程同步失败: {e}"
+    return BaseResponse.success(resp)
 
 
 def _upsert_collector_config(meter_id: str, interval_seconds: int, enabled: int):

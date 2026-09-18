@@ -156,12 +156,9 @@
       <n-tabs type="line">
         <n-tab-pane name="collector" tab="采集器配置">
           <n-alert type="info" :bordered="false" style="margin-bottom: 12px">
-            配置由 mytool 反向下发给采集器,采集器每轮自动拉取生效(最迟一个采集周期内)。
-            间隔建议 ≥60 秒;
-            <code>暂停</code> 后采集器停止抄表(后台保持待命)。
-            <br />
-            <b style="color:#d03050">启停请以「采集触发器」页为准</b>: 触发器页的「保存下发」会同时同步节点进程状态,
-            本页直接改启停会有两处不一致的风险, 保存前会再要一次确认。
+            配置由 mytool 反向下发给采集器, 保存即时生效; 间隔建议 ≥60 秒。
+            「启停」开关会<b>同步到节点进程</b>: 开 = 拉起并恢复采集, 关 = 停止采集(后台待命)。
+            本页与「采集触发器」页操作的是同一个状态, 在哪一页开/关效果一致。
           </n-alert>
           <n-data-table
             :columns="cfgColumns"
@@ -844,13 +841,12 @@ async function loadCfgRows() {
   }
 }
 
-/** 启停切换: 需二次确认(防与触发器页两处状态不一致) */
+/** 启停切换: 二次确认后保存, 后端会同步到节点采集进程(与触发器页行为一致) */
 function toggleCfgEnabled(r) {
   const on = (r.enabled === 1)
   window.$dialog.warning({
     title: on ? '确认暂停采集？' : '确认恢复采集？',
-    content: `「${r.name || r.meter_id}」将${on ? '暂停' : '恢复'}采集, 保存后采集器下一轮生效。` +
-      (on ? '\n建议在「采集触发器」页统一管理启停, 那里会同步节点进程状态。' : ''),
+    content: `「${r.name || r.meter_id}」将${on ? '暂停' : '恢复'}采集, 立即保存并同步节点进程, 不用再管其他页面。`,
     positiveText: '确定',
     negativeText: '取消',
     onPositiveClick: async () => {
@@ -862,12 +858,12 @@ function toggleCfgEnabled(r) {
 
 async function saveCfgRow(row) {
   try {
-    await dianbiaoApi.saveCollectorConfig({
+    const res = await dianbiaoApi.saveCollectorConfig({
       meter_id: row.meter_id,
       interval_seconds: Number(row.interval) || 300,
       enabled: row.enabled === 1 ? 1 : 0,
     })
-    window.$message.success(`${row.name || row.meter_id} 配置已下发, 采集器下一轮自动生效`)
+    window.$message.success(`${row.name || row.meter_id} 配置已保存` + (res?.proc ? ` · ${res.proc}` : ''))
     await loadCfgRows()
   } catch (e) { console.error(e) }
 }
