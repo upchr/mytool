@@ -62,6 +62,9 @@ async def jwt_auth_middleware(request: Request, call_next):
         "/api/auth/login",
         "/version",
         "/example",
+        # dianbiao 采集端上报/拉配置放行(模块内以 X-Agent-Token 校验), 面板查询仍走 JWT
+        "/dianbiao/readings",
+        "/dianbiao/agent/config",
     ]
 
     if any(request.url.path.startswith(path) for path in public_paths):

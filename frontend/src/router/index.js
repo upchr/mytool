@@ -19,6 +19,7 @@ import WorkflowExecutionLog from '../modules/workflow/WorkflowExecutionLog.vue'
 import AssetList from '../modules/asset/AssetList.vue'
 import CPEManager from '../modules/cpe/CPEManager.vue'
 import DockerManager from '../modules/docker/DockerManager.vue'
+import MeterDashboard from '../modules/dianbiao/MeterDashboard.vue'
 
 
 import {
@@ -42,6 +43,7 @@ import {
     DiamondOutline as AssetIcon,
     WifiOutline as CPEIcon,
     CubeOutline as DockerIcon,
+    FlashOutline as MeterIcon,
 } from "@vicons/ionicons5";
 
 const routes = [
@@ -61,6 +63,7 @@ const routes = [
     { path: '/asset', component: AssetList },
     { path: '/cpe', component: CPEManager },
     { path: '/docker', component: DockerManager },
+    { path: '/dianbiao', component: MeterDashboard },
     { path: '/ssl-dns', component: SSLDns },
     {
         path: '/ssl-apply',
@@ -165,6 +168,12 @@ const routeLabels = [
         label: 'Docker 管理',
         icon: DockerIcon,
         key: 'docker'
+    },
+    {
+        path: '/dianbiao',
+        label: '智能电表',
+        icon: MeterIcon,
+        key: 'dianbiao'
     },
     {
         label: 'AI 助手',

@@ -1,0 +1,1 @@
+# dianbiao 电表采集模块: 远端 PC 采集端 → POST /dianbiao/readings 幂等入库 → 面板查询

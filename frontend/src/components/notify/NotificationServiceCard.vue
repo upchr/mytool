@@ -88,6 +88,71 @@
         </n-icon>
       </template>
 
+      <!-- 动态配置表单区域 -->
+      <template #default="{ formData }">
+        <div class="config-form">
+          <div class="config-header">
+            <n-text strong>配置参数</n-text>
+            <n-button size="small" type="primary" ghost @click="addField">
+              <template #icon>
+                <n-icon><AddIcon /></n-icon>
+              </template>
+              添加字段
+            </n-button>
+          </div>
+
+          <div class="config-fields">
+            <div
+              v-for="(field, index) in configFields"
+              :key="index"
+              class="config-field-item"
+            >
+              <div class="field-row">
+                <div class="field-key">
+                  <n-input
+                    v-model:value="field.key"
+                    placeholder="字段名"
+                    :disabled="field.isDefault"
+                    size="small"
+                  />
+                </div>
+                <div class="field-value">
+                  <n-input
+                    v-model:value="field.value"
+                    placeholder="字段值"
+                    type="textarea"
+                    :autosize="{ minRows: 1, maxRows: 3 }"
+                    size="small"
+                  />
+                </div>
+                <div class="field-action">
+                  <n-button
+                    v-if="!field.isDefault"
+                    text
+                    type="error"
+                    size="small"
+                    @click="removeField(index)"
+                  >
+                    <template #icon>
+                      <n-icon><DeleteIcon /></n-icon>
+                    </template>
+                  </n-button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- JSON 预览 -->
+          <div class="config-preview">
+            <n-collapse>
+              <n-collapse-item title="JSON 预览" name="preview">
+                <n-code :code="configJsonPreview" language="json" />
+              </n-collapse-item>
+            </n-collapse>
+          </div>
+        </div>
+      </template>
+
       <template #action="{ formData }">
         <n-space justify="end">
           <n-button size="small" type="default" @click="handleCancel">
@@ -101,7 +166,7 @@
 
       <template #footer>
         <n-text depth="3" style="font-size: 12px;">
-          请根据对应格式填写配置信息
+          默认字段不可删除，可添加自定义字段
         </n-text>
       </template>
     </DialogForm>
@@ -109,7 +174,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useBreakpoints } from '@vueuse/core'
 import DialogForm from '@/components/DialogForm.vue'
 import {
@@ -117,7 +182,9 @@ import {
   Pencil as EditIcon,
   CheckmarkCircle as CheckIcon,
   CloseCircle as CloseIcon,
-  ChatbubbleOutline
+  ChatbubbleOutline,
+  Add as AddIcon,
+  Trash as DeleteIcon
 } from '@vicons/ionicons5'
 
 // 响应式断点
@@ -163,23 +230,43 @@ const editingId = ref(null)
 // 对话框标题
 const dialogTitle = computed(() => `编辑 ${props.title}`)
 
-// 表单字段配置
+// 默认配置模板（根据服务类型）
+const defaultConfigTemplates = {
+  dingtalk: {
+    webhook_url: { label: 'Webhook URL', placeholder: 'https://oapi.dingtalk.com/robot/send?access_token=...', required: true }
+  },
+  feishu: {
+    webhook_url: { label: 'Webhook URL', placeholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/...', required: true }
+  },
+  bark: {
+    device_key: { label: '设备 Key', placeholder: 'xxx', required: true },
+    server_url: { label: '服务器地址', placeholder: 'https://api.day.app', required: false }
+  },
+  email: {
+    smtp_server: { label: 'SMTP 服务器', placeholder: 'smtp.example.com', required: true },
+    smtp_port: { label: 'SMTP 端口', placeholder: '587', required: true },
+    email_user: { label: '邮箱用户', placeholder: 'user@example.com', required: true },
+    email_password: { label: '邮箱密码', placeholder: '********', required: true },
+    recipient_email: { label: '收件人邮箱', placeholder: 'recipient@example.com', required: true }
+  },
+  wecom: {
+    webhook_url: { label: 'Webhook URL', placeholder: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...', required: true }
+  },
+  webhook: {
+    webhook_url: { label: 'Webhook URL', placeholder: 'https://...', required: true }
+  }
+}
+
+// 配置字段列表
+const configFields = ref([])
+
+// 表单字段配置（移除了 config 字段）
 const formFields = [
   {
     name: 'service_name',
     label: '渠道名称',
     type: 'input',
     placeholder: `如：我的${props.service.service_name}`,
-  },
-  {
-    name: 'config',
-    label: '配置 (JSON)',
-    type: 'textarea',
-    placeholder: props.config,
-    autosize: {
-      minRows: 5,
-      maxRows: 10,
-    }
   },
   {
     name: 'is_enabled',
@@ -198,23 +285,78 @@ const formRules = {
   service_name: [
     { required: true, message: '请输入渠道名称', trigger: 'blur' },
     { min: 2, max: 20, message: '名称长度在 2 到 20 个字符', trigger: 'blur' }
-  ],
-  config: [
-    { required: true, message: '请输入配置 JSON', trigger: 'blur' },
-    {
-      validator: (rule, value) => {
-        if (!value) return true
-        try {
-          JSON.parse(value)
-          return true
-        } catch (e) {
-          return false
-        }
-      },
-      message: '请输入有效的 JSON 格式',
-      trigger: 'blur'
+  ]
+}
+
+// 计算属性：JSON 预览
+const configJsonPreview = computed(() => {
+  const config = {}
+  configFields.value.forEach(field => {
+    if (field.key && field.value) {
+      config[field.key] = field.value
     }
-  ],
+  })
+  return JSON.stringify(config, null, 2)
+})
+
+// 初始化配置字段
+const initConfigFields = (existingConfig = null) => {
+  const serviceType = props.service.service_type
+  const template = defaultConfigTemplates[serviceType] || {}
+
+  // 从模板创建默认字段
+  const fields = Object.keys(template).map(key => ({
+    key,
+    value: '',
+    label: template[key].label,
+    placeholder: template[key].placeholder,
+    required: template[key].required,
+    isDefault: true
+  }))
+
+  // 如果有已存在的配置，填充值
+  if (existingConfig && typeof existingConfig === 'object') {
+    fields.forEach(field => {
+      if (existingConfig[field.key] !== undefined) {
+        field.value = existingConfig[field.key]
+      }
+    })
+
+    // 添加自定义字段（不在模板中的字段）
+    Object.keys(existingConfig).forEach(key => {
+      if (!template[key]) {
+        fields.push({
+          key,
+          value: existingConfig[key],
+          label: key,
+          placeholder: `请输入 ${key}`,
+          required: false,
+          isDefault: false
+        })
+      }
+    })
+  }
+
+  configFields.value = fields
+}
+
+// 添加字段
+const addField = () => {
+  configFields.value.push({
+    key: '',
+    value: '',
+    label: '自定义字段',
+    placeholder: '请输入字段值',
+    required: false,
+    isDefault: false
+  })
+}
+
+// 删除字段
+const removeField = (index) => {
+  if (!configFields.value[index].isDefault) {
+    configFields.value.splice(index, 1)
+  }
 }
 
 // 获取服务配置
@@ -222,6 +364,20 @@ const getService = async (serviceId) => {
   try {
     const res = await window.$request.get(`/notifications/services/${serviceId}`)
     formData.value = { ...res }
+    // 解析配置并初始化字段
+    let config = {}
+    if (res.config) {
+      if (typeof res.config === 'string') {
+        try {
+          config = JSON.parse(res.config)
+        } catch (e) {
+          console.error('解析配置失败:', e)
+        }
+      } else {
+        config = res.config
+      }
+    }
+    initConfigFields(config)
   } catch (error) {
     window.$message.error('获取通知配置失败')
   }
@@ -238,7 +394,24 @@ const showEditDialog = async () => {
 // 保存配置
 const saveService = async (data) => {
   try {
-    data.config = JSON.parse(data.config)
+    // 将动态表单转换为 JSON
+    const config = {}
+    configFields.value.forEach(field => {
+      if (field.key && field.value) {
+        config[field.key] = field.value
+      }
+    })
+
+    // 验证必填字段
+    const serviceType = props.service.service_type
+    const template = defaultConfigTemplates[serviceType] || {}
+    for (const key in template) {
+      if (template[key].required && !config[key]) {
+        throw new Error(`${template[key].label} 为必填项`)
+      }
+    }
+
+    data.config = config
     await window.$request.put(`/notifications/services/${data.id}`, data)
     window.$message.success('配置成功')
   } catch (error) {
@@ -304,6 +477,16 @@ const handleSubmit = async (data, flag = false) => {
 const loadData = () => {
   emit('success')
 }
+
+// 监听对话框可见性，初始化配置字段
+watch(dialogVisible, (newVal) => {
+  if (newVal) {
+    // 对话框打开时，如果配置字段为空，初始化默认字段
+    if (configFields.value.length === 0) {
+      initConfigFields()
+    }
+  }
+})
 
 // 暴露方法给父组件
 defineExpose({
@@ -398,6 +581,64 @@ defineExpose({
   font-weight: 500;
 }
 
+/* 配置表单样式 */
+.config-form {
+  padding: 8px 0;
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.config-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.config-field-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background-color: var(--n-color-modal);
+  border-radius: 8px;
+  border: 1px solid var(--n-border-color);
+  transition: all 0.2s ease;
+}
+
+.config-field-item:hover {
+  border-color: var(--n-primary-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.field-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.field-key {
+  flex: 0 0 150px;
+}
+
+.field-value {
+  flex: 1;
+}
+
+.field-action {
+  flex-shrink: 0;
+}
+
+.config-preview {
+  margin-top: 16px;
+}
+
 /* 移动端适配 */
 @media (max-width: 640px) {
   .service-card {
@@ -432,6 +673,19 @@ defineExpose({
   }
 
   .action-button {
+    flex: 1;
+  }
+
+  .field-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .field-key {
+    flex: 1;
+  }
+
+  .field-value {
     flex: 1;
   }
 }
