@@ -1,7 +1,7 @@
 ## 📦 ToolsPlus 项目（[体验地址](https://upchr.github.io/mytool/)->密码：mytool123）
 
 ![status](https://img.shields.io/badge/状态-稳定-success)
-![version](https://img.shields.io/badge/version-v3.4.0-blue)
+![version](https://img.shields.io/badge/version-v3.6.5-blue)
 ![vue](https://img.shields.io/badge/Vue-3.x-brightgreen)
 ![python](https://img.shields.io/badge/Python-3.8+-blue)
 
@@ -27,6 +27,8 @@
 | v2.1 | ✅ 已发布 | AI 聊天助手 + SSL 证书管理 | 已完成 |
 | v2.2 | ✅ 已发布 | 固定资产管理 + 工作流管理 | 已完成 |
 | v3.4 | ✅ 已发布 | 性能优化 + UI 改进 | 已完成 |
+| v3.5 | ✅ 已发布 | 通知多渠道 + 版本升级机制 | 已完成 |
+| v3.6 | ✅ 已发布 | 电表远程抄表模块（采集触发部署 / 充值自动识别 / 阈值告警 / 自愈保活） | 2026-09-18 |
 | v4.0 | 🚧 开发中 | 移动端适配 + 更多功能 |  |
 | 未来版本 | 📝 规划中 | 企业版、多租户 |  |
 
@@ -90,6 +92,15 @@
     - 版本管理（创建版本、版本列表、恢复版本、设置默认版本）
     - 工作流格式验证
     - 支持手动触发工作流执行
+
+- 🔌 **电表远程抄表** ⭐
+    - 采集触发器部署：SSH 节点 + 目录分发（SFTP 打包上传）+ 远端 doctor 自检 + `.env` 配置下发，一键初始化
+    - 实时数据：剩余电量（度）、累计用量、功率、电压/电流/功率因数，多图表趋势与 日/月/年 用电统计
+    - 充值记录自动识别：剩余电量跳升（>5 度）或报文订单增量自动入库，历史数据可回填
+    - 阈值告警：电量/功率/电压/电流低高限告警，复用通知渠道推送
+    - 自愈保活：触发器节点自动安装 crontab 保活（每 5 分钟 + 开机自检），后端 enabled=1 才拉起，面板暂停不打扰
+    - 断网兜底：采集器本地 JSONL 积压，网络恢复后每轮限速补发（最多 20 条/轮），数据不丢
+    - 多电表单面板切换、查看节点采集日志（SSH tail）、最近上报状态可见
 
 #### 🚧 开发中
 - [ ] **插件系统**
@@ -255,5 +266,5 @@ mytool/
 - Gitee: https://gitee.com/upchr/mytool.git
 - GitHub: https://github.com/upchr/mytool
 
-**当前版本：** v3.4.0
-**最后更新：** 2026-03-20
+**当前版本：** v3.6.5
+**最后更新：** 2026-09-18
