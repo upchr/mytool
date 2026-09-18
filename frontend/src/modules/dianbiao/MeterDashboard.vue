@@ -43,6 +43,14 @@
             <template #icon><n-icon><git-branch-outline /></n-icon></template>
             电表项目源码
           </n-button>
+          <n-tooltip>
+            <template #trigger>
+              <n-button quaternary circle title="模块使用说明" @click="showHelp = true">
+                <template #icon><n-icon size="18"><HelpCircleOutline /></n-icon></template>
+              </n-button>
+            </template>
+            使用说明
+          </n-tooltip>
         </n-space>
       </n-space>
       <div v-if="lastTs" class="last-ts">最近采样: {{ lastTs }}</div>
@@ -114,6 +122,23 @@
         </div>
       </n-card>
     </n-spin>
+
+    <!-- 模块使用说明 -->
+    <n-modal v-model:show="showHelp" preset="card" title="电表模块使用说明" style="width: 780px" :mask-closable="true">
+      <n-alert type="info" :bordered="false" style="margin-bottom: 12px">
+        本模块<b>只读</b>监测电表数据: 全程不执行充值/断电/清零等任何写操作, 采集时 BLE 会话用完即断。
+      </n-alert>
+      <n-collapse :default-expanded-names="helpSections.map((_, i) => i)">
+        <n-collapse-item v-for="(s, i) in helpSections" :key="i" :name="i" :title="s.title">
+          <div v-for="(line, j) in s.lines" :key="j" style="font-size: 13px; line-height: 1.7">
+            <template v-if="line.b">
+              <b>{{ line.b }}</b>{{ line.t }}
+            </template>
+            <template v-else>{{ line }}</template>
+          </div>
+        </n-collapse-item>
+      </n-collapse>
+    </n-modal>
 
     <!-- 推送 Token 管理 -->
     <n-modal
@@ -282,13 +307,89 @@ import {
   ThermometerOutline, PowerOutline, StatsChartOutline, RefreshOutline,
   SwapHorizontalOutline, KeyOutline, AddCircleOutline, GitBranchOutline,
   OptionsOutline, CalendarOutline, CalendarClearOutline, CalendarNumberOutline, TimeOutline,
-  NotificationsOutline,
+  NotificationsOutline, HelpCircleOutline,
 } from '@vicons/ionicons5'
 import * as dianbiaoApi from '@/api/dianbiao'
 
 const meterId = ref('')
 const meterOptions = ref([])
 const rangeHours = ref(24)
+const showHelp = ref(false)
+const helpSections = [
+  {
+    title: '数据链路与计量单位',
+    lines: [
+      '采集器(节点上)每 5 分钟经 BLE 抄表 → 推送到本后端「D 表读数」→ 本页图表展示。',
+      { b: '断网兜底: ', t: '抄表失败先落到节点 backup.jsonl, 网络恢复后每轮限速补发(每轮最多 20 条), 历史数据不丢。' },
+      { b: '计量单位: ', t: '剩余电量/累计用电以「度」为准; 「充值金额(元)」按 1.3 元/度换算, 仅作参考展示。' },
+    ],
+  },
+  {
+    title: '页面分区',
+    lines: [
+      '① 顶部: 选择电表(多表时切换)、时间范围、刷新、推送 Token / 采集配置 / 阈值告警入口。',
+      '② 指标卡与曲线: 剩余电量/累计用量趋势、功率曲线、电压电流、日/月/年用电统计。',
+      '③ 明细: 「最近采样明细」看原始读数, 「充值记录」看自动识别的充值事件。',
+    ],
+  },
+  {
+    title: '采集器源码与代码同步 (SFTP)',
+    lines: [
+      { b: '源码仓库: ', t: '采集器代码本地工程在 P:\\workspace\\tools\\dianbiao(独立 git 仓库), 远端 gitee: gitee.com/upchr/baozupo(右上角「电表项目源码」直达)。本地改代码后先在该工程里 git commit 存档。' },
+      { b: '代码源目录: ', t: '触发器行的「代码源目录」就是本地源码位置(默认 P:/workspace/tools/dianbiao)。' },
+      { b: 'SFTP 分发: ', t: '点「初始化」时, 后端会把该目录打包(自动排除 .env/.git/密钥/日志备份等敏感文件)经 SFTP 上传解压到节点上的「采集目录」。' },
+      { b: '采集目录: ', t: '即 work_dir(如 /mydata/dianbiao), 是节点上真正运行的路径; .env 由后端单独下发, 不随代码包走。' },
+      { b: '什么时候重新同步: ', t: '只改间隔/启停/Token 用「保存下发」即可; 改了采集器代码(collector.py 等)后再点「初始化」才会把新代码推到节点。若节点已有任意方式放好的代码, 代码源目录可留空, 初始化时跳过同步。' },
+    ],
+  },
+  {
+    title: '采集配置 vs 采集触发器 (启停那点事)',
+    lines: [
+      '两处操作的是同一个启停状态, 在哪一页开/关结果完全一致。',
+      { b: '采集配置: ', t: '直接改采集间隔/启停并立即同步节点上的采集进程。' },
+      { b: '采集触发器: ', t: '负责搭建(节点+目录)与初始化(同步代码+自动创建 Token+远端自检), 初始化通过后采集才会真正跑起来。' },
+      '改完记得点「保存下发」, 采集器下一轮轮询(≤60 秒)自动生效。',
+    ],
+  },
+  {
+    title: '自愈保活 (自动恢复)',
+    lines: [
+      '保存/初始化触发器时, 会自动在节点安装保活(每 5 分钟自检 + 开机恢复)。',
+      '保活逻辑: 后端 enabled=1 且采集进程不在 → 自动拉起; 面板暂停(enabled=0)时保持待命不打扰。',
+      '删掉触发器时自动清理保活与 crontab。想确认采集是否活着, 看触发器行的「最近上报」列。',
+    ],
+  },
+  {
+    title: '充值记录自动识别',
+    lines: [
+      '剩余电量较上一条上涨超过 5 度 → 记一次「剩余跳变」型充值。',
+      '报文携带 order_value 且较前一条有增量 → 记一次「订单」型充值(首次出现只作基线, 不算事件)。',
+      '同一时间点只记一次, 重复上报天然幂等, 不会叠水。',
+    ],
+  },
+  {
+    title: '阈值告警',
+    lines: [
+      '告警阈值与读数同一单位: 剩余电量/累计用电(度)、功率(W)、电压(V)、电流(A)。',
+      '低于/高于即触发, 触发后可走「通知渠道」已启用的渠道(钉钉/飞书/邮件等)提醒; 冷却期内不重复打扰。',
+    ],
+  },
+  {
+    title: '推送 Token',
+    lines: [
+      '采集器上报用 X-Agent-Token 鉴权, 在本页创建/作废; 作废即刻生效。',
+      '把 Token 写入采集器 .env 的 MYTOOL_AGENT_TOKEN 后重启采集器即可完成对接。',
+    ],
+  },
+  {
+    title: '故障排查',
+    lines: [
+      '节点收不到数: 打开「采集触发器」→ 看「最近上报」是否有时间, 点「日志」看节点 collector.log。',
+      '日志里「mytool 已暂停采集(enabled=0)」表示面板处于停采状态, 到配置/触发器页开启即可。',
+      'Token 失效: 新建 Token 填回 .env 并重启采集器。',
+    ],
+  },
+]
 const rangeOptions = [
   { label: '1小时', value: 1 },
   { label: '6小时', value: 6 },
