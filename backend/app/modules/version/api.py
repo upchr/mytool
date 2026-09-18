@@ -51,9 +51,9 @@ def get_current_version():
 
 # ===== 获取最新版本（核心）=====
 async def _fetch_latest_version():
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
         try:
-            resp = await client.get(VERSION_URL, timeout=6.0)
+            resp = await client.get(VERSION_URL)
             if resp.status_code == 200:
                 data = resp.json()
                 last_version=f"v{data['toolsplus']['version']}"
