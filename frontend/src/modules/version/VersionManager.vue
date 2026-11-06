@@ -162,7 +162,7 @@ if [ \\$? -ne 0 ]; then
 fi
 
 echo "正在安装新版本 FPK..."
-appcenter-cli install-fpk toolsplus.fpk
+appcenter-cli install-fpk "toolsplus_\\$LATEST_VERSION.fpk"
 
 echo "正在启动 toolsplus..."
 appcenter-cli start toolsplus

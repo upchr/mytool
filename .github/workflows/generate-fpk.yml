@@ -58,7 +58,8 @@ jobs:
       - name: Copy .fpk to FnDepot toolsplus/ directory
         run: |
           mkdir -p fnpack-repo/toolsplus
-          cp /tmp/fnpack-workspace/files/toolsplus.fpk fnpack-repo/toolsplus/
+          # 按版本命名：固定名 toolsplus.fpk 会被下一版覆盖，导致旧版本索引里的 sha256 对不上
+          cp /tmp/fnpack-workspace/files/toolsplus.fpk "fnpack-repo/toolsplus/toolsplus_${VERSION}.fpk"
 
       - name: Update fnpack.json
         working-directory: fnpack-repo
@@ -80,7 +81,7 @@ jobs:
                 updated_at: $time,
                 packages: {
                   all: {
-                    download_url: "./toolsplus/toolsplus.fpk",
+                    download_url: ("./toolsplus/toolsplus_" + $ver + ".fpk"),
                     sha256: $sha,
                     size: $size
                   }

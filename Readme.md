@@ -1,14 +1,15 @@
 ## 📦 ToolsPlus 项目（[体验地址](https://upchr.github.io/mytool/)->密码：mytool123）
 
 ![status](https://img.shields.io/badge/状态-稳定-success)
-![version](https://img.shields.io/badge/version-v3.6.5-blue)
+![version](https://img.shields.io/badge/version-v3.6.7-blue)
 ![vue](https://img.shields.io/badge/Vue-3.x-brightgreen)
 ![python](https://img.shields.io/badge/Python-3.8+-blue)
 
 > 轻量级多设备定时任务管理、通知、AI 助手、固定资产管理、工作流自动化 + 个人便签速记
 
 
-[![GitHub](https://img.shields.io/badge/项目源码-181717?logo=github)](https://github.com/upchr/FnDepot/tree/main/toolsplus)
+[![GitHub](https://img.shields.io/badge/项目源码-181717?logo=github)](https://github.com/upchr/mytool)
+[![fnOS](https://img.shields.io/badge/飞牛应用源-FnDepot-blue)](https://github.com/upchr/FnDepot)
 
 ### 🎯 项目背景
 基于 Vue 3 和 Python 3 构建，为开发者和多设备用户提供集中式定时任务管理、个人备忘服务、AI 对话助手、SSL 证书自动续签、固定资产管理和工作流自动化功能，解决跨设备任务同步、通知和自动化问题。
@@ -18,6 +19,21 @@
 ### 多平台支持
 - x86
 - arm
+
+### 🐮 飞牛 fnOS 安装与升级
+
+安装包由 [CHRPLUS 应用源（FnDepot）](https://github.com/upchr/FnDepot) 托管，索引为 **V2 结构**
+（`apps.toolsplus.releases.<版本>.packages`），应用中心与一键升级脚本都从这里取包。
+
+- **安装**：应用中心添加第三方源 `https://github.com/upchr/FnDepot`（国内可用 Gitee 镜像
+  `https://gitee.com/upchr/FnDepot`），搜索 ToolsPlus 后安装。索引中 `platform` 为 `["all"]`，
+  docker 应用，不区分 CPU 架构。
+- **升级**：应用中心点更新，或在应用内「系统 → 版本」页面执行一键升级；两条路径都按索引取对应版本安装包。
+- **包名**：`toolsplus_<版本>.fpk`（例：`toolsplus_3.6.7.fpk`），**每个版本一个文件、旧版本保留**，
+  需要回退时可直接安装历史版本包。
+- **校验**：索引为每个包记录 `sha256` 与 `size`（字节），应用中心与一键升级均按记录校验完整性。
+
+发布流程见 [CHRPLUS 应用源 README](https://github.com/upchr/FnDepot#二新增一个版本)。
 
 ### 📊 版本规划
 
@@ -154,7 +170,7 @@
 ### 📌 相关链接
 - [🐛 Bug 反馈](https://github.com/upchr/mytool/issues)
 - [💬 讨论区](https://github.com/upchr/mytool/issues/new)
-- [📦 个人飞牛仓库](https://github.com/upchr/Fndepot)
+- [📦 个人飞牛应用源](https://github.com/upchr/FnDepot)
 
 ## 🚀 快速开始
 
@@ -266,5 +282,5 @@ mytool/
 - Gitee: https://gitee.com/upchr/mytool.git
 - GitHub: https://github.com/upchr/mytool
 
-**当前版本：** v3.6.5
-**最后更新：** 2026-09-18
+**当前版本：** v3.6.7
+**最后更新：** 2026-11-06
