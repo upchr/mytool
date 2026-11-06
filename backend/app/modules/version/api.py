@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -50,18 +51,25 @@ def get_current_version():
         return "unknown"
 
 # ===== 获取最新版本（核心）=====
+def _latest_release(releases: dict) -> str:
+    # V2 索引的 releases 是按版本号做键的对象，取版本号最大的一条；
+    # 不能按字符串比大小，否则 "3.9.9" 会排在 "3.10.0" 之后。
+    return max(releases, key=lambda v: [int(p) if p.isdigit() else 0 for p in re.split(r"[.\-+]", v)])
+
+
 async def _fetch_latest_version():
     async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
         try:
             resp = await client.get(VERSION_URL)
             if resp.status_code == 200:
                 data = resp.json()
-                last_version=f"v{data['toolsplus']['version']}"
-                last_time=data['toolsplus']['lasttime']
-                return last_version,last_time
+                releases = ((data.get("apps") or {}).get("toolsplus") or {}).get("releases") or {}
+                if releases:
+                    version = _latest_release(releases)
+                    return f"v{version}", (releases[version] or {}).get("updated_at")
         except Exception:
-            return None,None
-    return None,None
+            return None, None
+    return None, None
 
 
 

@@ -118,10 +118,10 @@ else
   echo "拉取完成！"
 fi
 
-# === 2. 读取最新版本（来自 fnpack.json）===
-LATEST_VERSION=\\$(jq -r '.toolsplus.version' "$FPK_DIR/fnpack.json")
+# === 2. 读取最新版本（来自 fnpack.json 的 V2 结构 apps.toolsplus.releases）===
+LATEST_VERSION=\\$(jq -r '.apps.toolsplus.releases // {} | keys | sort_by(split(".") | map(tonumber? // 0)) | last // empty' "$FPK_DIR/fnpack.json")
 if [ -z "\\$LATEST_VERSION" ] || [ "\\$LATEST_VERSION" = "null" ]; then
-  echo "❌ 无法从 fnpack.json 读取 version 字段"
+  echo "❌ 无法从 fnpack.json 读取 apps.toolsplus.releases 的版本号"
   exit 1
 fi
 echo "最新版本: v\\$LATEST_VERSION"
